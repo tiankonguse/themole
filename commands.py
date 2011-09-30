@@ -43,7 +43,7 @@ class Command:
                 mole.initialize()
                 if not mole.initialized:
                     raise QuietCommandException()
-            except TheMole.MoleAttributeRequired as ex:
+            except themole.MoleAttributeRequired as ex:
                 print('Mole error:', ex.message)
                 raise CommandException('Mole not ready yet')
 
@@ -109,7 +109,7 @@ class SchemasCommand(Command):
         self.check_initialization(mole)
         try:
             schemas = mole.get_databases()
-        except TheMole.QueryError as err:
+        except themole.QueryError as err:
             print('[-] Unknown exception found')
             raise err
         output_manager.begin_sequence(['Databases'])
@@ -130,13 +130,13 @@ class TablesCommand(Command):
         try:
             self.check_initialization(mole)
             tables = mole.get_tables(params[0])
-        except TheMole.DatabasesNotDumped:
+        except themole.DatabasesNotDumped:
             print('[-] Databases must be dumped first.')
             return
-        except TheMole.DatabaseNotFound:
+        except themole.DatabaseNotFound:
             print('[-] Database', params[0], 'does not exist.')
             return
-        except TheMole.QueryError:
+        except themole.QueryError:
             print('[-] Unknown exception found.')
             return
         output_manager.begin_sequence(['Tables'])
@@ -161,19 +161,19 @@ class ColumnsCommand(Command):
         try:
             self.check_initialization(mole)
             columns = mole.get_columns(params[0], params[1])
-        except TheMole.DatabasesNotDumped:
+        except themole.DatabasesNotDumped:
             print('[-] Databases must be dumped first.')
             return
-        except TheMole.DatabaseNotFound:
+        except themole.DatabaseNotFound:
             print('[-] Database', params[0], 'does not exist.')
             return
-        except TheMole.TableNotDumped:
+        except themole.TableNotDumped:
             print('[-] Table not dumped yet.')
             return
-        except TheMole.TableNotFound:
+        except themole.TableNotFound:
             print('[-] Table', params[1], 'not found.')
             return
-        except TheMole.QueryError:
+        except themole.QueryError:
             print('[-] Unknown exception found.')
             return
         output_manager.begin_sequence(['Columns for table ' + params[1]])
@@ -206,18 +206,18 @@ class SelectCommand(Command):
                 raise CommandException('Expected 3 or at least 5 parameters, got 4.')
             condition = ' '.join(params[4:]) if len(params) > 3 else '1=1'
             result = mole.get_fields(params[0], params[1], params[2].split(','), condition)
-        except TheMole.DatabasesNotDumped:
+        except themole.DatabasesNotDumped:
             print('[-] Databases must be dumped first.')
             return
-        except TheMole.DatabaseNotFound:
+        except themole.DatabaseNotFound:
             print('[-] Database', params[0], 'does not exist.')
-        except TheMole.TableNotDumped:
+        except themole.TableNotDumped:
             print('[-] Table not dumped yet.')
             return
-        except TheMole.TableNotFound:
+        except themole.TableNotFound:
             print('[-] Table', params[1], 'not found.')
             return
-        except TheMole.QueryError:
+        except themole.QueryError:
             print('[-] Unknown exception found.')
             return
         output_manager.begin_sequence(params[2].split(','))

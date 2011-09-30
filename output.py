@@ -22,6 +22,8 @@
 # Matías Fontanini
 # Gastón Traberg
 
+import sys
+
 class OutputManager:
     def put(self, string):
         pass
@@ -38,11 +40,15 @@ class PrettyOutputManager(OutputManager):
         self.results = []
         self.lengths = []
         self.headers = ''
+        self.current_index = 1
     
     def put(self, string):
+        sys.stdout.write('\r[i] ' + str(self.current_index) + '/' + str(len(self.lengths)))
+        sys.stdout.flush()
         self.results.append(string)
     
     def begin_sequence(self, header):
+        self.current_index = 1
         self.results = []
         self.headers = header
         self.lengths = list(map(len, header))
@@ -52,7 +58,7 @@ class PrettyOutputManager(OutputManager):
             for j in range(len(i)):
                 self.lengths[j] = max(len(i[j]), self.lengths[j])
         total_len = sum(self.lengths)
-        print('+', '-' * (total_len + 2 * len(self.lengths) + len(self.lengths) - 1), '+', sep='')
+        print('\r','+', '-' * (total_len + 2 * len(self.lengths) + len(self.lengths) - 1), '+', sep='')
         line = ''
         for i in range(len(self.headers)):
             line += '| ' + self.headers[i] + ' ' * (self.lengths[i] - len(self.headers[i]) + 1)

