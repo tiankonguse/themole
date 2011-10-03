@@ -60,7 +60,7 @@ class Mysql5Mole(DbmsMole):
     out_delimiter_result = "::-::"
     inner_delimiter = "0x3a3a"
     inner_delimiter_result = "::"
-    field_finger_str = 'The Mole!'
+    field_finger_str = 'The_Mole.mysqlfinger!'
 
     @classmethod
     def parse_condition(self, condition):

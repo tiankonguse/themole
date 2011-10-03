@@ -120,7 +120,7 @@ class TheMole:
                     self._dbms_mole.schema_count_query(self.query_columns, self.injectable_field)
                 )
               )
-        result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
+        result = self._dbms_mole.parse_results(self.analyser.decode(req))
         if not result or len(result) != 1:
             raise QueryError()
         else:
@@ -361,7 +361,7 @@ class TheMole:
                     ).decode(self.analyser.encoding)
                 try:
                     self.injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
-                    print("[+] Injectable fields found:", ', '.join(map(str, self.injectable_fields)))
+                    print("[+] Injectable fields found: [" + ', '.join(map(lambda x: str(x + 1), self.injectable_fields)) + "]")
                     self._filter_injectable_fields()
                     return
                 except Exception as ex:
@@ -371,13 +371,13 @@ class TheMole:
 
     def _filter_injectable_fields(self):
         for field in self.injectable_fields:
-            print('[i] Trying field', field)
+            print('[i] Trying field', field + 1)
             for dbms_mole_class in TheMole.dbms_mole_list:
                 query = dbms_mole_class.field_finger_query(self.query_columns,
                                                      field)
                 url_query = self.generate_url(query)
                 req = self.get_requester().request(url_query)
-                if dbms_mole_class.field_finger() in self.analyser.node_content(req):
+                if dbms_mole_class.field_finger() in self.analyser.decode(req):
                     self.injectable_field = field
                     print('[+] Found injectable field:', field)
                     return

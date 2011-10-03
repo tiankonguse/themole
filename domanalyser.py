@@ -31,10 +31,17 @@ class DomAnalyser():
     def __init__(self):
         self.encoding = None
     
-    def set_good_page(self, page, search_needle):
+    def decode(self, data):
         if self.encoding is None:
-            self.encoding = chardet.detect(page)['encoding']
-        dom_page = lxml.fromstring(page.decode(self.encoding))
+            self.encoding = chardet.detect(data)['encoding']
+        try:
+            return data.decode(self.encoding)
+        except UnicodeDecodeError:
+            self.encoding = chardet.detect(data)['encoding']
+            return data.decode(self.encoding)
+    
+    def set_good_page(self, page, search_needle):
+        dom_page = lxml.fromstring(self.decode(page))
         self._good_index_list = DomAnalyser._dfs(dom_page, [search_needle])
         if not self._good_index_list:
             raise NeedleNotFound()
@@ -43,14 +50,14 @@ class DomAnalyser():
         del dom_page
     
     def is_valid(self, page):
-        dom_page = lxml.fromstring(page.decode(self.encoding))
+        dom_page = lxml.fromstring(self.decode(page))
         content_on_page = DomAnalyser._lookup_node(dom_page,
                                                    self._good_index_list)
         del dom_page
         return content_on_page == self._good_content
     
     def find_needles(self, page, needles):
-        dom_page = lxml.fromstring(page.decode(self.encoding))
+        dom_page = lxml.fromstring(self.decode(page))
         index_list = DomAnalyser._dfs(dom_page, [needles])
         if not index_list:
             return None
@@ -58,7 +65,7 @@ class DomAnalyser():
         return next(n for n in needles if needles in content)
     
     def node_content(self, page):
-        return DomAnalyser._lookup_node(lxml.fromstring(page.decode(self.encoding)), self._good_index_list)
+        return DomAnalyser._lookup_node(lxml.fromstring(self.decode(page)), self._good_index_list)
 
     @classmethod
     def _dfs(cls, dom, search_needles, index_list=[]):
