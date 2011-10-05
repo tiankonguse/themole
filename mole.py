@@ -27,34 +27,39 @@ import completion
 import output
 import signal
 from readline import get_line_buffer
-from commands import CommandException, CmdNotFoundException, CommandManager, QuietCommandException
-
-mole = themole.TheMole()
-
-cmd_manager = CommandManager()
-completer   = completion.CompletionManager(cmd_manager, mole)
-output      = output.PrettyOutputManager()
+import builtins
+import commands
 
 
 def sigint_handler(x, y):
-    exit(0)
+    manager.mole.abort_query()
 
-signal.signal(signal.SIGINT, sigint_handler)
+class Manager:
+    def __init__(self):
+        self.mole = themole.TheMole()
+        self.cmd_manager = commands.CommandManager()
+        self.completer   = completion.CompletionManager(self.cmd_manager, self.mole)
+        self.output      = output.PrettyOutputManager()
 
-while True:
-    try:
-        line = [i for i in input('#> ').strip().split(' ') if len(i) > 0]
-        if len(line) != 0:
-            cmd = cmd_manager.find(line[0])
-            cmd.execute(mole, line[1:] if len(line) > 1 else [], output)
-    except CommandException as ex:
-        print(' Error: ' + ex.message)
-        print(' Usage: ' + cmd.usage(line[0]))
-    except CmdNotFoundException as ex:
-        print(' Error: ' + ex.message)
-    except QuietCommandException:
-        pass
-    except EOFError:
-        print('')
-        exit(0)
+    def start(self):
+        signal.signal(signal.SIGINT, sigint_handler)
+        while True:
+            try:
+                line = [i for i in input('#> ').strip().split(' ') if len(i) > 0]
+                if len(line) != 0:
+                    cmd = self.cmd_manager.find(line[0])
+                    cmd.execute(self.mole, line[1:] if len(line) > 1 else [], self.output)
+            except commands.CommandException as ex:
+                print(' Error: ' + ex.message)
+                print(' Usage: ' + cmd.usage(line[0]))
+            except commands.CmdNotFoundException as ex:
+                print(' Error: ' + ex.message)
+            except commands.QuietCommandException:
+                pass
+            except EOFError:
+                print('')
+                exit(0)
 
+if __name__ == '__main__':
+    builtins.manager = Manager()
+    manager.start()

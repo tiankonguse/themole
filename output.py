@@ -73,7 +73,8 @@ class PrettyOutputManager(OutputManager):
         
 class PlainOutputManager(OutputManager):
     def begin_sequence(self, string):
+        string[-1] = string[-1] + ': '
         self.put(string)
     
     def put(self, string):
-        print(string)
+        print(', '. join(string))

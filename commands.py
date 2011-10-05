@@ -22,7 +22,7 @@
 # Matías Fontanini
 # Gastón Traberg
 
-import connection, os
+import connection, os, output
 import themole
 
 class CmdNotFoundException(Exception):
@@ -104,11 +104,41 @@ class ClearScreenCommand(Command):
     def execute(self, mole, params, output_manager):
         os.sytem('clear')
 
+class FetchDataCommand(Command):
+    def __init__(self):
+        self.cmds = {
+                        'schemas' : SchemasCommand(True),
+                        'tables'  : TablesCommand(True),
+                        'columns' : ColumnsCommand(True),
+                    }
+
+    def execute(self, mole, params, output_manager):
+        self.check_initialization(mole)
+        if len(params) == 0:
+            raise CommandException('At least one parameter is required!')
+        self.cmds[params[0]].execute(mole, params[1:], output_manager)
+
+    def usage(self, cmd_name):
+        return cmd_name + ' <schemas|tables|columns> args'
+
+    def parameters(self, mole, current_params):
+        if len(current_params) == 0:
+            return ['schemas', 'tables', 'columns']
+        else:
+            try:
+                return self.cmds[current_params[0]].parameters(mole, current_params[1:])
+            except KeyError:
+                return []
+    
+
 class SchemasCommand(Command):
+    def __init__(self, force_fetch=False):
+        self.force_fetch = force_fetch
+    
     def execute(self, mole, params, output_manager):
         self.check_initialization(mole)
         try:
-            schemas = mole.get_databases()
+            schemas = mole.get_databases(self.force_fetch)
         except themole.QueryError as err:
             print('[-] Unknown exception found')
             raise err
@@ -124,12 +154,15 @@ class SchemasCommand(Command):
         return []
         
 class TablesCommand(Command):
+    def __init__(self, force_fetch=False):
+        self.force_fetch = force_fetch
+    
     def execute(self, mole, params, output_manager):
         if len(params) != 1:
             raise CommandException('Database name required')
         try:
             self.check_initialization(mole)
-            tables = mole.get_tables(params[0])
+            tables = mole.get_tables(params[0], self.force_fetch)
         except themole.DatabasesNotDumped:
             print('[-] Databases must be dumped first.')
             return
@@ -155,12 +188,15 @@ class TablesCommand(Command):
             return []
 
 class ColumnsCommand(Command):
+    def __init__(self, force_fetch=False):
+        self.force_fetch = force_fetch
+    
     def execute(self, mole, params, output_manager):
         if len(params) != 2:
             raise CommandException('Database name required')
         try:
             self.check_initialization(mole)
-            columns = mole.get_columns(params[0], params[1])
+            columns = mole.get_columns(params[0], params[1], force_fetch=self.force_fetch)
         except themole.DatabasesNotDumped:
             print('[-] Databases must be dumped first.')
             return
@@ -217,8 +253,9 @@ class SelectCommand(Command):
         except themole.TableNotFound:
             print('[-] Table', params[1], 'not found.')
             return
-        except themole.QueryError:
+        except themole.QueryError as ex:
             print('[-] Unknown exception found.')
+            raise ex
             return
         output_manager.begin_sequence(params[2].split(','))
         for i in result:
@@ -269,7 +306,7 @@ class DBInfoCommand(Command):
         return []
 
 class ProxyCommand(Command):
-    def execute(self, params, mole, output_manager):
+    def execute(self, mole, params, output_manager):
         if len(params) == 1:
             proxy_support = urllib.request.ProxyHandler({'http': params[0]})
             opener = urllib.request.build_opener(proxy_support)
@@ -278,8 +315,24 @@ class ProxyCommand(Command):
             raise CommandException('Proxy required as a parameter')
 
 class ExitCommand(Command):
-    def execute(self, params, mole, output_manager):
+    def execute(self, mole, params, output_manager):
         exit(0)
+
+class OutputCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) != 1:
+            raise CommandException('Expected output manager name as parameter')
+        if params[0] not in ['pretty', 'plain']:
+            raise CommandException('Unknown output manager.')
+        if params[0] == 'pretty':
+            new_output = output.PrettyOutputManager()
+        else:
+            new_output = output.PlainOutputManager()
+        manager.output = new_output
+
+    def parameters(self, mole, current_params):
+        return ['pretty', 'plain'] if len(current_params) == 0 else []
+        
 
 class CommandManager:
     def __init__(self):
@@ -287,8 +340,10 @@ class CommandManager:
                       'columns'  : ColumnsCommand(),
                       'dbinfo'   : DBInfoCommand(),
                       'exit'     : ExitCommand(),
+                      'fetch'    : FetchDataCommand(),
                       'select'   : SelectCommand(),
                       'needle'   : NeedleCommand(),
+                      'output'   : OutputCommand(),
                       'proxy'    : ProxyCommand(),
                       'schemas'  : SchemasCommand(),
                       'tables'   : TablesCommand(),
