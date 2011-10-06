@@ -29,17 +29,22 @@ import signal
 from readline import get_line_buffer
 import builtins
 import commands
+import getopt, sys
 
 
 def sigint_handler(x, y):
     manager.mole.abort_query()
 
 class Manager:
-    def __init__(self):
+    def __init__(self, opt_map):
         self.mole = themole.TheMole()
         self.cmd_manager = commands.CommandManager()
         self.completer   = completion.CompletionManager(self.cmd_manager, self.mole)
         self.output      = output.PrettyOutputManager()
+        if 'url' in opt_map:
+            self.cmd_manager.find('url').execute(self.mole, [opt_map['url']], self.output)
+        if 'needle' in opt_map:
+            self.cmd_manager.find('needle').execute(self.mole, [opt_map['needle']], self.output)
 
     def start(self):
         signal.signal(signal.SIGINT, sigint_handler)
@@ -60,6 +65,20 @@ class Manager:
                 print('')
                 exit(0)
 
+def parse_options():
+    options = 'u:n:'
+    args, extra = getopt.getopt(sys.argv[1:], options)
+    return args
+
 if __name__ == '__main__':
-    builtins.manager = Manager()
+    options = parse_options()
+    option_name_mapper = {
+        '-u' : 'url',
+        '-n' : 'needle'
+    }
+    opt_map = {}
+    for i in options:
+        opt_map[option_name_mapper[i[0]]] = i[1]
+            
+    builtins.manager = Manager(opt_map)
     manager.start()

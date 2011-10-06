@@ -232,7 +232,7 @@ class ColumnsCommand(Command):
         else:
             return []
 
-class SelectCommand(Command):
+class QueryCommand(Command):
     def execute(self, mole, params, output_manager):
         if len(params) < 3:
             raise CommandException('Database name required')
@@ -318,6 +318,19 @@ class ExitCommand(Command):
     def execute(self, mole, params, output_manager):
         exit(0)
 
+class QueryModeCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            print(mole.mode)
+        else:
+            if not params[0] in ['union', 'blind']:
+                raise CommandException('Invalid query mode.')
+            mole.mode = params[0]
+            
+    
+    def parameters(self, mole, current_params):
+        return ['union', 'blind'] if len(current_params) == 0 else []
+
 class OutputCommand(Command):
     def execute(self, mole, params, output_manager):
         if len(params) != 1:
@@ -341,10 +354,11 @@ class CommandManager:
                       'dbinfo'   : DBInfoCommand(),
                       'exit'     : ExitCommand(),
                       'fetch'    : FetchDataCommand(),
-                      'select'   : SelectCommand(),
+                      'mode'     : QueryModeCommand(),
                       'needle'   : NeedleCommand(),
                       'output'   : OutputCommand(),
                       'proxy'    : ProxyCommand(),
+                      'query'    : QueryCommand(),
                       'schemas'  : SchemasCommand(),
                       'tables'   : TablesCommand(),
                       'url'      : URLCommand()
