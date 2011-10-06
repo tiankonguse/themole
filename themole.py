@@ -23,7 +23,7 @@
 # Gastón Traberg
 
 from domanalyser import DomAnalyser,NeedleNotFound
-from dbmsmoles import DbmsMole, Mysql5Mole
+from dbmsmoles import DbmsMole, Mysql5Mole, PostgresMole
 from dbdump import DatabaseDump
 import sys, time
 
@@ -33,7 +33,7 @@ class TheMole:
     field = '[_SQL_Field_]'
     table = '[_SQL_Table_]'
     
-    dbms_mole_list = [Mysql5Mole]
+    dbms_mole_list = [Mysql5Mole, PostgresMole]
     
     def __init__(self):
         self.initialized = False
@@ -462,8 +462,7 @@ class TheMole:
         for field in self.injectable_fields:
             print('[i] Trying field', field + 1)
             for dbms_mole_class in TheMole.dbms_mole_list:
-                query = dbms_mole_class.field_finger_query(self.query_columns,
-                                                     field)
+                query = dbms_mole_class.field_finger_query(self.query_columns, field)
                 url_query = self.generate_url(query)
                 req = self.get_requester().request(url_query)
                 if dbms_mole_class.field_finger() in self.analyser.decode(req):
@@ -474,8 +473,7 @@ class TheMole:
 
     def _detect_dbms(self):
         for dbms_mole_class in TheMole.dbms_mole_list:
-            query = dbms_mole_class.dbms_check_query(self.query_columns,
-                                                     self.injectable_field)
+            query = dbms_mole_class.dbms_check_query(self.query_columns, self.injectable_field)
             url_query = self.generate_url(query)
             req = self.get_requester().request(url_query)
             parsed = dbms_mole_class().parse_results(self.analyser.decode(req))

