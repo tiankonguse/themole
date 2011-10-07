@@ -63,6 +63,7 @@ class Manager:
                 pass
             except EOFError:
                 print('')
+                self.mole.abort_query()
                 exit(0)
 
 def parse_options():
