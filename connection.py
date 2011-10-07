@@ -34,31 +34,16 @@ class HttpRequester:
         'Cache-Control': 'max-age=0',
     }
     
-    def __init__(self, url, proxy = '', timeout = 0, method = 'GET', cookie = None):
+    def __init__(self, url, timeout = 0, method = 'GET', cookie = None, max_retries=3):
         self.url = url
         self.timeout = timeout
         if method not in ['GET',  'POST']:
-            raise Exception('[-] Error: ' + method + ' is invalid! Only GET and POST supported')
+            raise Exception('[-] Error: ' + method + ' is invalid! Only GET and POST supported.')
         self.method = method
-        if len(proxy) > 0:
-            ip = self.get_ip()
-            proxy_support = urllib.request.ProxyHandler({'http': proxy})
-            opener = urllib.request.build_opener(proxy_support)
-            urllib.request.install_opener(opener)
-            if not self.is_anonymous(ip):
-                raise Exception('[-] Error: Proxy is not anonymous!')
-        self.checked_diff = False
+        self.max_retries = max_retries
         self.headers = HttpRequester.headers
         if cookie:
             self.headers['Cookie'] = cookie
-
-    def get_ip(self):
-        input = urllib.request.urlopen('http://checker.samair.ru/').read()
-        return input.split('<b>IP detected: ')[1].replace('<font color="#008000">', '').split('</font>')[0].strip()
-
-    def is_anonymous(self, ip):
-        input = urllib.request.urlopen('http://checker.samair.ru/').read()
-        return not ip in input and 'high-anonymous (elite) proxy' in input
 
     def do_request(self, params):
         params = (t.split('=', 1) for t in params.split('&'))
@@ -67,7 +52,12 @@ class HttpRequester:
             request = urllib.request.Request(self.url + '?' + params, None, self.headers)
         else:
             request = urllib.Request(self.url, params, self.headers)
-        return urllib.request.urlopen(request).read()
+        for i in range(self.max_retries):
+            try:
+                return urllib.request.urlopen(request).read()
+            except urllib.error as ex:
+                pass
+        raise ex
 
     def request(self, params):
         time.sleep(self.timeout)	

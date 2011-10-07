@@ -307,7 +307,7 @@ class DBInfoCommand(Command):
         self.check_initialization(mole)
         try:
             info = mole.get_dbinfo()
-        except QueryError:
+        except themole.QueryError:
             print('[-] There was an error with the query.')
             return
         print(" User:     ", info[0])
@@ -366,6 +366,7 @@ class CommandManager:
     def __init__(self):
         self.cmds = { 'clear'    : ClearScreenCommand(),
                       'columns'  : ColumnsCommand(),
+                      'cookie'   : CookieCommand(),
                       'dbinfo'   : DBInfoCommand(),
                       'exit'     : ExitCommand(),
                       'fetch'    : FetchDataCommand(),

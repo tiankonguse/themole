@@ -230,9 +230,9 @@ class TheMole:
             )
         else:
             return self._blind_query(
-                lambda x,y: self._dbms_mole.fields_blind_count_query(x, y, table=table, where=where), 
-                lambda x: lambda y,z: self._dbms_mole.fields_blind_len_query(y, z, fields=fields, table=table, offset=x, where=where),
-                lambda x,y,z: self._dbms_mole.fields_blind_data_query(x, y, fields=fields, table=table, offset=z, where=where),
+                lambda x,y: self._dbms_mole.fields_blind_count_query(x, y, db=db, table=table, where=where), 
+                lambda x: lambda y,z: self._dbms_mole.fields_blind_len_query(y, z, fields=fields, db=db, table=table, offset=x, where=where),
+                lambda x,y,z: self._dbms_mole.fields_blind_data_query(x, y, fields=fields, db=db, table=table, offset=z, where=where),
             )
 
     def get_dbinfo(self):

