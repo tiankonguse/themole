@@ -25,7 +25,16 @@
 import urllib.request, urllib.error, urllib.parse, time, difflib
 
 class HttpRequester:
-    def __init__(self, url, proxy = '', timeout = 0, method = 'GET'):
+    headers =  {
+        'User-Agent': 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)',
+        'Accept-Language': 'en-us',
+        'Accept-Encoding': 'text/html;q=0.9',
+        'Keep-Alive': '300',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'max-age=0',
+    }
+    
+    def __init__(self, url, proxy = '', timeout = 0, method = 'GET', cookie = None):
         self.url = url
         self.timeout = timeout
         if method not in ['GET',  'POST']:
@@ -39,6 +48,9 @@ class HttpRequester:
             if not self.is_anonymous(ip):
                 raise Exception('[-] Error: Proxy is not anonymous!')
         self.checked_diff = False
+        self.headers = HttpRequester.headers
+        if cookie:
+            self.headers['Cookie'] = cookie
 
     def get_ip(self):
         input = urllib.request.urlopen('http://checker.samair.ru/').read()
@@ -52,9 +64,10 @@ class HttpRequester:
         params = (t.split('=', 1) for t in params.split('&'))
         params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in params)
         if self.method == 'GET':
-            return urllib.request.urlopen(self.url + '?' + params).read()
+            request = urllib.request.Request(self.url + '?' + params, None, self.headers)
         else:
-            return urllib.request.urlopen(self.url, params).read()
+            request = urllib.Request(self.url, params, self.headers)
+        return urllib.request.urlopen(request).read()
 
     def request(self, params):
         time.sleep(self.timeout)	

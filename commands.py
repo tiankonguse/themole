@@ -83,7 +83,19 @@ class URLCommand(Command):
         
     def parameters(self, mole, current_params):
         return []
+
+class CookieCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if not mole.requester:
+            raise CommandException('URL must be set first.')
+        if len(params) == 1:
+            mole.requester.headers['Cookie'] = params[0]
+        else:
+            print(mole.requester.headers['Cookie'])
     
+    def usage(self, cmd_name):
+        return cmd_name + ' [URL]'
+
 class NeedleCommand(Command):
     def execute(self, mole, params, output_manager):
         if len(params) == 0:
@@ -102,7 +114,7 @@ class NeedleCommand(Command):
 
 class ClearScreenCommand(Command):
     def execute(self, mole, params, output_manager):
-        os.sytem('clear')
+        os.system('clear')
 
 class FetchDataCommand(Command):
     def __init__(self):
@@ -265,7 +277,7 @@ class QueryCommand(Command):
         output_manager.end_sequence()
     
     def usage(self, cmd_name):
-        return 'select <SCHEMA> <TABLE> <COLUMNS> [where <CONDITION>]'
+        return 'query <SCHEMA> <TABLE> <COLUMNS> [where <CONDITION>]'
     
     def parameters(self, mole, current_params):
         if len(current_params) == 0:

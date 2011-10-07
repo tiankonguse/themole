@@ -63,6 +63,20 @@ class DbmsMole():
             if re.match(i, data):
                 return True
         return False
+    
+    @classmethod
+    def parse_condition(self, condition):
+        cond = condition.split("'")
+        for i in range(len(cond)):
+            if i % 2 == 1:
+                cond[i] = DbmsMole.to_string(cond[i])
+        return ''.join(cond)
+    
+    # Subclasses should implement this method to return a valid
+    # string conversion for data in this dbms.
+    @classmethod
+    def to_string(cls, data):
+        pass
 
 class Mysql5Mole(DbmsMole):
     out_delimiter_result = "::-::"
@@ -71,12 +85,8 @@ class Mysql5Mole(DbmsMole):
     inner_delimiter = DbmsMole.to_hex(inner_delimiter_result)
 
     @classmethod
-    def parse_condition(self, condition):
-        cond = condition.split("'")
-        for i in range(len(cond)):
-            if i % 2 == 1:
-                cond[i] = DbmsMole.to_hex(cond[i])
-        return ''.join(cond)
+    def to_string(cls, data):
+        return DbmsMole.to_hex(data)
     
     @classmethod
     def injectable_field_finger(cls, query_columns, base):
@@ -325,16 +335,12 @@ class PostgresMole(DbmsMole):
     inner_delimiter = DbmsMole.chr_join(inner_delimiter_result)
     
     @classmethod
+    def to_string(cls, data):
+        return DbmsMole.chr_join(data)
+        
+    @classmethod
     def dbms_name(cls):
         return 'Postgres'
-    
-    @classmethod
-    def parse_condition(self, condition):
-        cond = condition.split("'")
-        for i in range(len(cond)):
-            if i % 2 == 1:
-                cond[i] = "(" + DbmsMole.chr_join(cond[i]) + ")::unknown"
-        return ''.join(cond)
     
     @classmethod
     def blind_field_delimiter(cls):
