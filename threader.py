@@ -88,5 +88,4 @@ class Threader:
         output = []
         for i in range(nthreads):
             output += self.results[i]
-        output.sort()
         return output

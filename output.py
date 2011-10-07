@@ -78,3 +78,19 @@ class PlainOutputManager(OutputManager):
     
     def put(self, string):
         print(', '. join(string))
+    
+
+class BlindSQLIOutput:
+    def __init__(self, length):
+        self.word = [' ' for i in range(length)]
+        sys.stdout.write(' ' * length)
+        sys.stdout.flush()
+
+    def set(self, char, index):
+        self.word[index] = char
+        sys.stdout.write('\r' + ''.join(self.word))
+        sys.stdout.flush()
+        
+    def finish(self):
+        print('')
+

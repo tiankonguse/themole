@@ -269,7 +269,6 @@ class QueryCommand(Command):
             return
         except themole.QueryError as ex:
             print('[-] Unknown exception found.')
-            raise ex
             return
         output_manager.begin_sequence(params[2].split(','))
         for i in result:

