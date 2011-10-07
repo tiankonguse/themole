@@ -25,6 +25,7 @@
 from domanalyser import DomAnalyser,NeedleNotFound
 from dbmsmoles import DbmsMole, Mysql5Mole, PostgresMole
 from dbdump import DatabaseDump
+from threader import Threader
 import sys, time
 
 class TheMole:
@@ -35,7 +36,7 @@ class TheMole:
     
     dbms_mole_list = [Mysql5Mole, PostgresMole]
     
-    def __init__(self):
+    def __init__(self, max_threads = 4):
         self.initialized = False
         self.needle = None
         self.url = None
@@ -43,6 +44,7 @@ class TheMole:
         self.wildcard = None
         self.mode = 'union'
         self.end = ' '
+        self.threader = Threader(max_threads)
     
     def restart(self):
         self.initialized = False
@@ -123,6 +125,15 @@ class TheMole:
 
     def abort_query(self):
         self.stop_query = True
+        self.threader.stop()
+
+    def _generic_query_item(self, query_generator, offset, result_parser = lambda x: x[0]):
+        req = self.get_requester().request(self.generate_url(query_generator(offset)))
+        result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
+        if not result or len(result) < 1:
+            raise QueryError()
+        else:
+            return result_parser(result)
 
     def _generic_query(self, count_query, query_generator, result_parser = lambda x: x[0]):
         req = self.get_requester().request(self.generate_url(count_query))
@@ -132,16 +143,11 @@ class TheMole:
         else:
             dump_result = []
             self.stop_query = False
-            for i in range(int(result[0])):
-                if self.stop_query:
-                    break
-                req = self.get_requester().request(self.generate_url(query_generator(i)))
-                result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
-                if not result or len(result) < 1:
-                    raise QueryError()
-                else:
-                    dump_result.append(result_parser(result))
-            dump_result.sort()
+            #for i in range(int(result[0])):
+            #    if self.stop_query:
+            #        break
+            #    dump_result.append(self._generic_query_item(query_generator, i, result_parser))
+            dump_result = self.threader.execute(int(result[0]), lambda i: self._generic_query_item(query_generator, i, result_parser))
             return dump_result
 
     def get_databases(self, force_fetch=False):
