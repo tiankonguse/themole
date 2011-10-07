@@ -18,8 +18,8 @@
 # Developed by: Nasel(http://www.nasel.com.ar)
 # 
 # Authors:
-# Santiago Alessandri
 # Matías Fontanini
+# Santiago Alessandri
 # Gastón Traberg
 
 import connection, os, output
@@ -143,6 +143,7 @@ class SchemasCommand(Command):
             print('[-] Unknown exception found')
             raise err
         output_manager.begin_sequence(['Databases'])
+        schemas.sort()
         for i in schemas:
             output_manager.put([i])
         output_manager.end_sequence()
@@ -173,6 +174,7 @@ class TablesCommand(Command):
             print('[-] Unknown exception found.')
             return
         output_manager.begin_sequence(['Tables'])
+        tables.sort()
         for i in tables:
             output_manager.put([i])
         output_manager.end_sequence()
@@ -296,8 +298,9 @@ class DBInfoCommand(Command):
         except QueryError:
             print('[-] There was an error with the query.')
             return
-        print(" User:", info[0])
-        print(" Version:", info[1])
+        print(" User:     ", info[0])
+        print(" Version:  ", info[1])
+        print(" Database: ", info[2])
 
     def usage(self, cmd_name):
         return 'dbinfo'

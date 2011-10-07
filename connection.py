@@ -18,8 +18,8 @@
 # Developed by: Nasel(http://www.nasel.com.ar)
 # 
 # Authors:
-# Santiago Alessandri
 # Matías Fontanini
+# Santiago Alessandri
 # Gastón Traberg
 
 import urllib.request, urllib.error, urllib.parse, time, difflib

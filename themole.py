@@ -18,8 +18,8 @@
 # Developed by: Nasel(http://www.nasel.com.ar)
 # 
 # Authors:
-# Santiago Alessandri
 # Matías Fontanini
+# Santiago Alessandri
 # Gastón Traberg
 
 from domanalyser import DomAnalyser,NeedleNotFound
@@ -250,10 +250,10 @@ class TheMole:
                 lambda x,y,z: self._dbms_mole.dbinfo_blind_data_query(x, y),
                 row_count=1, 
             )
-            if len(data) != 1 or len(data[0]) != 2:
+            if len(data) != 1 or len(data[0]) != 3:
                 raise QueryError()
-            data = [data[0][0], data[0][1]]
-        if not data or len(data) != 2:
+            data = [data[0][0], data[0][1], data[0][2]]
+        if not data or len(data) != 3:
             raise QueryError()
         else:
             return data
