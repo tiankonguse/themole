@@ -37,7 +37,10 @@ def sigint_handler(x, y):
 
 class Manager:
     def __init__(self, opt_map):
-        self.mole = themole.TheMole()
+        threads = 4
+        if 'threads' in opt_map:
+            threads = int(opt_map['threads'])
+        self.mole = themole.TheMole(threads=threads)
         self.cmd_manager = commands.CommandManager()
         self.completer   = completion.CompletionManager(self.cmd_manager, self.mole)
         self.output      = output.PrettyOutputManager()
@@ -64,18 +67,32 @@ class Manager:
             except EOFError:
                 print('')
                 self.mole.abort_query()
+                self.mole.threader.stop()
                 exit(0)
 
 def parse_options():
-    options = 'u:n:'
+    if '-h' in sys.argv:
+        help()
+    options = 'u:n:t:'
     args, extra = getopt.getopt(sys.argv[1:], options)
     return args
+
+def help():
+    print(' Usage ' + sys.argv[0] + ' [PARAMS]\n')
+    print(' The mole - Automatic SQL Injection exploiter.')
+    print(' Run The mole to begin an interactive session\n')
+    print(' Params can be:')
+    print('   -u URL: The url which contains a sqli vulnerability.')
+    print('   -n NEEDLE: The string which is printed on good queries.')
+    print('   -t THREADS: The amount of threads to run. Defaults to 4.')
+    exit(0)
 
 if __name__ == '__main__':
     options = parse_options()
     option_name_mapper = {
         '-u' : 'url',
-        '-n' : 'needle'
+        '-n' : 'needle',
+        '-t' : 'threads'
     }
     opt_map = {}
     for i in options:

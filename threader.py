@@ -54,8 +54,14 @@ class Threader:
                 return
             start, count, nthreads, functor = self.tasks[index]
             data = []
-            for i in range(start, start + count):
-                data.append(functor(i))
+            try:
+                for i in range(start, start + count):
+                    result = functor(i)
+                    if result is None:
+                        break
+                    data.append(result)
+            except:
+                pass
             self.results[index] = data
             self.task_end_lock.acquire()
             self.finished = self.finished + 1
@@ -77,8 +83,9 @@ class Threader:
         self.finish_event.clear()
         for i in range(nthreads):
             this_thread = per_thread
-            if i == 0:
-                this_thread += extra
+            if extra > 0:
+                this_thread += 1
+                extra -= 1
             self.tasks[i] = (start, this_thread, nthreads, functor)
             self.events[i].set()
             start += this_thread

@@ -23,12 +23,13 @@
 # Gastón Traberg
 
 import urllib.request, urllib.error, urllib.parse, time, difflib
+from urllib.parse import urlparse
 
 class HttpRequester:
     headers =  {
         'User-Agent': 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)',
         'Accept-Language': 'en-us',
-        'Accept-Encoding': 'text/html;q=0.9',
+        'Accept-Encoding': 'identity',
         'Keep-Alive': '300',
         'Connection': 'keep-alive',
         'Cache-Control': 'max-age=0',
@@ -42,6 +43,7 @@ class HttpRequester:
         self.method = method
         self.max_retries = max_retries
         self.headers = HttpRequester.headers
+        self.headers['Host'] = urlparse(url).netloc
         if cookie:
             self.headers['Cookie'] = cookie
 
@@ -55,9 +57,15 @@ class HttpRequester:
         for i in range(self.max_retries):
             try:
                 return urllib.request.urlopen(request).read()
-            except urllib.error as ex:
+            except urllib.error.HTTPError as ex:
+                exception = ex 
                 pass
-        raise ex
+            except urllib.error.URLError as ex:
+                exception = ex
+                pass
+        if exception.code == 404:
+            return b'<html><body></body></html>'
+        raise exception
 
     def request(self, params):
         time.sleep(self.timeout)	

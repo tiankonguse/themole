@@ -41,35 +41,39 @@ class DomAnalyser():
             return data.decode(self.encoding)
     
     def set_good_page(self, page, search_needle):
-        dom_page = lxml.fromstring(self.decode(page))
-        self._good_index_list = DomAnalyser._dfs(dom_page, [search_needle])
+        dom_page = lxml.fromstring(self.normalize(self.decode(page)))
+        self._good_index_list = self._dfs(dom_page, [search_needle], [])
         if not self._good_index_list:
             raise NeedleNotFound()
-        self._good_content = DomAnalyser._lookup_node(dom_page,
+        self._good_content = self._lookup_node(dom_page,
                                                       self._good_index_list)
         del dom_page
     
     def is_valid(self, page):
-        dom_page = lxml.fromstring(self.decode(page))
-        content_on_page = DomAnalyser._lookup_node(dom_page,
+        dom_page = lxml.fromstring(self.normalize(self.decode(page)))
+        content_on_page = self._lookup_node(dom_page,
                                                    self._good_index_list)
         del dom_page
         return content_on_page == self._good_content
     
     def find_needles(self, page, needles):
-        dom_page = lxml.fromstring(self.decode(page))
-        index_list = DomAnalyser._dfs(dom_page, [needles])
+        dom_page = lxml.fromstring(self.normalize(self.decode(page)))
+        index_list = self._dfs(dom_page, [needles], [])
         if not index_list:
             return None
-        content = DomAnalyser._lookup_node(dom_page, index_list)
+        content = self._lookup_node(dom_page, index_list)
         return next(n for n in needles if needles in content)
     
+    def normalize(self, page):
+        if len(page.strip()) == 0:
+            return '<html><body></body></html>'
+        return page
+    
     def node_content(self, page):
-        return DomAnalyser._lookup_node(lxml.fromstring(self.decode(page)), self._good_index_list)
+        return self._lookup_node(lxml.fromstring(self.normalize(self.decode(page))), self._good_index_list)
 
-    @classmethod
-    def _dfs(cls, dom, search_needles, index_list=[]):
-        node_value = DomAnalyser._join_text(dom)
+    def _dfs(self, dom, search_needles, index_list):
+        node_value = self._join_text(dom)
         if node_value is None:
             node_value = ""
         for needle in search_needles:
@@ -77,23 +81,21 @@ class DomAnalyser():
                 return index_list
         for i in range(len(dom)):
             index_list.append(i)
-            tmp_res = cls._dfs(dom[i], search_needles, index_list)
+            tmp_res = self._dfs(dom[i], search_needles, index_list)
             if tmp_res:
                 return index_list
             index_list.pop()
         return None
     
-    @classmethod
-    def _join_text(cls, node):
-        return (node.text and node.text or '') + ''.join(map(lambda x: x.tail and x.tail or '', node))
+    def _join_text(self, node):
+        return (node.text and node.text or '') + ''.join(map(lambda x: x.tail and x.tail or '', node)) + ''.join(node.attrib.values())
     
-    @classmethod
-    def _lookup_node(cls, dom, index_list):
+    def _lookup_node(self, dom, index_list):
         try:
             node = reduce(
                     lambda node, index: node[index],
                     index_list, dom)
-            return DomAnalyser._join_text(node)
+            return self._join_text(node)
         except IndexError:
             return None
 

