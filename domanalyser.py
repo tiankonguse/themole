@@ -25,6 +25,7 @@
 
 import lxml.html as lxml
 import chardet
+from dbmsmoles import DbmsMole
 from functools import reduce
 
 class DomAnalyser():
@@ -35,15 +36,18 @@ class DomAnalyser():
         if self.encoding is None:
             self.encoding = chardet.detect(data)['encoding']
         try:
-            return data.decode(self.encoding)
+            to_ret = data.decode(self.encoding)
         except UnicodeDecodeError:
             self.encoding = chardet.detect(data)['encoding']
-            return data.decode(self.encoding)
+            to_ret = data.decode(self.encoding)
+        if not '<html' in to_ret:
+            to_ret = '<html><body></body></html>' + to_ret
+        return DbmsMole.remove_errors(to_ret)
     
     def set_good_page(self, page, search_needle):
         dom_page = lxml.fromstring(self.normalize(self.decode(page)))
         self._good_index_list = self._dfs(dom_page, [search_needle], [])
-        if not self._good_index_list:
+        if self._good_index_list is None:
             raise NeedleNotFound()
         self._good_content = self._lookup_node(dom_page,
                                                       self._good_index_list)
