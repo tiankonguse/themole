@@ -69,7 +69,7 @@ class TheMole:
         self.parenthesis = 0
         self.database_dump = DatabaseDump()
         
-        original_request = self.get_requester().request(self.url.replace(self.wildcard, ''))
+        original_request = self.get_requester().request(self.url.replace(self.wildcard, self.prefix))
         try:
             self.analyser.set_good_page(original_request, self.needle)
         except NeedleNotFound:
@@ -379,7 +379,7 @@ class TheMole:
         separator_list = ['\'', '"', ' ']
         equal_cmp = { '\'' : 'like', '"' : 'like', ' ' : '='}
         separator = None
-        for parenthesis in range(0, 2):
+        for parenthesis in range(0, 3):
             print('[i] Trying injection using',parenthesis,'parenthesis.')
             self.parenthesis = parenthesis
             for sep in separator_list:
@@ -407,7 +407,7 @@ class TheMole:
         
         comment_list = ['#', '--', '/*', ' ']
         comment = None
-        for parenthesis in range(0, 2):
+        for parenthesis in range(0, 3):
             print('[i] Trying injection using',parenthesis,'parenthesis.')
             self.parenthesis = parenthesis
             for com in comment_list:

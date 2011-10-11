@@ -344,7 +344,10 @@ class PrefixCommand(Command):
         if len(params) == 0:
             print(mole.prefix)
         else:
-            mole.prefix = ' '.join(params)
+            if params[0].startswith('"') or params[0].startswith('\''):
+                mole.prefix = ' '.join(params)
+            else:
+                mole.prefix = ' ' + ' '.join(params)
             
 class SuffixCommand(Command):
     def execute(self, mole, params, output_manager):
