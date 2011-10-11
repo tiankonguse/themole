@@ -54,7 +54,7 @@ class Command:
         pass
 
     def usage(self, cmd_name):
-        return ''
+        return cmd_name
 
     def parameters(self, mole, current_params):
         return []
@@ -82,7 +82,7 @@ class URLCommand(Command):
             mole.wildcard = URLCommand.separator
     
     def usage(self, cmd_name):
-        return 'url [URL]'
+        return cmd_name + ' [URL]'
         
     def parameters(self, mole, current_params):
         return []
@@ -92,12 +92,12 @@ class CookieCommand(Command):
         if not mole.requester:
             raise CommandException('URL must be set first.')
         if len(params) == 1:
-            mole.requester.headers['Cookie'] = params[0]
+            mole.requester.headers['Cookie'] = ' '.join(params)
         else:
             print(mole.requester.headers['Cookie'])
     
     def usage(self, cmd_name):
-        return cmd_name + ' [URL]'
+        return cmd_name + ' [COOKIE]'
 
 class NeedleCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -110,7 +110,7 @@ class NeedleCommand(Command):
             mole.needle = ' '.join(params)
 
     def usage(self, cmd_name):
-        return 'needle [URL]'
+        return cmd_name + ' [NEEDLE]'
         
     def parameters(self, mole, current_params):
         return []
@@ -134,7 +134,7 @@ class FetchDataCommand(Command):
         self.cmds[params[0]].execute(mole, params[1:], output_manager)
 
     def usage(self, cmd_name):
-        return cmd_name + ' <schemas|tables|columns> args'
+        return cmd_name + ' <schemas|tables|columns> [args]'
 
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
@@ -163,9 +163,6 @@ class SchemasCommand(Command):
         for i in schemas:
             output_manager.put([i])
         output_manager.end_sequence()
-    
-    def usage(self, cmd_name):
-        return 'schemas'
         
     def parameters(self, mole, current_params):
         return []
@@ -196,7 +193,7 @@ class TablesCommand(Command):
         output_manager.end_sequence()
     
     def usage(self, cmd_name):
-        return 'tables <SCHEMA>'
+        return cmd_name + ' <SCHEMA>'
         
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
@@ -236,7 +233,7 @@ class ColumnsCommand(Command):
         output_manager.end_sequence()
     
     def usage(self, cmd_name):
-        return 'columns <SCHEMA> <TABLE>'
+        return cmd_name + ' <SCHEMA> <TABLE>'
         
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
@@ -269,7 +266,7 @@ class QueryCommand(Command):
         output_manager.end_sequence()
     
     def usage(self, cmd_name):
-        return 'query <SCHEMA> <TABLE> <COLUMNS> [where <CONDITION>]'
+        return cmd_name + ' <SCHEMA> <TABLE> <COLUMNS> [where <CONDITION>]'
     
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
@@ -306,20 +303,8 @@ class DBInfoCommand(Command):
         print(" Version:  ", info[1])
         print(" Database: ", info[2])
 
-    def usage(self, cmd_name):
-        return 'dbinfo'
-
     def parameters(self, mole, current_params):
         return []
-
-class ProxyCommand(Command):
-    def execute(self, mole, params, output_manager):
-        if len(params) == 1:
-            proxy_support = urllib.request.ProxyHandler({'http': params[0]})
-            opener = urllib.request.build_opener(proxy_support)
-            urllib.request.install_opener(opener)
-        else:
-            raise CommandException('Proxy required as a parameter')
 
 class ExitCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -338,6 +323,9 @@ class QueryModeCommand(Command):
     
     def parameters(self, mole, current_params):
         return ['union', 'blind'] if len(current_params) == 0 else []
+        
+    def usage(self, cmd_name):
+        return cmd_name + ' <union|blind>'
 
 class PrefixCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -348,6 +336,9 @@ class PrefixCommand(Command):
                 mole.prefix = ' '.join(params)
             else:
                 mole.prefix = ' ' + ' '.join(params)
+
+    def usage(self, cmd_name):
+        return cmd_name + ' [PREFIX]'
             
 class SuffixCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -358,15 +349,21 @@ class SuffixCommand(Command):
                 mole.end = ' '.join(params)
             else:
                 mole.end = ' ' + ' '.join(params)
+
+    def usage(self, cmd_name):
+        return cmd_name + ' [SUFFIX]'
                 
 class TimeoutCommand(Command):
     def execute(self, mole, params, output_manager):
         if len(params) == 0:
             print(mole.timeout)
         else:
-            mole.timeout = int(params[0])
+            mole.timeout = float(params[0])
             if mole.requester:
                 mole.requester.timeout = mole.timeout
+
+    def usage(self, cmd_name):
+        return cmd_name + ' [TIMEOUT]'
             
 class VerboseCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -379,6 +376,9 @@ class VerboseCommand(Command):
     
     def parameters(self, mole, current_params):
         return ['on', 'off'] if len(current_params) == 0 else []
+    
+    def usage(self, cmd_name):
+        return cmd_name + ' <on|off>'
 
 
 class OutputCommand(Command):
@@ -395,7 +395,24 @@ class OutputCommand(Command):
 
     def parameters(self, mole, current_params):
         return ['pretty', 'plain'] if len(current_params) == 0 else []
-        
+
+    def usage(self, cmd_name):
+        return cmd_name + ' <pretty(default)|plain>'
+       
+class UsageCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            raise CommandException('Command required as argument')
+        else:
+            cmd = cmd_manager.find(params[0])
+            print(' ' + cmd.usage(params[0]))
+                
+    
+    def parameters(self, mole, current_params):
+        return cmd_manager.cmds.keys() if len(current_params) == 0 else []
+    
+    def usage(self, cmd_name):
+        return cmd_name + ' <on|off>' 
 
 class CommandManager:
     def __init__(self):
@@ -408,14 +425,14 @@ class CommandManager:
                       'mode'     : QueryModeCommand(),
                       'needle'   : NeedleCommand(),
                       'output'   : OutputCommand(),
-                      'proxy'    : ProxyCommand(),
                       'prefix'   : PrefixCommand(),
                       'query'    : QueryCommand(),
                       'schemas'  : SchemasCommand(),
                       'suffix'   : SuffixCommand(),
                       'tables'   : TablesCommand(),
-                      'timeout'   : TimeoutCommand(),
+                      'timeout'  : TimeoutCommand(),
                       'url'      : URLCommand(),
+                      'usage'    : UsageCommand(),
                       'verbose'  : VerboseCommand(),
                     }
     

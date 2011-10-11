@@ -23,7 +23,7 @@
 # Gastón Traberg
 
 from domanalyser import DomAnalyser,NeedleNotFound
-from dbmsmoles import DbmsMole, Mysql5Mole, PostgresMole, MssqlMole
+from dbmsmoles import DbmsMole, MysqlMole, PostgresMole, MssqlMole
 from dbdump import DatabaseDump
 from threader import Threader
 from output import BlindSQLIOutput
@@ -35,7 +35,7 @@ class TheMole:
     field = '[_SQL_Field_]'
     table = '[_SQL_Table_]'
     
-    dbms_mole_list = [Mysql5Mole, PostgresMole, MssqlMole]
+    dbms_mole_list = [MysqlMole, PostgresMole, MssqlMole]
     
     def __init__(self, threads = 4):
         self.initialized = False
@@ -118,6 +118,7 @@ class TheMole:
                                         sep=self.separator,
                                         com=self.comment,
                                         par=(self.parenthesis * ')'),
+                                        op_par=(self.parenthesis * ')'),
                                         prefix=self.prefix,
                                         end=self.end)
         )
@@ -132,6 +133,8 @@ class TheMole:
         if mode == 'blind':
             if self.initialized and self.separator != ' ':
                 self.end =  ' and {sep}{sep} like {sep}'.format(sep=self.separator)
+            self.comment = ''
+            self.parenthesis = 0
         else:
             self.initialized = False
         self.mode = mode

@@ -41,13 +41,17 @@ class Manager:
         if 'threads' in opt_map:
             threads = int(opt_map['threads'])
         self.mole = themole.TheMole(threads=threads)
-        self.cmd_manager = commands.CommandManager()
-        self.completer   = completion.CompletionManager(self.cmd_manager, self.mole)
+        self.completer   = completion.CompletionManager(cmd_manager, self.mole)
         self.output      = output.PrettyOutputManager()
         if 'url' in opt_map:
-            self.cmd_manager.find('url').execute(self.mole, [opt_map['url']], self.output)
+            try:
+                cmd_manager.find('url').execute(self.mole, [opt_map['url']], self.output)
+            except commands.CommandException as ex:
+                print('[-] Error while setting URL:', ex)
+                self.mole.abort_query()
+                exit(1)
         if 'needle' in opt_map:
-            self.cmd_manager.find('needle').execute(self.mole, [opt_map['needle']], self.output)
+            cmd_manager.find('needle').execute(self.mole, [opt_map['needle']], self.output)
 
     def start(self):
         signal.signal(signal.SIGINT, sigint_handler)
@@ -55,7 +59,7 @@ class Manager:
             try:
                 line = [i for i in input('#> ').strip().split(' ') if len(i) > 0]
                 if len(line) != 0:
-                    cmd = self.cmd_manager.find(line[0])
+                    cmd = cmd_manager.find(line[0])
                     cmd.execute(self.mole, line[1:] if len(line) > 1 else [], self.output)
             except commands.CommandException as ex:
                 print(' Error: ' + ex.message)
@@ -97,6 +101,7 @@ if __name__ == '__main__':
     opt_map = {}
     for i in options:
         opt_map[option_name_mapper[i[0]]] = i[1]
-            
+    
+    builtins.cmd_manager = commands.CommandManager()        
     builtins.manager = Manager(opt_map)
     manager.start()
