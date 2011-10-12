@@ -28,7 +28,8 @@ class DbmsMole():
     field_finger_str = 'The_Mole.F1nger!'
     error_strings = [
                         "Error: Unknown column '(\d+)' in 'order clause'",
-                        "SQLSTATE\[\d+\]"
+                        "SQLSTATE\[\d+\]",
+                        "Warning: pg_exec\(\): Query failed: ERROR:"
                     ]
                     
     error_filters = [
@@ -75,7 +76,7 @@ class DbmsMole():
     @classmethod
     def is_error(cls, data):
         for i in DbmsMole.error_strings:
-            if re.match(i, data):
+            if re.search(i, data):
                 return True
         return False
     
@@ -126,8 +127,9 @@ class DbmsMole():
         return ' and {op_par}' + str(value) + ' ' + operator + ' (select length('+field+') '+table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)+')'
         
     def schema_count_query(self, columns, injectable_field):
-        return self.forge_query(columns, "count(*)", 
-               self._schemas_query_info()['table'], injectable_field, offset=0)
+        info = self._schemas_query_info()
+        return self.forge_query(columns, "count(" + info["field"] + ")", 
+               info['table'], injectable_field, offset=0)
     
     def schema_query(self, columns, injectable_field, offset):
         info = self._schemas_query_info()

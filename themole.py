@@ -87,7 +87,7 @@ class TheMole:
             return
 
         if not self.separator == ' ':
-            self.end = 'and {par}{sep}{sep}like{sep}'.format(sep=self.separator, par=(self.parenthesis * ')'))
+            self.end = 'and {op_par}' + '{sep}{sep} like {sep}'.format(sep=self.separator, par=(self.parenthesis * ')'))
         else:
             self.end = ' '
 
@@ -132,9 +132,9 @@ class TheMole:
                                         sep=self.separator,
                                         com=self.comment,
                                         par=(self.parenthesis * ')'),
-                                        op_par=(self.parenthesis * ')'),
+                                        op_par=(self.parenthesis * '('),
                                         prefix=self.prefix,
-                                        end=self.end)
+                                        end=self.end.format(op_par=(self.parenthesis * '(')))
         )
         if self.verbose == True:
             print('[i] Executing query:',url)
@@ -383,11 +383,14 @@ class TheMole:
             )
             print('\r[+] Guessed length:', length)
             output=''
-            sqli_output = BlindSQLIOutput(length)
             if self.stop_query:
                 return results
+            sqli_output = BlindSQLIOutput(length)
             output = ''.join(self.threader.execute(length, lambda i: self._blind_query_character(query_fun, i, row, sqli_output)))
-            sqli_output.finish()
+            if not self.stop_query:
+                sqli_output.finish()
+            else:
+                print('')
             results.append(output.split(self._dbms_mole.blind_field_delimiter()))
         return results
 
@@ -433,7 +436,7 @@ class TheMole:
                 req = self.get_requester().request(
                     self.generate_url(' order by 1')
                 )
-                if self.analyser.node_content(req) != self._syntax_error_content:
+                if self.analyser.node_content(req) != self._syntax_error_content and not DbmsMole.is_error(self.analyser.decode(req)):
                     comment = com
                     break
             if not comment is None:

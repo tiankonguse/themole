@@ -111,7 +111,6 @@ class MysqlMole(DbmsMole):
                                             MysqlMole.out_delimiter +
                                         ")")
         query += ','.join(query_list)
-        print('Table"', table_name,'"')
         if len(table_name) > 0:
             query += " from " + table_name 
         query += " where " + self.parse_condition(where) + \

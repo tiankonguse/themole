@@ -154,8 +154,8 @@ class SchemasCommand(Command):
         self.check_initialization(mole)
         try:
             schemas = mole.get_databases(self.force_fetch)
-        except themole.QueryError as err:
-            print('[-]', err)
+        except themole.QueryError as ex:
+            print('[-]', ex)
             return
             
         output_manager.begin_sequence(['Databases'])
@@ -177,8 +177,8 @@ class TablesCommand(Command):
         try:
             self.check_initialization(mole)
             tables = mole.get_tables(params[0], self.force_fetch)
-        except themole.QueryError as err:
-            print('[-]', err)
+        except themole.QueryError as ex:
+            print('[-]', ex)
             return
         output_manager.begin_sequence(['Tables'])
         tables.sort()
@@ -206,8 +206,8 @@ class ColumnsCommand(Command):
         try:
             self.check_initialization(mole)
             columns = mole.get_columns(params[0], params[1], force_fetch=self.force_fetch)
-        except themole.QueryError:
-            print('[-]', err)
+        except themole.QueryError as ex:
+            print('[-]', ex)
             return
         output_manager.begin_sequence(['Columns for table ' + params[1]])
         for i in columns:
@@ -240,7 +240,7 @@ class QueryCommand(Command):
             condition = ' '.join(params[4:]) if len(params) > 3 else '1=1'
             result = mole.get_fields(params[0], params[1], params[2].split(','), condition)
         except themole.QueryError as ex:
-            print('[-]', err)
+            print('[-]', ex)
             return
         output_manager.begin_sequence(params[2].split(','))
         for i in result:
