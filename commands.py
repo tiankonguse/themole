@@ -177,13 +177,7 @@ class TablesCommand(Command):
         try:
             self.check_initialization(mole)
             tables = mole.get_tables(params[0], self.force_fetch)
-        except themole.DatabasesNotDumped:
-            print('[-] Databases must be dumped first.')
-            return
-        except themole.DatabaseNotFound:
-            print('[-] Database', params[0], 'does not exist.')
-            return
-        except themole.QueryError:
+        except themole.QueryError as err:
             print('[-]', err)
             return
         output_manager.begin_sequence(['Tables'])
@@ -212,18 +206,6 @@ class ColumnsCommand(Command):
         try:
             self.check_initialization(mole)
             columns = mole.get_columns(params[0], params[1], force_fetch=self.force_fetch)
-        except themole.DatabasesNotDumped:
-            print('[-] Databases must be dumped first.')
-            return
-        except themole.DatabaseNotFound:
-            print('[-] Database', params[0], 'does not exist.')
-            return
-        except themole.TableNotDumped:
-            print('[-] Table not dumped yet.')
-            return
-        except themole.TableNotFound:
-            print('[-] Table', params[1], 'not found.')
-            return
         except themole.QueryError:
             print('[-]', err)
             return
