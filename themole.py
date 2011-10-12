@@ -118,7 +118,8 @@ class TheMole:
                 return
             
             if self._dbms_mole is None:
-                self._detect_dbms()
+                print('[-] Could not detect DBMS.')
+                return
         else:
             self._detect_dbms_blind()
         
@@ -460,7 +461,7 @@ class TheMole:
         )
         while new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
             last *= 2
-            sys.stdout.write('\r[i] Trying length: ' + str(last) + '     ')
+            sys.stdout.write('\r[i] Trying ' + str(last) + ' columns     ')
             sys.stdout.flush()
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
@@ -472,7 +473,7 @@ class TheMole:
         sys.stdout.flush()
         while pri < last:
             medio = ((pri + last) // 2) + ((pri + last) & 1)
-            sys.stdout.write('\r[i] Trying length: ' + str(medio) + '    ')
+            sys.stdout.write('\r[i] Trying ' + str(medio) + ' columns     ')
             sys.stdout.flush()
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
@@ -489,8 +490,9 @@ class TheMole:
     def _find_injectable_field_using(self, dbms_mole):
         base = 714
         fingers = dbms_mole.injectable_field_fingers(self.query_columns, base)
-        for i in fingers:
-            hashes, to_search_hashes = i
+        for finger in fingers:
+            hashes = finger.build_query()
+            to_search_hashes = finger.fingers_to_search()
             hash_string = ",".join(hashes)
             req = self.analyser.decode(self.get_requester().request(
                     self.generate_url(
@@ -501,7 +503,9 @@ class TheMole:
                 self.injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
                 if len(self.injectable_fields) > 0:
                     print("[+] Injectable fields found: [" + ', '.join(map(lambda x: str(x + 1), self.injectable_fields)) + "]")
-                    if self._filter_injectable_fields(dbms_mole):
+                    if self._filter_injectable_fields(dbms_mole, finger):
+                        self._dbms_mole = dbms_mole()
+                        self._dbms_mole.set_good_finger(finger)
                         return True
             except Exception as ex:
                 print(ex)
@@ -510,17 +514,19 @@ class TheMole:
     def _find_injectable_field(self):
         if self._dbms_mole is None:
             for mole in TheMole.dbms_mole_list:
+                print('[i] Trying DBMS', mole.dbms_name())
                 if self._find_injectable_field_using(mole):
+                    print('[+] Found DBMS:', mole.dbms_name())
                     return
         else:
-            if self._find_injectable_field_using(self._dbms_mole):
+            if self._find_injectable_field_using(self._dbms_mole.__class__):
                 return
         raise SQLInjectionNotExploitable()
 
-    def _filter_injectable_fields(self, dbms_mole_class):
+    def _filter_injectable_fields(self, dbms_mole_class, finger):
         for field in self.injectable_fields:
-            print('[i] Trying field', field + 1)
-            query = dbms_mole_class.field_finger_query(self.query_columns, field)
+            print('[i] Trying to inject in field', field + 1)
+            query = dbms_mole_class.field_finger_query(self.query_columns, finger, field)
             url_query = self.generate_url(query)
             req = self.get_requester().request(url_query)
             if dbms_mole_class.field_finger() in self.analyser.decode(req):
@@ -529,20 +535,9 @@ class TheMole:
                 return True
         return False
 
-    def _detect_dbms(self):
-        for dbms_mole_class in TheMole.dbms_mole_list:
-            query = dbms_mole_class.dbms_check_query(self.query_columns, self.injectable_field)
-            url_query = self.generate_url(query)
-            req = self.get_requester().request(url_query)
-            parsed = dbms_mole_class().parse_results(self.analyser.decode(req))
-            if parsed and len(parsed) > 0:
-                self._dbms_mole = dbms_mole_class()
-                print('[+] Found DBMS:', dbms_mole_class.dbms_name())
-                return
-        raise Exception('[-] Could not detect DBMS')
-
     def _detect_dbms_blind(self):
         for dbms_mole_class in TheMole.dbms_mole_list:
+            print('[i] Tyring DBMS', dbms_mole_class.dbms_name())
             query = dbms_mole_class.dbms_check_blind_query()
             url_query = self.generate_url(query)
             req = self.get_requester().request(url_query)

