@@ -57,6 +57,12 @@ class OracleMole(DbmsMole):
             'filter': where
         }
     
+    def _dbinfo_query_info(self):
+        return {
+            'field' : 'user,banner,ora_database_name', 
+            'table' : 'v$version'
+        }
+    
     @classmethod
     def dbms_name(cls):
         return 'Oracle'

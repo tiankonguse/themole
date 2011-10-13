@@ -39,7 +39,7 @@ class TheMole:
     field = '[_SQL_Field_]'
     table = '[_SQL_Table_]'
     
-    dbms_mole_list = [MysqlMole, PostgresMole, MssqlMole, OracleMole]
+    dbms_mole_list = [MysqlMole, MssqlMole, PostgresMole, OracleMole]
     
     def __init__(self, threads = 4):
         self.initialized = False
@@ -182,6 +182,8 @@ class TheMole:
             count = int(result[0])
             if count == 0:
                 return []
+            sys.stdout.write('[+] Row count: ' + str(count) + '\r')
+            sys.stdout.flush()
             dump_result = []
             self.stop_query = False
             dump_result = self.threader.execute(count, lambda i: self._generic_query_item(query_generator, i, result_parser))
