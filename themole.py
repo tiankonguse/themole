@@ -88,7 +88,7 @@ class TheMole:
             return
 
         if not self.separator == ' ':
-            self.end = 'and {op_par}' + '{sep}{sep} like {sep}'.format(sep=self.separator, par=(self.parenthesis * ')'))
+            self.end = 'and {op_par}' + '{sep}1{sep} like {sep}1'.format(sep=self.separator, par=(self.parenthesis * ')'))
         else:
             self.end = ' '
 
@@ -96,7 +96,7 @@ class TheMole:
             try:
                 self._detect_dbms_blind()
             except:
-                pass
+                print('[i] Early DBMS detection failed. Retrying later.')
             
             self.end = ''
             req = self.get_requester().request(
@@ -182,7 +182,7 @@ class TheMole:
             count = int(result[0])
             if count == 0:
                 return []
-            sys.stdout.write('[+] Row count: ' + str(count) + '\r')
+            sys.stdout.write('[+] Rows: ' + str(count) + '\r')
             sys.stdout.flush()
             dump_result = []
             self.stop_query = False
@@ -191,9 +191,6 @@ class TheMole:
             return dump_result
 
     def get_databases(self, force_fetch=False):
-        if not self._dbms_mole.lists_schemas():
-            self.database_dump.add_db(self._dbms_mole.default_schema())
-            raise Exception(self._dbms_mole.dbms_name() + ' does not support schema listing.')
         if not force_fetch and self.database_dump.db_map:
             return list(self.database_dump.db_map.keys())
         if self.mode == 'union':
@@ -402,7 +399,7 @@ class TheMole:
 
     
     def _find_separator(self):
-        separator_list = ['\'', '"', ' ']
+        separator_list = ['\'', '"', ' ', '\0']
         equal_cmp = { '\'' : 'like', '"' : 'like', ' ' : '='}
         separator = None
         for parenthesis in range(0, 3):
@@ -516,6 +513,8 @@ class TheMole:
                         self._dbms_mole = dbms_mole()
                         self._dbms_mole.set_good_finger(finger)
                         return True
+                    else:
+                        print('[i] Failed to inject using these fields.')
             except Exception as ex:
                 print(ex)
         return False
@@ -546,7 +545,7 @@ class TheMole:
 
     def _detect_dbms_blind(self):
         for dbms_mole_class in TheMole.dbms_mole_list:
-            print('[i] Tyring DBMS', dbms_mole_class.dbms_name())
+            print('[i] Trying DBMS', dbms_mole_class.dbms_name())
             query = dbms_mole_class.dbms_check_blind_query()
             url_query = self.generate_url(query)
             req = self.get_requester().request(url_query)

