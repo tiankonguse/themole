@@ -113,8 +113,8 @@ class MysqlMole(DbmsMole):
         query += ','.join(query_list)
         if len(table_name) > 0:
             query += " from " + table_name 
-        query += " where " + self.parse_condition(where) + \
-                 " limit 1 offset " + str(offset) + " "
+            query += " where " + self.parse_condition(where) + \
+                     " limit 1 offset " + str(offset) + " "
         return query
 
     def parse_results(self, url_data):
