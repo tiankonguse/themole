@@ -45,9 +45,9 @@ class DbmsMole():
         for i in DbmsMole.error_filters:
             data = i.sub('', data)
         return data
-    
+        
     @classmethod
-    def dbms_check_query(cls, columns, injectable_field):
+    def dbms_check_blind_queries(cls):
         pass
     
     @classmethod

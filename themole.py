@@ -26,7 +26,7 @@ from domanalyser import DomAnalyser,NeedleNotFound
 from dbmsmoles import DbmsMole
 from mysql import MysqlMole
 from postgres import PostgresMole
-from mssql import MssqlMole
+from sqlserver import SQLServerMole
 from oracle import OracleMole
 from dbdump import DatabaseDump
 from threader import Threader
@@ -39,7 +39,7 @@ class TheMole:
     field = '[_SQL_Field_]'
     table = '[_SQL_Table_]'
     
-    dbms_mole_list = [MysqlMole, MssqlMole, PostgresMole, OracleMole]
+    dbms_mole_list = [MysqlMole, SQLServerMole, PostgresMole, OracleMole]
     
     def __init__(self, threads = 4):
         self.initialized = False

