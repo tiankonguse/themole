@@ -31,6 +31,7 @@ from oracle import OracleMole
 from dbdump import DatabaseDump
 from threader import Threader
 from output import BlindSQLIOutput
+from xmlexporter import XMLExporter
 import sys, time
 
 class TheMole:
@@ -48,7 +49,6 @@ class TheMole:
         self.requester = None
         self.wildcard = None
         self.mode = 'union'
-        self.end = ' '
         self.threader = Threader(threads)
         self.prefix = ''
         self.end = ''
@@ -303,6 +303,11 @@ class TheMole:
             raise QueryError()
         else:
             return data
+
+    def export_xml(self, filename):
+        exporter = XMLExporter()
+        exporter.export(self, self.database_dump.db_map, filename)
+        print("[*] Exportation successful")
 
     def _generic_blind_len(self, count_fun, trying_msg, max_msg):
         length = 0
