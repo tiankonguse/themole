@@ -91,7 +91,21 @@ def help():
     print('   -t THREADS: The amount of threads to run. Defaults to 4.')
     exit(0)
 
+info_string = \
+r"""                     _____ _           ___  ___      _      
+                    |_   _| |          |  \/  |     | |     
+                      | | | |__   ___  | .  . | ___ | | ___ 
+                      | | | '_ \ / _ \ | |\/| |/ _ \| |/ _ \
+                      | | | | | |  __/ | |  | | (_) | |  __/
+                      \_/ |_| |_|\___| \_|  |_/\___/|_|\___|
+
+ Developed by Nasel(http://www.nasel.com.ar).
+ Published under GPLv3. 
+ Be efficient and have fun!
+"""
+
 if __name__ == '__main__':
+    print(info_string)
     options = parse_options()
     option_name_mapper = {
         '-u' : 'url',
