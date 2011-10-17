@@ -103,8 +103,6 @@ class SQLServerMole(DbmsMole):
             hashes = list(map(lambda x: 'null', range(query_columns)))
             to_search = list(map(lambda x: '3rr_NO!', range(query_columns)))
             to_search[i] = str(base + i)
-            hashes[i] = str(base + i)
-            output.append(FingerBase(list(hashes), to_search))
             hashes[i] = DbmsMole.char_concat(str(base + i))
             output.append(FingerBase(hashes, to_search))
         hashes = []
