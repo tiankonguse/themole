@@ -419,6 +419,20 @@ class UsageCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' <on|off>' 
 
+class ExportCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) != 2:
+            raise CommandException('Expected type and filename as parameter')
+        if params[0] not in ['xml']:
+            raise CommandException('Unknown export format.')
+        mole.export_xml(params[1])
+    
+    def parameters(self, mole, current_params):
+        return ['xml'] if len(current_params) == 0 else []
+    
+    def usage(self, cmd_name):
+        return cmd_name + ' <format> <output_filename>' 
+
 class CommandManager:
     def __init__(self):
         self.cmds = { 'find_tables' : BruteforceTablesCommand(),
@@ -428,6 +442,7 @@ class CommandManager:
                       'cookie'   : CookieCommand(),
                       'dbinfo'   : DBInfoCommand(),
                       'exit'     : ExitCommand(),
+                      'export'   : ExportCommand(),
                       'fetch'    : FetchDataCommand(),
                       'mode'     : QueryModeCommand(),
                       'needle'   : NeedleCommand(),

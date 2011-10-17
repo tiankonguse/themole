@@ -50,6 +50,8 @@ class HttpRequester:
     def do_request(self, params):
         params = (t.split('=', 1) for t in params.split('&'))
         params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in params)
+        params = params.replace('union', 'unIOn')
+        params = params.replace('UNION', 'unIOn')
         if self.method == 'GET':
             request = urllib.request.Request(self.url + '?' + params, None, self.headers)
         else:
