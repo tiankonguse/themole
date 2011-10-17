@@ -23,6 +23,37 @@
 
 from xml.dom import minidom
 from base64 import b64encode, b64decode
+import lxml
+
+attribute_types = {
+    'comment'   :   str,
+    'end'       :   str,
+    'mode'      :   str,
+    'needle'    :   str,
+    'parenthesis':  int,
+    'prefix'    :   str,
+    'separator' :   str,
+    'tiemout'   :   float,
+    'url'       :   str,
+    }
+
+dtd = """<!DOCTYPE themole [
+<!ENTITY themole (config, data_schema)>
+<!ENTITY config (attribute+, dbms_mole)>
+<!ENTITY attribute (#PCDATA)>
+<!ATTLIST attribute name CDATA #REQUIRED>
+<!ATTLIST attribute value CDATA #REQUIRED>
+<!ENTITY dbms_mole (#PCDATA)>
+<!ATTLIST dbms_mole type CDATA #REQUIRED>
+<!ENTITY data_schema (schema*)>
+<!ENTITY schema (table*)>
+<!ATTLIST schema name CDATA #REQUIRED>
+<!ENTITY table (column*)>
+<!ATTLIST table name CDATA #REQUIRED>
+<!ENTITY column (#PCDATA)>
+<!ATTLIST column name CDATA #REQUIRED>
+]>
+"""
 
 class XMLExporter:
     
@@ -114,3 +145,40 @@ class XMLExporter:
         f = open(file_name, "w")
         xml_doc.writexml(f, addindent='    ', newl='\n')
         f.close()
+    
+    def load(self, mole_config, schemata, file_name):
+        f = open(filename, "r")
+        xml_string = dtd + f.read()
+        f.close()
+
+        parser = lxml.etree.Parser(dtd_validation = True)
+        root = lxml.etree.fromstring(xml_string, parser)
+
+        config = root[0]
+
+        for attribute in config[:-1]:
+            name = attribute.get('name')
+            value = attribute.get('value')
+            value = b64decode(value.encode()).decode()
+            value = attribute_types[name](value)
+            setattr(mole_config, name, value)
+        
+        dbms_mole_type = config[-1]
+
+        dbms_mole_type = dbms_mole_type.get('type')
+        dbms_mole_class = [c for c in mole_config.dbms_mole_list if c.dbms_name() == dbms_mole_type]
+        if len(dbms_mole_class) == 0:
+            raise Exception('Could not find the dbms_mole indicated in the XML file.')
+        if len(dbms_mole_class) > 1:
+            raise Exception('Too many dbms_moles match the type string. This should never happen :S')
+        mole_config._dbms_mole = dbms_mole_class[0]()
+
+        schemata.clear()
+        data_schema = root[1]
+        for schema in data_schema:
+            table_dict = {}
+            for table in schema:
+                column_list = [col.get('name') for col in table]
+                table_dict[table.get('name')] = column_list
+            schemata[schema.get('name')] = table_dict
+
