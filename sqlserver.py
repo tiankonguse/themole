@@ -49,9 +49,9 @@ class SQLServerMole(DbmsMole):
         
     def _columns_query_info(self, db, table):
         return {
-            'table' : db + '..syscolumns',
-            'field' : 'name',
-            'filter': "id = (select id from {db}..sysobjects where name = '{table}')".format(db=db, table=table)
+            'table' : '{db}..syscolumns,{db}..sysobjects'.format(db=db),
+            'field' : '{db}..syscolumns.name'.format(db=db),
+            'filter': "{db}..syscolumns.id = {db}..sysobjects.id and {db}..sysobjects.name = '{table}'".format(db=db, table=table)
         }
 
     def _fields_query_info(self, fields, db, table, where):

