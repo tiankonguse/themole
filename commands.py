@@ -304,13 +304,14 @@ class BruteforceTablesCommand(Command):
 
 class BruteforceUserTableCommand(Command):
     def execute(self, mole, params, output_manager):
+        self.check_initialization(mole)
         if len(params) == 0:
             raise CommandException("DB name expected as argument.")
         else:
             mole.brute_force_users_tables(params[0])
 
     def usage(self, cmd_name):
-        return cmd_name + ' [TIMEOUT]'
+        return cmd_name + ' <SCHEMA>'
 
 class ExitCommand(Command):
     def execute(self, mole, params, output_manager):
