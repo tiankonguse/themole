@@ -468,6 +468,19 @@ class ImportCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' <format> <input_filename>'
 
+
+class ReadFileCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) != 1:
+            raise CommandException('Expected filename as parameter')
+        mole.read_file(params[0])
+
+    def parameters(self, mole, current_params):
+        return []
+
+    def usage(self, cmd_name):
+        return cmd_name + ' <filename>'
+
 class CommandManager:
     def __init__(self):
         self.cmds = { 'find_tables' : BruteforceTablesCommand(),
@@ -486,6 +499,7 @@ class CommandManager:
                       'output'   : OutputCommand(),
                       'prefix'   : PrefixCommand(),
                       'query'    : QueryCommand(),
+                      'readfile' : ReadCommand(),
                       'schemas'  : SchemasCommand(),
                       'suffix'   : SuffixCommand(),
                       'tables'   : TablesCommand(),

@@ -343,6 +343,15 @@ class TheMole:
             )
         return data
 
+    def read_file(self, filename):
+        data = self._generic_query(
+                1, 
+                lambda x: self._dbms_mole.read_file_query(
+                    filename, self.query_columns, self.injectable_field
+                ),
+            )
+        return data
+
     def brute_force_tables(self, db, table_list):
         for table in table_list:
             print('[i] Trying table', table)
@@ -364,7 +373,7 @@ class TheMole:
 
     def brute_force_users_tables(self, db):
         self.brute_force_tables(db, TheMole.users_tables)
-
+    
 
     def set_url(self, url):
         if not '?' in url:

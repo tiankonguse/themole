@@ -71,6 +71,12 @@ class MysqlMole(DbmsMole):
             'table' : ''
         }
     
+    def _read_file_query_info(self, filename):
+        return {
+            'field' : 'load_file({filename})'.format(filename=DbmsMole.to_hex(filename)),
+            'table' : '',
+        }
+    
     def _concat_fields(self, fields):
         return 'CONCAT_WS(' + MysqlMole.inner_delimiter + ',' + ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)) + ')'
     
