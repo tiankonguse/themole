@@ -285,6 +285,28 @@ class DBInfoCommand(Command):
     def parameters(self, mole, current_params):
         return []
 
+class BruteforceTablesCommand(Command):
+    def execute(self, mole, params, output_manager):
+        self.check_initialization(mole)
+        if len(params) < 2:
+            raise CommandException("DB name and table names to bruteforce required.")
+        else:
+            mole.brute_force_tables(params[0], params[1:])
+
+    def usage(self, cmd_name):
+        return cmd_name + ' DB TABLE1 [TABLE2 [...]]'
+
+class BruteforceUserTableCommand(Command):
+    def execute(self, mole, params, output_manager):
+        self.check_initialization(mole)
+        if len(params) == 0:
+            raise CommandException("DB name expected as argument.")
+        else:
+            mole.brute_force_users_tables(params[0])
+
+    def usage(self, cmd_name):
+        return cmd_name + ' <SCHEMA>'
+
 class ExitCommand(Command):
     def execute(self, mole, params, output_manager):
         mole.abort_query()
@@ -359,7 +381,6 @@ class VerboseCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' <on|off>'
 
-
 class OutputCommand(Command):
     def execute(self, mole, params, output_manager):
         if len(params) != 1:
@@ -423,7 +444,9 @@ class ImportCommand(Command):
 
 class CommandManager:
     def __init__(self):
-        self.cmds = { 'clear'    : ClearScreenCommand(),
+        self.cmds = { 'find_tables' : BruteforceTablesCommand(),
+                      'find_users_table'  : BruteforceUserTableCommand(),
+                      'clear'    : ClearScreenCommand(),
                       'columns'  : ColumnsCommand(),
                       'cookie'   : CookieCommand(),
                       'dbinfo'   : DBInfoCommand(),
