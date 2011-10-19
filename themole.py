@@ -33,7 +33,7 @@ from threader import Threader
 from output import BlindSQLIOutput
 from xmlexporter import XMLExporter
 import connection
-import sys, time
+import time
 
 class TheMole:
 
@@ -207,8 +207,7 @@ class TheMole:
             count = int(result[0])
             if count == 0:
                 return []
-            sys.stdout.write('[+] Rows: ' + str(count) + '\r')
-            sys.stdout.flush()
+            print('\r[+] Rows: ' + str(count), end='')
             dump_result = []
             self.stop_query = False
             dump_result = self.threader.execute(count, lambda i: self._generic_query_item(query_generator, i, result_parser))
@@ -423,6 +422,15 @@ class TheMole:
             )
         return data
 
+    def read_file(self, filename):
+        data = self._generic_query(
+                1, 
+                lambda x: self._dbms_mole.read_file_query(
+                    filename, self.query_columns, self.injectable_field
+                ),
+            )
+        return data
+
     def brute_force_tables(self, db, table_list):
         for table in table_list:
             print('[i] Trying table', table)
@@ -444,7 +452,7 @@ class TheMole:
 
     def brute_force_users_tables(self, db):
         self.brute_force_tables(db, TheMole.users_tables)
-
+    
 
     def set_url(self, url):
         if not '?' in url:
@@ -482,13 +490,11 @@ class TheMole:
                     count_fun('>', last)
                 )
             )
-            sys.stdout.write(trying_msg(last))
-            sys.stdout.flush()
+            print(trying_msg(last), end='')
             if self.needle in self.analyser.decode(req):
                 break;
             last *= 2
-        sys.stdout.write(max_msg(str(last)))
-        sys.stdout.flush()
+        print(max_msg(str(last)), end='')
         pri = last // 2
         while pri < last:
             if self.stop_query:
@@ -636,20 +642,17 @@ class TheMole:
         )
         while new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
             last *= 2
-            sys.stdout.write('\r[i] Trying ' + str(last) + ' columns     ')
-            sys.stdout.flush()
+            print('\r[i] Trying ' + str(last) + ' columns     ', end='')
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
                     self.generate_url(' order by %d ' % (last,))
                 )
             )
         pri = last // 2
-        sys.stdout.write('\r[i] Maximum length: ' + str(last) + '     ')
-        sys.stdout.flush()
+        print('\r[i] Maximum length: ' + str(last) + '     ', end='')
         while pri < last:
             medio = ((pri + last) // 2) + ((pri + last) & 1)
-            sys.stdout.write('\r[i] Trying ' + str(medio) + ' columns     ')
-            sys.stdout.flush()
+            print('\r[i] Trying ' + str(medio) + ' columns     ', end='')
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
                     self.generate_url(' order by %d ' % (medio,))

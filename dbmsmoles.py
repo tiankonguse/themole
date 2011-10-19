@@ -400,6 +400,11 @@ class DbmsMole():
         return self.forge_blind_query(
             index, value, self._concat_fields(info['field'].split(',')), info['table']
         )
+        
+    def read_file_query(self, filename, columns, injectable_field):
+        info = self._read_file_query_info()
+        return self.forge_query(columns, info['field'], 
+               info['table'], injectable_field)
 
 
 class FingerBase:
