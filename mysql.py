@@ -212,7 +212,7 @@ class MysqlMole(DbmsMole):
         if not self.finger or self.finger.is_string_query:
             return data.split(MysqlMole.inner_delimiter_result)
         else:
-            return data
+            return data.split(MysqlMole.inner_delimiter_result)
     
     def is_string_query(self):
         return self.finger.is_string_query
