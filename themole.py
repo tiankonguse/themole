@@ -78,6 +78,7 @@ class TheMole:
         self.comment = ''
         self.parenthesis = 0
         self._dbms_mole = None
+        self.stop_query = False
         self.database_dump = DatabaseDump()
 
     def restart(self):
@@ -386,7 +387,6 @@ class TheMole:
                       )
                 data = self._dbms_mole.parse_results(self.analyser.decode(req))
             else:
-                self.stop_query = False
                 length = self._dbms_mole.parse_results(self.analyser.decode(self.requester.request(
                             self.generate_url(self._dbms_mole.dbinfo_integer_len_query(self.query_columns, self.injectable_field))
                          )))
@@ -423,12 +423,9 @@ class TheMole:
         return data
 
     def read_file(self, filename):
-        data = self._generic_query(
-                1, 
-                lambda x: self._dbms_mole.read_file_query(
-                    filename, self.query_columns, self.injectable_field
-                ),
-            )
+        data = self._generic_query_item(
+                    lambda x: self._dbms_mole.read_file_query(filename, self.query_columns, self.injectable_field), 0, lambda x: ''.join(x)
+                )
         return data
 
     def brute_force_tables(self, db, table_list):
@@ -452,7 +449,6 @@ class TheMole:
 
     def brute_force_users_tables(self, db):
         self.brute_force_tables(db, TheMole.users_tables)
-    
 
     def set_url(self, url):
         if not '?' in url:

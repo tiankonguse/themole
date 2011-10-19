@@ -472,9 +472,10 @@ class ImportCommand(Command):
 
 class ReadFileCommand(Command):
     def execute(self, mole, params, output_manager):
+        self.check_initialization(mole)
         if len(params) != 1:
             raise CommandException('Expected filename as parameter')
-        mole.read_file(params[0])
+        print(mole.read_file(params[0]))
 
     def parameters(self, mole, current_params):
         return []

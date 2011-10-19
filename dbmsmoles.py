@@ -402,7 +402,7 @@ class DbmsMole():
         )
         
     def read_file_query(self, filename, columns, injectable_field):
-        info = self._read_file_query_info()
+        info = self._read_file_query_info(filename)
         return self.forge_query(columns, info['field'], 
                info['table'], injectable_field)
 
