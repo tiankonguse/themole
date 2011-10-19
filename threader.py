@@ -60,8 +60,8 @@ class Threader:
                     if result is None:
                         break
                     data.append(result)
-            except:
-                pass
+            except Exception as ex:
+                raise ex
             self.results[index] = data
             self.task_end_lock.acquire()
             self.finished = self.finished + 1

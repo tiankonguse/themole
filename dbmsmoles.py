@@ -88,6 +88,9 @@ class DbmsMole():
     def field_finger_trailer(cls):
         return ''
     
+    def is_string_query(self):
+        return True
+    
     # Parses a "where condition", replacing strings within
     # single quotes(') for their representation in the current DBMS.
     def parse_condition(self, condition):
@@ -202,6 +205,108 @@ class DbmsMole():
                     offset=offset
                )
                
+    def dbinfo_query(self, columns, injectable_field):
+        info = self._dbinfo_query_info()
+        return self.forge_query(columns, info['field'], 
+               info['table'], injectable_field, offset=0)
+    
+    # Integer queries
+    
+    def schema_integer_count_query(self, columns, injectable_field):
+        info = self._schemas_query_info()
+        return self.forge_integer_count_query(columns, info["field"], 
+               info['table'], injectable_field)
+    
+    def schema_integer_len_query(self, columns, injectable_field, offset):
+        info = self._schemas_query_info()
+        return self.forge_integer_len_query(columns, info["field"], 
+               info['table'], injectable_field, offset=offset)
+    
+    def schema_integer_query(self, index, columns, injectable_field, offset):
+        info = self._schemas_query_info()
+        return self.forge_integer_query(columns, index, info['field'], 
+               info['table'], injectable_field, offset=offset)
+    
+    def table_integer_count_query(self, db, columns, injectable_field):
+        info = self._tables_query_info(db)
+        return self.forge_integer_count_query(columns, info["field"], 
+                    info['table'], injectable_field,
+                    info['filter'],
+               )
+
+    def table_integer_len_query(self, db, columns, injectable_field, offset):
+        info = self._tables_query_info(db)
+        return self.forge_integer_len_query(columns, info['field'], 
+                    info['table'], injectable_field,
+                    info['filter'], offset=offset
+               )
+
+    def table_integer_query(self, index, db, columns, injectable_field, offset):
+        info = self._tables_query_info(db)
+        return self.forge_integer_query(columns, index, info['field'], 
+                    info['table'], injectable_field,
+                    info['filter'], offset=offset
+               )
+               
+    def columns_integer_count_query(self, db, table, columns, injectable_field):
+        info = self._columns_query_info(db, table)
+        return self.forge_integer_count_query(columns, info["field"], 
+                    info['table'], injectable_field,
+                    where=info['filter']
+               )
+
+    def columns_integer_query(self, index, db, table, columns, injectable_field, offset):
+        info = self._columns_query_info(db, table)
+        return self.forge_integer_query(columns, index, info['field'], 
+                    info['table'], injectable_field,
+                    where=info['filter'],
+                    offset=offset
+               )
+
+    def columns_integer_len_query(self, db, table, columns, injectable_field, offset):
+        info = self._columns_query_info(db, table)
+        return self.forge_integer_len_query(columns, info['field'], 
+                    info['table'], injectable_field,
+                    where=info['filter'],
+                    offset=offset
+               )
+
+    def fields_integer_count_query(self, db, table, columns, injectable_field, where="1=1"):
+        info = self._fields_query_info([], db, table, where)
+        return self.forge_integer_count_query(columns, '*', 
+                    info['table'], injectable_field,
+                    where=info['filter']
+               )
+
+    def fields_integer_query(self, index, db, table, fields, columns, injectable_field, offset, where="1=1"):
+        info = self._fields_query_info(fields, db, table, where)
+        return self.forge_integer_query(columns, index, info['field'], 
+                    info['table'], injectable_field,
+                    where=info['filter'], 
+                    offset=offset
+               )
+               
+    def fields_integer_len_query(self, db, table, fields, columns, injectable_field, offset, where="1=1"):
+        info = self._fields_query_info(fields, db, table, where)
+        return self.forge_integer_len_query(columns, info['field'], 
+                    info['table'], injectable_field,
+                    where=info['filter'], 
+                    offset=offset
+               )
+
+    def dbinfo_integer_query(self, index, columns, injectable_field):
+        info = self._dbinfo_query_info()
+        return self.forge_integer_query(columns, index, info['field'], 
+               info['table'], injectable_field, offset=0)
+
+    def dbinfo_integer_len_query(self, columns, injectable_field):
+        info = self._dbinfo_query_info()
+        return self.forge_integer_len_query(columns, info['field'], 
+               info['table'], injectable_field, offset=0)
+
+    # Blind queries
+    
+    
     def schema_blind_count_query(self, operator, value):
         info = self._schemas_query_info()
         return self.forge_blind_count_query(
@@ -283,11 +388,6 @@ class DbmsMole():
             index, value, self._concat_fields(fields), 
             info['table'], offset=offset, where=info['filter']
         )
-        
-    def dbinfo_query(self, columns, injectable_field):
-        info = self._dbinfo_query_info()
-        return self.forge_query(columns, info['field'], 
-               info['table'], injectable_field, offset=0)
 
     def dbinfo_blind_len_query(self, operator, value):
         info = self._dbinfo_query_info()

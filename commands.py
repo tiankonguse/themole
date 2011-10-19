@@ -152,6 +152,7 @@ class SchemasCommand(Command):
             print('[-]', ex)
             return
         except Exception as ex:
+            raise ex
             print('[-]', str(ex))
             return
 
