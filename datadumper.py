@@ -3,36 +3,36 @@ from output import BlindSQLIOutput
 
 class BlindDataDumper:
 
-    def get_databases(self, mole, column_count, injectable_field):
+    def get_databases(self, mole, query_columns, injectable_field):
         count_fun = lambda x,y: mole._dbms_mole.schema_blind_count_query(x, y)
         length_fun = lambda x: lambda y,z: mole._dbms_mole.schema_blind_len_query(y, z, offset=x)
         query_fun = lambda x,y,z: mole._dbms_mole.schema_blind_data_query(x, y, offset=z)
         data = self._blind_query(mole, count_fun, length_fun, query_fun)
         return list(map(lambda x: x[0], data))
 
-    def get_tables(self, mole, db, column_count, injectable_field):
+    def get_tables(self, mole, db, query_columns, injectable_field):
         count_fun = lambda x,y: mole._dbms_mole.table_blind_count_query(x, y, db=db)
-        length_fun = lambda x: lambda y,z: mole._dbms_mole.table_blind_len_query(y, z, db=db, offset=x),
+        length_fun = lambda x: lambda y,z: mole._dbms_mole.table_blind_len_query(y, z, db=db, offset=x)
         query_fun = lambda x,y,z: mole._dbms_mole.table_blind_data_query(x, y, db=db, offset=z)
         data = self._blind_query(mole, count_fun, length_fun, query_fun)
         return list(map(lambda x: x[0], data))
 
-    def get_columns(self, mole, db, table, column_count, injectable_field):
-        count_fun = lambda x,y: mole._dbms_mole.columns_blind_count_query(x, y, db=db, table=table),
+    def get_columns(self, mole, db, table, query_columns, injectable_field):
+        count_fun = lambda x,y: mole._dbms_mole.columns_blind_count_query(x, y, db=db, table=table)
         length_fun = lambda x: lambda y,z: mole._dbms_mole.columns_blind_len_query(y, z, db=db, table=table, offset=x)
         query_fun = lambda x,y,z: mole._dbms_mole.columns_blind_data_query(x, y, db=db, table=table, offset=z)
         data = self._blind_query(mole, count_fun, length_fun, query_fun)
         return list(map(lambda x: x[0], data))
 
-    def get_fields(self, mole, db, table, fields, where, column_count, injectable_field):
-        count_fun = lambda x,y: mole._dbms_mole.fields_blind_count_query(x, y, db=db, table=table, where=where),
+    def get_fields(self, mole, db, table, fields, where, query_columns, injectable_field):
+        count_fun = lambda x,y: mole._dbms_mole.fields_blind_count_query(x, y, db=db, table=table, where=where)
         length_fun = lambda x: lambda y,z: mole._dbms_mole.fields_blind_len_query(y, z, fields=fields, db=db, table=table, offset=x, where=where)
         query_fun = lambda x,y,z: mole._dbms_mole.fields_blind_data_query(x, y, fields=fields, db=db, table=table, offset=z, where=where)
         return self._blind_query(mole, count_fun, length_fun, query_fun)
 
     def get_dbinfo(self, mole, query_columns, injectable_field):
         count_fun = None
-        length_fun = lambda x: lambda y,z: mole._dbms_mole.dbinfo_blind_len_query(y, z),
+        length_fun = lambda x: lambda y,z: mole._dbms_mole.dbinfo_blind_len_query(y, z)
         query_fun = lambda x,y,z: mole._dbms_mole.dbinfo_blind_data_query(x, y)
 
         data = self._blind_query(mole, count_fun, length_fun, query_fun, row_count=1)
@@ -138,22 +138,22 @@ class BlindDataDumper:
 
 class StringUnionDataDumper:
 
-    def get_databases(self, mole, column_count, injectable_field):
+    def get_databases(self, mole, query_columns, injectable_field):
         count_query = mole._dbms_mole.schema_count_query(query_columns, injectable_field)
         query_gen =  lambda x: mole._dbms_mole.schema_query(query_columns, injectable_field, x)
         return self._generic_query(mole, count_query, query_gen)
 
-    def get_tables(self, mole, db, column_count, injectable_field):
-        count_query = mole._dbms_mole.table_count_query(db, column_count, injectable_field)
+    def get_tables(self, mole, db, query_columns, injectable_field):
+        count_query = mole._dbms_mole.table_count_query(db, query_columns, injectable_field)
         query_gen = lambda x: mole._dbms_mole.table_query(db, query_columns, injectable_field, x)
         return self._generic_query(mole, count_query, query_gen)
 
-    def get_columns(self, mole, db, table, column_count, injectable_field):
+    def get_columns(self, mole, db, table, query_columns, injectable_field):
         count_query = mole._dbms_mole.columns_count_query(db, table, query_columns, injectable_field)
         query_gen = lambda x: mole._dbms_mole.columns_query(db, table, query_columns, injectable_field, x)
         return self._generic_query(mole, count_query, query_gen)
 
-    def get_fields(self, mole, db, table, fields, where, column_count, injectable_field):
+    def get_fields(self, mole, db, table, fields, where, query_columns, injectable_field):
         count_query = mole._dbms_mole.fields_count_query(db, table, query_columns, injectable_field, where=where)
         query_gen = lambda x: mole._dbms_mole.fields_query(db, table, fields, query_columns, injectable_field, x, where=where)
         return self._generic_query(mole, count_query, query_gen, lambda x: x)
@@ -207,7 +207,7 @@ class StringUnionDataDumper:
 
 class IntegerUnionDataDumper:
 
-    def get_databases(self, mole, column_count, injectable_field):
+    def get_databases(self, mole, query_columns, injectable_field):
         count_query = mole._dbms_mole.schema_integer_count_query(query_columns,
                                                                  injectable_field)
         length_query = lambda x: mole._dbms_mole.schema_integer_len_query(query_columns,
@@ -219,7 +219,7 @@ class IntegerUnionDataDumper:
                                                                                offset=offset)
         return self._generic_integer_query(mole, count_query, length_query, query_gen)
 
-    def get_tables(self, mole, db, column_count, injectable_field):
+    def get_tables(self, mole, db, query_columns, injectable_field):
         count_query = mole._dbms_mole.table_integer_count_query(db,
                                                                 query_columns,
                                                                 injectable_field)
@@ -234,7 +234,7 @@ class IntegerUnionDataDumper:
                                                                               offset=offset)
         return self._generic_integer_query(mole, count_query, length_query, query_gen)
 
-    def get_tables(self, mole, db, table, column_count, injectable_field):
+    def get_tables(self, mole, db, table, query_columns, injectable_field):
         count_query = mole._dbms_mole.columns_integer_count_query(db,
                                                                   table,
                                                                   query_columns,
@@ -252,7 +252,7 @@ class IntegerUnionDataDumper:
                                                                                 offset=offset)
         return self._generic_integer_query(mole, count_query, length_query, query_gen)
 
-    def get_fields(self, mole, db, table, fields, where, column_count, injectable_field):
+    def get_fields(self, mole, db, table, fields, where, query_columns, injectable_field):
         count_query = mole._dbms_mole.fields_integer_count_query(db,
                                                                  table,
                                                                  query_columns,
@@ -265,7 +265,7 @@ class IntegerUnionDataDumper:
                                                                           injectable_field,
                                                                           offset=x,
                                                                           where=where)
-        query_gen = lambda index, offset: mole._dbms_mole.fields_integer_query(index
+        query_gen = lambda index, offset: mole._dbms_mole.fields_integer_query(index,
                                                                                db,
                                                                                table,
                                                                                fields,
