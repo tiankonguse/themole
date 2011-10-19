@@ -152,6 +152,7 @@ class SchemasCommand(Command):
             print('[-]', ex)
             return
         except Exception as ex:
+            raise ex
             print('[-]', str(ex))
             return
 
@@ -186,6 +187,32 @@ class TablesCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' <SCHEMA>'
 
+    def parameters(self, mole, current_params):
+        if len(current_params) == 0:
+            schemas = mole.poll_databases()
+            return schemas if schemas else []
+        else:
+            return []
+            
+class FindTablesLikeCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) != 2:
+            raise CommandException('Database and table filter required.')
+        try:
+            self.check_initialization(mole)
+            tables = mole.find_tables_like(params[0], "'"  + ' '.join(params[1:]) + "'")
+        except themole.QueryError as ex:
+            print('[-]', ex)
+            return
+        output_manager.begin_sequence(['Tables'])
+        tables.sort()
+        for i in tables:
+            output_manager.put([i])
+        output_manager.end_sequence()
+    
+    def usage(self, cmd_name):
+        return cmd_name + ' <SCHEMA> <FILTER>'
+        
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
             schemas = mole.poll_databases()
@@ -442,9 +469,24 @@ class ImportCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' <format> <input_filename>'
 
+
+class ReadFileCommand(Command):
+    def execute(self, mole, params, output_manager):
+        self.check_initialization(mole)
+        if len(params) != 1:
+            raise CommandException('Expected filename as parameter')
+        print(mole.read_file(params[0]))
+
+    def parameters(self, mole, current_params):
+        return []
+
+    def usage(self, cmd_name):
+        return cmd_name + ' <filename>'
+
 class CommandManager:
     def __init__(self):
         self.cmds = { 'find_tables' : BruteforceTablesCommand(),
+                      'find_tables_like' : FindTablesLikeCommand(),
                       'find_users_table'  : BruteforceUserTableCommand(),
                       'clear'    : ClearScreenCommand(),
                       'columns'  : ColumnsCommand(),
@@ -459,6 +501,7 @@ class CommandManager:
                       'output'   : OutputCommand(),
                       'prefix'   : PrefixCommand(),
                       'query'    : QueryCommand(),
+                      'readfile' : ReadFileCommand(),
                       'schemas'  : SchemasCommand(),
                       'suffix'   : SuffixCommand(),
                       'tables'   : TablesCommand(),
