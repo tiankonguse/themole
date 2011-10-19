@@ -408,9 +408,10 @@ class DbmsMole():
 
 
 class FingerBase:
-    def __init__(self, query, to_search):
+    def __init__(self, query, to_search, is_string_query = True):
         self._query = query
         self._to_search = to_search
+        self.is_string_query = is_string_query
     
     def build_query(self):
         return self._query

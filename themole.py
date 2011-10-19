@@ -570,7 +570,7 @@ class TheMole:
 
 
     def _find_separator(self):
-        separator_list = ['\'', '"', ' ', '\0']
+        separator_list = ['\'', '"', ' ']
         equal_cmp = { '\'' : 'like', '"' : 'like', ' ' : '='}
         separator = None
         for parenthesis in range(0, 3):

@@ -34,6 +34,8 @@ class MysqlMole(DbmsMole):
     integer_out_delimiter = '3133707'
     integer_inner_delimiter = '0x3e3c'
     
+    def __init__(self):
+        self.finger = None
 
     @classmethod
     def to_string(cls, data):
@@ -60,7 +62,7 @@ class MysqlMole(DbmsMole):
         }
         
     def _fields_query_info(self, fields, db, table, where):
-        if self.finger.is_string_query:
+        if not self.finger or self.finger.is_string_query:
             return {
                 'table' : db + '.' + table,
                 'field' : ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)),
@@ -74,7 +76,7 @@ class MysqlMole(DbmsMole):
             }
         
     def _dbinfo_query_info(self):
-        if self.finger.is_string_query:
+        if not self.finger or self.finger.is_string_query:
             return {
                 'field' : 'user(),version(),database()', 
                 'table' : ''
@@ -92,7 +94,7 @@ class MysqlMole(DbmsMole):
         }
     
     def _concat_fields(self, fields):
-        if self.finger.is_string_query:
+        if not self.finger or self.finger.is_string_query:
             return 'CONCAT_WS(' + MysqlMole.inner_delimiter + ',' + ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)) + ')'
         else:
             return 'CONCAT_WS(' + MysqlMole.integer_inner_delimiter + ',' + ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)) + ')'
@@ -106,7 +108,7 @@ class MysqlMole(DbmsMole):
             hashes_str.append(DbmsMole.to_hex(str(base + i)))
             hashes_int.append(str(base + i))
             to_search.append(str(base + i))
-        return [MysqlFinger(hashes_str, to_search, True), MysqlFinger(hashes_int, to_search, False)]
+        return [FingerBase(hashes_str, to_search, True), FingerBase(hashes_int, to_search, False)]
     
     @classmethod
     def dbms_name(cls):
@@ -200,14 +202,14 @@ class MysqlMole(DbmsMole):
         self.finger = finger
 
     def parse_results(self, url_data):
-        if self.finger.is_string_query:
+        if not self.finger or self.finger.is_string_query:
             data_list = url_data.split(MysqlMole.out_delimiter_result)
         else:
             data_list = url_data.split(MysqlMole.integer_out_delimiter)
         if len(data_list) < 3:
             return None
         data = data_list[1]
-        if self.finger.is_string_query:
+        if not self.finger or self.finger.is_string_query:
             return data.split(MysqlMole.inner_delimiter_result)
         else:
             return data
@@ -217,9 +219,3 @@ class MysqlMole(DbmsMole):
     
     def __str__(self):
         return "Mysql Mole"
-
-
-class MysqlFinger(FingerBase):
-    def __init__(self, query, to_search, is_string_query):
-        FingerBase.__init__(self, query, to_search)
-        self.is_string_query = is_string_query
