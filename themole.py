@@ -33,7 +33,7 @@ from threader import Threader
 from output import BlindSQLIOutput
 from xmlexporter import XMLExporter
 import connection
-import time
+import time,sys
 
 class TheMole:
 
@@ -223,7 +223,7 @@ class TheMole:
         if not result or len(result) < 1:
             raise QueryError()
         else:
-            result = chr(int(result))
+            result = chr(int(result[0]))
             sqli_output.set(result, index)
             return result
 
@@ -233,7 +233,7 @@ class TheMole:
         if not result:
             raise QueryError('Count query failed.')
         else:
-            count = int(result)
+            count = int(result[0])
             if count == 0:
                 return []
             sys.stdout.write('[+] Rows: ' + str(count) + '\r')
@@ -242,7 +242,7 @@ class TheMole:
             self.stop_query = False
             for i in range(count):
                 length = self._dbms_mole.parse_results(self.analyser.decode(self.requester.request(self.generate_url(length_query(i)))))
-                length = int(length)
+                length = int(length[0])
                 sqli_output = BlindSQLIOutput(length)
                 dump_result.append(''.join(self.threader.execute(length, lambda x: self._generic_integer_query_item(query_generator, x, i, sqli_output))))
                 if not self.stop_query:
