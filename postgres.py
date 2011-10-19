@@ -111,6 +111,8 @@ class PostgresMole(DbmsMole):
         return self.finger.is_string_query
     
     def forge_count_query(self, column_count, fields, table_name, injectable_field, where = None):
+        if not self.finger is None and not self.finger.is_string_query:
+            return self.forge_integer_count_query(column_count, fields, table_name, injectable_field, where)
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.query)
         query_list[injectable_field] = ("(" + PostgresMole.out_delimiter + "||COUNT(" + fields + ")||" + PostgresMole.out_delimiter + ")")
