@@ -151,8 +151,6 @@ class XMLExporter:
         xml_string = '<?xml version="1.0" ?>' + dtd + f.read().replace('<?xml version="1.0" ?>', '')
         f.close()
 
-        print(xml_string)
-
         parser = etree.XMLParser(dtd_validation = True)
         root = etree.fromstring(xml_string, parser)
 
