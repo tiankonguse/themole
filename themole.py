@@ -369,15 +369,24 @@ class TheMole:
             return ''
 
     def export_xml(self, filename):
+        if not self.initialized:
+            print("[-] Cannot export if mole isn't initialized")
+            return
         exporter = XMLExporter()
-        exporter.export(self, self.database_dump.db_map, filename)
-        print("[*] Exportation successful")
+        try:
+            exporter.export(self, self.database_dump.db_map, filename)
+            print("[+] Exportation successful")
+        except Exception:
+            print("[-] Exportation NOT successful")
 
     def import_xml(self, filename):
         exporter = XMLExporter()
-        exporter.load(self, self.database_dump.db_map, filename)
-        self.initialized = True
-        print("[*] Importation successful")
+        try:
+            exporter.load(self, self.database_dump.db_map, filename)
+            self.initialized = True
+            print("[+] Importation successful")
+        except Exception:
+            print("[-] Importation NOT successful")
 
     def _generic_blind_len(self, count_fun, trying_msg, max_msg):
         length = 0
