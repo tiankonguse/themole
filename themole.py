@@ -33,7 +33,7 @@ from threader import Threader
 from output import BlindSQLIOutput
 from xmlexporter import XMLExporter
 import connection
-import sys, time
+import time
 
 class TheMole:
 
@@ -207,8 +207,7 @@ class TheMole:
             count = int(result[0])
             if count == 0:
                 return []
-            sys.stdout.write('[+] Rows: ' + str(count) + '\r')
-            sys.stdout.flush()
+            print('\r[+] Rows: ' + str(count), end='')
             dump_result = []
             self.stop_query = False
             if not is_integer_query:
@@ -411,13 +410,11 @@ class TheMole:
                     count_fun('>', last)
                 )
             )
-            sys.stdout.write(trying_msg(last))
-            sys.stdout.flush()
+            print(trying_msg(last), end='')
             if self.needle in self.analyser.decode(req):
                 break;
             last *= 2
-        sys.stdout.write(max_msg(str(last)))
-        sys.stdout.flush()
+        print(max_msg(str(last)), end='')
         pri = last // 2
         while pri < last:
 
@@ -566,20 +563,17 @@ class TheMole:
         )
         while new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
             last *= 2
-            sys.stdout.write('\r[i] Trying ' + str(last) + ' columns     ')
-            sys.stdout.flush()
+            print('\r[i] Trying ' + str(last) + ' columns     ', end='')
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
                     self.generate_url(' order by %d ' % (last,))
                 )
             )
         pri = last // 2
-        sys.stdout.write('\r[i] Maximum length: ' + str(last) + '     ')
-        sys.stdout.flush()
+        print('\r[i] Maximum length: ' + str(last) + '     ', end='')
         while pri < last:
             medio = ((pri + last) // 2) + ((pri + last) & 1)
-            sys.stdout.write('\r[i] Trying ' + str(medio) + ' columns     ')
-            sys.stdout.flush()
+            print('\r[i] Trying ' + str(medio) + ' columns     ', end='')
             new_needle_content = self.analyser.node_content(
                 self.get_requester().request(
                     self.generate_url(' order by %d ' % (medio,))

@@ -499,7 +499,7 @@ class CommandManager:
                       'output'   : OutputCommand(),
                       'prefix'   : PrefixCommand(),
                       'query'    : QueryCommand(),
-                      'readfile' : ReadCommand(),
+                      'readfile' : ReadFileCommand(),
                       'schemas'  : SchemasCommand(),
                       'suffix'   : SuffixCommand(),
                       'tables'   : TablesCommand(),
