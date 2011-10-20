@@ -23,11 +23,7 @@
 # Gastón Traberg
 
 from domanalyser import DomAnalyser,NeedleNotFound
-from dbmsmoles import DbmsMole
-from mysql import MysqlMole
-from postgres import PostgresMole
-from sqlserver import SQLServerMole
-from oracle import OracleMole
+from dbmsmoles import DbmsMole, MysqlMole, PostgresMole, SQLServerMole, OracleMole
 from dbdump import DatabaseDump
 from threader import Threader
 from output import BlindSQLIOutput
@@ -103,11 +99,17 @@ class TheMole:
             raise MoleAttributeRequired('Attribute wildcard is required')
         if not self.needle:
             raise MoleAttributeRequired('Attribute needle is required')
+
+        self.query_columns = None
+        self.injectable_field = None
         self.separator = ''
         self.comment = ''
+        self.prefix = ''
+        self.end = ''
         self.parenthesis = 0
         self._dbms_mole = None
         self.database_dump = DatabaseDump()
+
         injection_inspector = InjectionInspector()
 
         original_request = self.requester.request(self.url.replace(self.wildcard, self.prefix))
@@ -119,7 +121,7 @@ class TheMole:
 
         try:
             self.separator, self.parenthesis = injection_inspector.find_separator(self)
-        except SQLInjectionNotDetected:
+        except Exception:
             print('[-] Could not detect SQL Injection.')
             return
 
@@ -129,6 +131,7 @@ class TheMole:
             self.end = ' '
 
         if self.mode == 'union':
+
             try:
                 self._detect_dbms_blind()
             except:
@@ -194,14 +197,8 @@ class TheMole:
         return self.requester
 
     def set_mode(self, mode):
-        if mode == 'blind':
-            if self.initialized and self.separator != ' ':
-                self.end =  ' and {sep}{sep} like {sep}'.format(sep=self.separator)
-            self.comment = ''
-            self.parenthesis = 0
-        else:
-            self.initialized = False
         self.mode = mode
+        self.initialized = False
 
     def poll_databases(self):
         if self.database_dump.db_map:
