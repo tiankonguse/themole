@@ -475,7 +475,11 @@ class ReadFileCommand(Command):
         self.check_initialization(mole)
         if len(params) != 1:
             raise CommandException('Expected filename as parameter')
-        print(mole.read_file(params[0]))
+        data = mole.read_file(params[0])
+        if len(data) == 0:
+            print('[-] Error reading file or file is empty.')
+        else:
+            print(data)
 
     def parameters(self, mole, current_params):
         return []
