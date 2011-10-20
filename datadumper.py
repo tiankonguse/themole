@@ -202,7 +202,7 @@ class StringUnionDataDumper:
             count = int(result[0])
             if count == 0:
                 return []
-            print('\r[+] Rows: ' + str(count), end='')
+            print('\r[+] Rows: ' + str(count))
             dump_result = []
             mole.stop_query = False
             gen_query_item = lambda i: self._generic_query_item(mole, query_generator, i, result_parser)
@@ -252,7 +252,7 @@ class IntegerUnionDataDumper:
                                                                               offset=offset)
         return self._generic_integer_query(mole, count_query, length_query, query_gen)
 
-    def get_tables(self, mole, db, table, query_columns, injectable_field):
+    def get_columns(self, mole, db, table, query_columns, injectable_field):
         count_query = mole._dbms_mole.columns_integer_count_query(db,
                                                                   table,
                                                                   query_columns,
@@ -313,7 +313,6 @@ class IntegerUnionDataDumper:
         data = ''.join(mole.threader.execute(length, query_item_gen))
         sqli_output.finish()
         data = data.split(mole._dbms_mole.blind_field_delimiter())
-        print(repr(data))
         if not data or len(data) != 3:
             raise QueryError()
         else:
@@ -352,7 +351,7 @@ class IntegerUnionDataDumper:
             count = int(result[0])
             if count == 0:
                 return []
-            print('\r[+] Rows:', count, end='')
+            print('\r[+] Rows:', count)
             dump_result = []
             mole.stop_query = False
             for i in range(count):

