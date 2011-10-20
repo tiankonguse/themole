@@ -251,7 +251,7 @@ class PostgresMole(DbmsMole):
         self.query = finger._query
 
     def _concat_fields(self, fields):
-        return ('||' + PostgresMole.inner_delimiter + '||').join(map(lambda x: 'coalesce(' + x + ',CHR(32))', fields))
+        return ('||' + PostgresMole.inner_delimiter + '||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar(150)),CHR(32))', fields))
 
     def parse_results(self, url_data):
         if not self.finger or self.finger.is_string_query:
