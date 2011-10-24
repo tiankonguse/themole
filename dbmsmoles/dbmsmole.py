@@ -210,6 +210,11 @@ class DbmsMole():
         return self.forge_query(columns, info['field'], 
                info['table'], injectable_field, offset=0)
     
+    def read_file_query(self, filename, columns, injectable_field):
+        info = self._read_file_query_info(filename)
+        return self.forge_query(columns, info['field'], 
+               info['table'], injectable_field)
+
     # Integer queries
     
     def schema_integer_count_query(self, columns, injectable_field):
@@ -325,6 +330,16 @@ class DbmsMole():
         return self.forge_integer_len_query(columns, info['field'], 
                info['table'], injectable_field, offset=0)
 
+    def read_file_integer_len_query(self, filename, columns, injectable_field):
+        info = self._read_file_query_info(filename)
+        return self.forge_integer_len_query(columns, info['field'], 
+               info['table'], injectable_field)
+
+    def read_file_integer_query(self, index, filename, columns, injectable_field):
+        info = self._read_file_query_info(filename)
+        return self.forge_integer_query(columns, index, info['field'], 
+               info['table'], injectable_field)
+    
     # Blind queries
     
     
@@ -442,11 +457,8 @@ class DbmsMole():
         return self.forge_blind_query(
             index, value, info['field'], info['table']
         )
-        
-    def read_file_query(self, filename, columns, injectable_field):
-        info = self._read_file_query_info(filename)
-        return self.forge_query(columns, info['field'], 
-               info['table'], injectable_field)
+    
+    
 
 class FingerBase:
     def __init__(self, query, to_search, is_string_query = True):

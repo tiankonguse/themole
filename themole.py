@@ -121,6 +121,7 @@ class TheMole:
 
         try:
             self.separator, self.parenthesis = injection_inspector.find_separator(self)
+            print("[+] Found separator: \"" + self.separator + "\"")
         except Exception:
             print('[-] Could not detect SQL Injection.')
             return
@@ -143,13 +144,14 @@ class TheMole:
 
             try:
                 self.comment, self.parenthesis = injection_inspector.find_comment_delimiter(self)
-                print('[+] Found comment delimiter:', self.comment)
+                print('[+] Found comment delimiter: "' + self.comment + '"')
             except Exception:
                 print('[-] Could not exploit SQL Injection.')
                 return
 
             self.query_columns = injection_inspector.find_column_number(self)
-
+            print('[+] Query columns count:', self.query_columns)
+            
             try:
                 self.injectable_field = injection_inspector.find_injectable_field(self)
                 print('[+] Found injectable field:', self.injectable_field + 1)
@@ -254,7 +256,10 @@ class TheMole:
         return self.dumper.get_dbinfo(self, self.query_columns, self.injectable_field)
 
     def find_tables_like(self, db, table_filter):
-        return self.dumper.find_tables_like(self, db, table_filter, self.query_columns, self.injectable_field)
+        data = self.dumper.find_tables_like(self, db, table_filter, self.query_columns, self.injectable_field)
+        for i in data:
+            self.dumper.add_table(db, i)
+        return data
 
     def read_file(self, filename):
         return self.dumper.read_file(self, filename, self.query_columns, self.injectable_field)
@@ -264,6 +269,7 @@ class TheMole:
             print('[i] Trying table', table)
             try:
                 if self.dumper.table_exists(self, db, table, self.query_columns, self.injectable_field):
+                    self.dumper.add_table(db, table)
                     print('[+] Table',table,'exists.')
             except:
                 pass

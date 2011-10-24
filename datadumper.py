@@ -188,7 +188,7 @@ class StringUnionDataDumper:
         query = mole._dbms_mole.read_file_query(filename, query_columns, injectable_field)
         req = mole.make_request(query)
         result = mole._dbms_mole.parse_results(mole.analyser.decode(req))
-        return result[0]
+        return result[0] if not result is None else ''
 
     def _generic_query(self, mole,
                              count_query,
@@ -337,6 +337,31 @@ class IntegerUnionDataDumper:
     def table_exists(self, mole, db, table, query_columns, injectable_field):
         req = mole.make_request(mole._dbms_mole.fields_integer_count_query(db, table, query_columns, injectable_field))
         return not mole._dbms_mole.parse_results(mole.analyser.decode(req)) is None
+
+    def read_file(self, mole, filename, query_columns, injectable_field):
+        query = mole._dbms_mole.readfile_integer_len_query(filename, query_columns, injectable_field)
+        req = mole.make_request(query)
+        length = mole._dbms_mole.parse_results(mole.analyser.decode(req))
+        if length is None or len(length) == 0:
+            return ''
+        length = int(length[0])
+
+        sqli_output = BlindSQLIOutput(length)
+        query_gen = lambda index,offset: mole._dbms_mole.read_file_integer_query(index,
+                                                                              query_columns,
+                                                                              injectable_field)
+        query_item_gen = lambda x: self._generic_integer_query_item(mole, 
+                                                                    query_gen,
+                                                                    x,
+                                                                    0,
+                                                                    sqli_output)
+        data = ''.join(mole.threader.execute(length, query_item_gen))
+        sqli_output.finish()
+        data = data.split(mole._dbms_mole.blind_field_delimiter())
+        if not data or len(data) != 1:
+            raise QueryError()
+        else:
+            return data[0]
 
     def _generic_integer_query(self, mole,
                                      count_query,

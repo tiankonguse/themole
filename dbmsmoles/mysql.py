@@ -76,7 +76,7 @@ class MysqlMole(DbmsMole):
     
     def _read_file_query_info(self, filename):
         return {
-            'field' : 'load_file({filename})'.format(filename=DbmsMole.to_hex(filename)),
+            'field' : ['load_file({filename})'.format(filename=DbmsMole.to_hex(filename))],
             'table' : '',
         }
     

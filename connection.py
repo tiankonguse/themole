@@ -23,6 +23,7 @@
 # Gastón Traberg
 
 import urllib.request, urllib.error, urllib.parse, time, difflib
+import http.client
 from urllib.parse import urlparse
 
 class HttpRequester:
@@ -52,6 +53,7 @@ class HttpRequester:
         params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in params)
         params = params.replace('union', 'unIOn')
         params = params.replace('UNION', 'unIOn')
+        exception = Exception()
         if self.method == 'GET':
             request = urllib.request.Request(self.url + '?' + params, None, self.headers)
         else:
@@ -64,6 +66,10 @@ class HttpRequester:
                 pass
             except urllib.error.URLError as ex:
                 exception = ex
+                pass
+            except http.client.BadStatusLine:
+                pass
+            except http.client.IncompleteRead:
                 pass
         try:
             if exception.code in [404, 500]:
