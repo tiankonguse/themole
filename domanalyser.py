@@ -24,28 +24,11 @@
 
 
 import lxml.html as lxml
-import chardet
-from dbmsmoles import DbmsMole
 from functools import reduce
 
 class DomAnalyser():
-    def __init__(self):
-        self.encoding = None
-    
-    def decode(self, data):
-        if self.encoding is None:
-            self.encoding = chardet.detect(data)['encoding']
-        try:
-            to_ret = data.decode(self.encoding)
-        except UnicodeDecodeError:
-            self.encoding = chardet.detect(data)['encoding']
-            to_ret = data.decode(self.encoding)
-        if not '<html' in to_ret and not '<HTML' in to_ret:
-            to_ret = '<html><body></body></html>' + to_ret
-        return DbmsMole.remove_errors(to_ret)
-    
     def set_good_page(self, page, search_needle):
-        dom_page = lxml.fromstring(self.normalize(self.decode(page)))
+        dom_page = lxml.fromstring(self.normalize(page))
         self._good_index_list = self._dfs(dom_page, [search_needle], [])
         if self._good_index_list is None:
             raise NeedleNotFound()
@@ -54,14 +37,14 @@ class DomAnalyser():
         del dom_page
     
     def is_valid(self, page):
-        dom_page = lxml.fromstring(self.normalize(self.decode(page)))
+        dom_page = lxml.fromstring(self.normalize(page))
         content_on_page = self._lookup_node(dom_page,
                                                    self._good_index_list)
         del dom_page
         return content_on_page == self._good_content
     
     def find_needles(self, page, needles):
-        dom_page = lxml.fromstring(self.normalize(self.decode(page)))
+        dom_page = lxml.fromstring(self.normalize(page))
         index_list = self._dfs(dom_page, [needles], [])
         if not index_list:
             return None
@@ -74,7 +57,7 @@ class DomAnalyser():
         return page
     
     def node_content(self, page):
-        return self._lookup_node(lxml.fromstring(self.normalize(self.decode(page))), self._good_index_list)
+        return self._lookup_node(lxml.fromstring(self.normalize(page)), self._good_index_list)
 
     def _dfs(self, dom, search_needles, index_list):
         node_value = self._join_text(dom)

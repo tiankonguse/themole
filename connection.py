@@ -25,6 +25,8 @@
 import urllib.request, urllib.error, urllib.parse, time, difflib
 import http.client
 from urllib.parse import urlparse
+import chardet, re
+from dbmsmoles import DbmsMole
 
 class HttpRequester:
     headers =  {
@@ -37,6 +39,7 @@ class HttpRequester:
     }
     
     def __init__(self, url, timeout = 0, method = 'GET', cookie = None, max_retries=3):
+        self.encoding = None
         self.url = url
         self.timeout = timeout
         if method not in ['GET',  'POST']:
@@ -48,19 +51,46 @@ class HttpRequester:
         if cookie:
             self.headers['Cookie'] = cookie
 
+    def decode(self, data):
+        if self.encoding is None:
+            self.encoding = chardet.detect(data)['encoding']
+        try:
+            to_ret = data.decode(self.encoding)
+        except UnicodeDecodeError:
+            self.encoding = chardet.detect(data)['encoding']
+            to_ret = data.decode(self.encoding)
+        if not '<html' in to_ret and not '<HTML' in to_ret:
+            to_ret = '<html><body></body></html>' + to_ret
+        return DbmsMole.remove_errors(to_ret)
+    
+    # Tries to remove the query from the result html.
+    def filter(self, data, params):
+        for i in params:
+            data = self.ireplace(i[1], '', data)
+        return data
+
+    def ireplace(self, old, new, text):
+        idx = 0
+        while idx < len(text):
+            index_l = text.lower().find(old.lower(), idx)
+            if index_l == -1:
+                return text
+            text = text[:index_l] + new + text[index_l + len(old):]
+            idx = index_l + len(old)
+        return text
+
     def do_request(self, params):
-        params = (t.split('=', 1) for t in params.split('&'))
-        params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in params)
-        params = params.replace('union', 'unIOn')
-        params = params.replace('UNION', 'unIOn')
+        params = list(t.split('=', 1) for t in params.split('&'))
+        params_enc = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in params)
         exception = Exception()
         if self.method == 'GET':
-            request = urllib.request.Request(self.url + '?' + params, None, self.headers)
+            request = urllib.request.Request(self.url + '?' + params_enc, None, self.headers)
         else:
-            request = urllib.Request(self.url, params, self.headers)
+            request = urllib.Request(self.url, params_enc, self.headers)
         for i in range(self.max_retries):
             try:
-                return urllib.request.urlopen(request).read()
+                data = self.decode(urllib.request.urlopen(request).read())
+                return self.filter(data, params)
             except urllib.error.HTTPError as ex:
                 exception = ex 
                 pass
@@ -73,7 +103,7 @@ class HttpRequester:
                 pass
         try:
             if exception.code in [404, 500]:
-                return b'<html><body></body></html>'
+                return '<html><body></body></html>'
         except AttributeError:
             pass
         raise exception

@@ -258,7 +258,7 @@ class TheMole:
     def find_tables_like(self, db, table_filter):
         data = self.dumper.find_tables_like(self, db, table_filter, self.query_columns, self.injectable_field)
         for i in data:
-            self.dumper.add_table(db, i)
+            self.database_dump.add_table(db, i)
         return data
 
     def read_file(self, filename):
@@ -269,7 +269,7 @@ class TheMole:
             print('[i] Trying table', table)
             try:
                 if self.dumper.table_exists(self, db, table, self.query_columns, self.injectable_field):
-                    self.dumper.add_table(db, table)
+                    self.database_dump.add_table(db, table)
                     print('[+] Table',table,'exists.')
             except:
                 pass
