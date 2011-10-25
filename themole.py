@@ -299,7 +299,7 @@ class TheMole:
 
     def get_url(self):
         try:
-            return self.requester.url + '?' + self.url
+            return (self.requester.url + '?' + self.url).replace(self.wildcard, '')
         except AttributeError:
             return ''
 

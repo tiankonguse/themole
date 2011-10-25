@@ -43,6 +43,7 @@ dtd = """<!DOCTYPE themole [
 <!ATTLIST mole_config separator CDATA #REQUIRED>
 <!ATTLIST mole_config timeout CDATA #REQUIRED>
 <!ATTLIST mole_config url CDATA #REQUIRED>
+<!ATTLIST mole_config vulnerable_param CDATA #REQUIRED>
 <!ATTLIST mole_config query_columns CDATA #REQUIRED>
 <!ATTLIST mole_config injectable_field CDATA #REQUIRED>
 <!ELEMENT dbms_mole (finger)>
@@ -129,6 +130,10 @@ class XMLExporter:
         mole_config.set('url', url)
         del url
 
+        vulnerable_param = b64encode(mole.requester.vulnerable_param.encode()).decode()
+        mole_config.set('vulnerable_param', vulnerable_param)
+        del vulnerable_param
+
         needle = b64encode(mole.needle.encode()).decode()
         mole_config.set('needle', needle)
         del needle
@@ -175,8 +180,11 @@ class XMLExporter:
 
         value = node.get('url')
         url = b64decode(value.encode()).decode()
-        mole_config.set_url(url)
+        value = node.get('vulnerable_param')
+        vulnerable_param = b64decode(value.encode()).decode()
+        mole_config.set_url(url, vulnerable_param)
         del url
+        del vulnerable_param
 
         value = node.get('needle')
         needle = b64decode(value.encode()).decode()
