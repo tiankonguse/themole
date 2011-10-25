@@ -38,7 +38,7 @@ class HttpRequester:
         'Cache-Control': 'max-age=0',
     }
     
-    def __init__(self, url, timeout = 0, method = 'GET', cookie = None, max_retries=3):
+    def __init__(self, url, vulnerable_param, timeout = 0, method = 'GET', cookie = None, max_retries=3):
         self.encoding = None
         self.url = url
         self.timeout = timeout
@@ -48,6 +48,7 @@ class HttpRequester:
         self.max_retries = max_retries
         self.headers = HttpRequester.headers
         self.headers['Host'] = urlparse(url).netloc
+        self.vulnerable_param = vulnerable_param
         if cookie:
             self.headers['Cookie'] = cookie
 
@@ -65,8 +66,12 @@ class HttpRequester:
     
     # Tries to remove the query from the result html.
     def filter(self, data, params):
-        for i in params:
-            data = self.ireplace(i[1], '', data)
+        try:
+            for i in params:
+                if i[0] == self.vulnerable_param:
+                    return self.ireplace(i[1], '', data) if 'and' in i[1].lower() else data
+        except ValueError:
+            pass
         return data
 
     def ireplace(self, old, new, text):

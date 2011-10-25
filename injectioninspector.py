@@ -97,7 +97,7 @@ class InjectionInspector:
         fingers = dbms_mole.injectable_field_fingers(mole.query_columns, base)
         index = 0
         for finger in fingers:
-            print('\r[+] Trying finger ' + str(index) + '/' + str(len(fingers)))
+            print('\r[+] Trying finger ' + str(index+1) + '/' + str(len(fingers)))
             index +=1
             hashes = finger.build_query()
             to_search_hashes = finger.fingers_to_search()
