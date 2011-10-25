@@ -47,6 +47,7 @@ class Command:
                 print('Mole error:', ex.message)
                 raise CommandException('Mole not ready yet')
             except Exception as ex:
+                raise ex
                 print(ex)
                 raise QuietCommandException()
 

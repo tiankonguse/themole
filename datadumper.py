@@ -53,6 +53,9 @@ class BlindDataDumper:
         req = mole.make_request(mole._dbms_mole.fields_blind_count_query('>', 100000000, db=db, table=table))
         return mole.analyser.is_valid(req)
 
+    def read_file(self, mole, filename, query_columns, injectable_field):
+        return 'Not implemented.'
+
     def _blind_query(self, mole, count_fun, length_fun, query_fun, offset=0, row_count=None):
         mole.stop_query = False
         if count_fun is None:
@@ -99,7 +102,7 @@ class BlindDataDumper:
                 )
             )
             print(trying_msg(last), end='')
-            if mole.needle in mole.analyser.decode(req):
+            if mole.needle in req:
                 break;
             last *= 2
         print(max_msg(str(last)), end='')
@@ -113,7 +116,7 @@ class BlindDataDumper:
                     count_fun('<', medio - 1)
                 )
             )
-            if mole.needle in mole.analyser.decode(req):
+            if mole.needle in req:
                 pri = medio
             else:
                 last = medio - 1
@@ -127,11 +130,9 @@ class BlindDataDumper:
             if mole.stop_query:
                 return None
             medio = (pri + last)//2
-            response = mole.analyser.decode(
-                mole.requester.request(
-                    mole.generate_url(query_fun(index, medio, offset))
-                )
-            )
+            response = mole.requester.request(
+                        mole.generate_url(query_fun(index, medio, offset))
+                       )
             if mole.needle in response:
                 pri = medio+1
             else:
@@ -173,7 +174,7 @@ class StringUnionDataDumper:
     def get_dbinfo(self, mole, query_columns, injectable_field):
         query = mole._dbms_mole.dbinfo_query(query_columns, injectable_field)
         req = mole.get_requester().request(mole.generate_url(query))
-        data = mole._dbms_mole.parse_results(mole.analyser.decode(req))
+        data = mole._dbms_mole.parse_results(req)
         if not data or len(data) != 3:
             raise QueryError()
         else:
@@ -186,12 +187,12 @@ class StringUnionDataDumper:
 
     def table_exists(self, mole, db, table, query_columns, injectable_field):
         req = mole.make_request(mole._dbms_mole.fields_count_query(db, table, query_columns, injectable_field))
-        return not mole._dbms_mole.parse_results(mole.analyser.decode(req)) is None
+        return not mole._dbms_mole.parse_results(req) is None
 
     def read_file(self, mole, filename, query_columns, injectable_field):
         query = mole._dbms_mole.read_file_query(filename, query_columns, injectable_field)
         req = mole.make_request(query)
-        result = mole._dbms_mole.parse_results(mole.analyser.decode(req))
+        result = mole._dbms_mole.parse_results(req)
         return result[0] if not result is None else ''
 
     def _generic_query(self, mole,
@@ -199,7 +200,7 @@ class StringUnionDataDumper:
                              query_generator,
                              result_parser = lambda x: x[0]):
         req = mole.get_requester().request(mole.generate_url(count_query))
-        result = mole._dbms_mole.parse_results(mole.analyser.decode(req))
+        result = mole._dbms_mole.parse_results(req)
         if not result or len(result) != 1:
             raise QueryError('Count query failed.')
         else:
@@ -221,7 +222,7 @@ class StringUnionDataDumper:
         if mole.stop_query:
             return None
         req = mole.get_requester().request(mole.generate_url(query_generator(offset)))
-        result = mole._dbms_mole.parse_results(mole.analyser.decode(req))
+        result = mole._dbms_mole.parse_results(req)
         if not result or len(result) < 1:
             raise QueryError()
         else:
@@ -304,7 +305,7 @@ class IntegerUnionDataDumper:
     def get_dbinfo(self, mole, query_columns, injectable_field):
         query = mole._dbms_mole.dbinfo_integer_len_query(query_columns, injectable_field)
         req = mole.make_request(query)
-        length = mole._dbms_mole.parse_results(mole.analyser.decode(req))
+        length = mole._dbms_mole.parse_results(req)
         length = int(length[0])
 
         sqli_output = BlindSQLIOutput(length)
@@ -342,12 +343,12 @@ class IntegerUnionDataDumper:
 
     def table_exists(self, mole, db, table, query_columns, injectable_field):
         req = mole.make_request(mole._dbms_mole.fields_integer_count_query(db, table, query_columns, injectable_field))
-        return not mole._dbms_mole.parse_results(mole.analyser.decode(req)) is None
+        return not mole._dbms_mole.parse_results(req) is None
 
     def read_file(self, mole, filename, query_columns, injectable_field):
         query = mole._dbms_mole.readfile_integer_len_query(filename, query_columns, injectable_field)
         req = mole.make_request(query)
-        length = mole._dbms_mole.parse_results(mole.analyser.decode(req))
+        length = mole._dbms_mole.parse_results(req)
         if length is None or len(length) == 0:
             return ''
         length = int(length[0])
@@ -375,7 +376,7 @@ class IntegerUnionDataDumper:
                                      query_generator,
                                      result_parser = lambda x: x[0]):
         req = mole.get_requester().request(mole.generate_url(count_query))
-        result = mole._dbms_mole.parse_results(mole.analyser.decode(req))
+        result = mole._dbms_mole.parse_results(req)
         if not result:
             raise QueryError('Count query failed.')
         else:
@@ -387,7 +388,7 @@ class IntegerUnionDataDumper:
             mole.stop_query = False
             for i in range(count):
                 req = mole.requester.request(mole.generate_url(length_query(i)))
-                length = mole._dbms_mole.parse_results(mole.analyser.decode(req))
+                length = mole._dbms_mole.parse_results(req)
                 length = int(length[0])
                 sqli_output = BlindSQLIOutput(length)
                 gen_query_item = lambda x: self._generic_integer_query_item(mole, query_generator, x, i, sqli_output)
@@ -401,7 +402,7 @@ class IntegerUnionDataDumper:
         if mole.stop_query:
             return None
         req = mole.get_requester().request(mole.generate_url(query_generator(index+1, offset=offset)))
-        result = mole._dbms_mole.parse_results(mole.analyser.decode(req))
+        result = mole._dbms_mole.parse_results(req)
         if not result or len(result) < 1:
             raise QueryError()
         else:

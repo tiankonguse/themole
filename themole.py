@@ -258,7 +258,7 @@ class TheMole:
     def find_tables_like(self, db, table_filter):
         data = self.dumper.find_tables_like(self, db, table_filter, self.query_columns, self.injectable_field)
         for i in data:
-            self.dumper.add_table(db, i)
+            self.database_dump.add_table(db, i)
         return data
 
     def read_file(self, filename):
@@ -269,7 +269,7 @@ class TheMole:
             print('[i] Trying table', table)
             try:
                 if self.dumper.table_exists(self, db, table, self.query_columns, self.injectable_field):
-                    self.dumper.add_table(db, table)
+                    self.database_dump.add_table(db, table)
                     print('[+] Table',table,'exists.')
             except:
                 pass
@@ -277,15 +277,25 @@ class TheMole:
     def brute_force_users_tables(self, db):
         return self.brute_force_tables(db, TheMole.users_tables)
 
-    def set_url(self, url):
+    def set_url(self, url, vulnerable_param = None):
         if not '?' in url:
-            raise Exception('URL requires GET parameters')
+            raise Exception('URL requires GET parameters.')
 
         url = url.split('?')
-        self.requester = connection.HttpRequester(url[0], timeout=self.timeout)
-        self.url = url[1]
-        if self.wildcard not in self.url:
-            self.url += self.wildcard
+        params = list(t.split('=', 1) for t in url[1].split('&'))
+        if vulnerable_param is None:
+            index = -1
+            vulnerable_param = params[index][0]
+        else:
+            index = None
+            for i in range(len(params)):
+                if params[i][0] == vulnerable_param:
+                    index = i
+            if index is None:
+                raise Exception('Vulnerable parameter given is not present in the URL.')
+        params[index][1] += self.wildcard
+        self.requester = connection.HttpRequester(url[0], timeout=self.timeout, vulnerable_param = vulnerable_param)
+        self.url = '&'.join(a + '=' + b for a, b in params)
 
     def get_url(self):
         try:
@@ -300,12 +310,9 @@ class TheMole:
         exporter = XMLExporter()
         try:
             exporter.export(self, self.database_dump.db_map, filename)
-            print("[+] Exportation successful")
-        except Exception as e:
-            import traceback
-            traceback.print_exc(file=sys.stdout)
-            print(e)
-            print("[-] Exportation NOT successful")
+            print("[+] Exportation successful.")
+        except Exception:
+            print("[-] Exportation NOT successful.")
 
     def import_xml(self, filename):
         exporter = XMLExporter()

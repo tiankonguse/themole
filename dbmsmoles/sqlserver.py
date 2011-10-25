@@ -126,7 +126,7 @@ class SQLServerMole(DbmsMole):
         hashes = []
         for i in range(base, base + query_columns):
             hashes.append(str(i))
-        output.append(FingerBase(list(hashes), to_search))
+        output_int.append(FingerBase(list(hashes), to_search, False))
         return output + output_int
 
     @classmethod
