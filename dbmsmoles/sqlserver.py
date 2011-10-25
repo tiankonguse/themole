@@ -45,21 +45,21 @@ class SQLServerMole(DbmsMole):
 
     def _tables_query_info(self, db):
         return {
-            'table' : db + '..sysobjects',
+            'table' : '[' + db + ']..sysobjects',
             'field' : ['name'],
             'filter': "xtype = 'U'"
         }
         
     def _columns_query_info(self, db, table):
         return {
-            'table' : '{db}..syscolumns,{db}..sysobjects'.format(db=db),
-            'field' : ['{db}..syscolumns.name'.format(db=db)],
-            'filter': "{db}..syscolumns.id = {db}..sysobjects.id and {db}..sysobjects.name = '{table}'".format(db=db, table=table)
+            'table' : '[{db}]..syscolumns,[{db}]..sysobjects'.format(db=db),
+            'field' : ['[{db}]..syscolumns.name'.format(db=db)],
+            'filter': "[{db}]..syscolumns.id = [{db}]..sysobjects.id and [{db}]..sysobjects.name = '{table}'".format(db=db, table=table)
         }
 
     def _fields_query_info(self, fields, db, table, where):
         return {
-            'table' : db + '..' + table,
+            'table' : '[' + db + ']..' + table,
             'field' : fields,
             'filter': where
         }

@@ -66,21 +66,27 @@ class Command:
 class URLCommand(Command):
 
     def execute(self, mole, params, output_manager):
-        if len(params) != 1:
+        if len(params) < 1:
             if not mole.get_url():
                 print('No url defined')
             else:
                 print(mole.get_url().replace(mole.wildcard, ''))
         else:
             url = params[0]
-            mole.set_url(url)
+            if len(params) == 2:
+                mole.set_url(url, params[1])
+            else:
+                mole.set_url(url)
             mole.restart()
 
     def usage(self, cmd_name):
-        return cmd_name + ' [URL]'
+        return cmd_name + ' [URL] [PARAM]'
 
     def parameters(self, mole, current_params):
-        return []
+        if len(current_params) == 1:
+            return list(t.split('=', 1)[0] for t in current_params[0].split('&'))
+        else:
+            return []
 
 class CookieCommand(Command):
     def execute(self, mole, params, output_manager):

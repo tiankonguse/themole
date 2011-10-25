@@ -142,10 +142,7 @@ class MysqlMole(DbmsMole):
         query_list = list(map(str, range(column_count)))
         query_list[injectable_field] = ("CONCAT(" +
                                             MysqlMole.out_delimiter +
-                                            ",CONCAT_WS(" +
-                                                MysqlMole.inner_delimiter + "," + 
-                                                ','.join(fields) +
-                                            ")," +
+                                            "," + self._concat_fields(fields) + "," +
                                             MysqlMole.out_delimiter +
                                         ")")
         query += ','.join(query_list)

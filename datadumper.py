@@ -340,7 +340,7 @@ class IntegerUnionDataDumper:
         return not mole._dbms_mole.parse_results(req) is None
 
     def read_file(self, mole, filename, query_columns, injectable_field):
-        query = mole._dbms_mole.readfile_integer_len_query(filename, query_columns, injectable_field)
+        query = mole._dbms_mole.read_file_integer_len_query(filename, query_columns, injectable_field)
         req = mole.make_request(query)
         length = mole._dbms_mole.parse_results(req)
         if length is None or len(length) == 0:
@@ -349,6 +349,7 @@ class IntegerUnionDataDumper:
 
         sqli_output = BlindSQLIOutput(length)
         query_gen = lambda index,offset: mole._dbms_mole.read_file_integer_query(index,
+                                                                              filename,
                                                                               query_columns,
                                                                               injectable_field)
         query_item_gen = lambda x: self._generic_integer_query_item(mole, 
@@ -381,8 +382,12 @@ class IntegerUnionDataDumper:
             dump_result = []
             mole.stop_query = False
             for i in range(count):
+                if mole.stop_query:
+                    break
                 req = mole.requester.request(mole.generate_url(length_query(i)))
                 length = mole._dbms_mole.parse_results(req)
+                if length is None:
+                    break
                 length = int(length[0])
                 sqli_output = BlindSQLIOutput(length)
                 gen_query_item = lambda x: self._generic_integer_query_item(mole, query_generator, x, i, sqli_output)
