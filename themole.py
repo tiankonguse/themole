@@ -82,8 +82,8 @@ class TheMole:
         self.parenthesis = 0
         self._dbms_mole = None
         self.stop_query = False
-        self.query_columns = None
-        self.injectable_field = None
+        self.query_columns = 0
+        self.injectable_field = 0
         self.database_dump = DatabaseDump()
 
     def restart(self):
@@ -100,8 +100,8 @@ class TheMole:
         if not self.needle:
             raise MoleAttributeRequired('Attribute needle is required')
 
-        self.query_columns = None
-        self.injectable_field = None
+        self.query_columns = 0
+        self.injectable_field = 0
         self.separator = ''
         self.comment = ''
         self.prefix = ''
@@ -151,7 +151,7 @@ class TheMole:
 
             self.query_columns = injection_inspector.find_column_number(self)
             print('[+] Query columns count:', self.query_columns)
-            
+
             try:
                 self.injectable_field = injection_inspector.find_injectable_field(self)
                 print('[+] Found injectable field:', self.injectable_field + 1)
@@ -299,7 +299,7 @@ class TheMole:
 
     def get_url(self):
         try:
-            return self.requester.url + '?' + self.url
+            return (self.requester.url + '?' + self.url).replace(self.wildcard, '')
         except AttributeError:
             return ''
 
@@ -320,7 +320,10 @@ class TheMole:
             exporter.load(self, self.database_dump.db_map, filename)
             self.initialized = True
             print("[+] Importation successful")
-        except Exception:
+        except Exception as e:
+            import traceback
+            traceback.print_exc(file=sys.stdout)
+            print(e)
             print("[-] Importation NOT successful")
 
     def _detect_dbms_blind(self):
