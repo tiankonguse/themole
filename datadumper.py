@@ -3,6 +3,8 @@ from output import BlindSQLIOutput
 
 class BlindDataDumper:
 
+    name = 'BlindDataDumper'
+
     def get_databases(self, mole, query_columns, injectable_field):
         count_fun = lambda x,y: mole._dbms_mole.schema_blind_count_query(x, y)
         length_fun = lambda x: lambda y,z: mole._dbms_mole.schema_blind_len_query(y, z, offset=x)
@@ -146,6 +148,8 @@ class BlindDataDumper:
 
 class StringUnionDataDumper:
 
+    name = 'StringUnionDataDumper'
+
     def get_databases(self, mole, query_columns, injectable_field):
         count_query = mole._dbms_mole.schema_count_query(query_columns, injectable_field)
         query_gen =  lambda x: mole._dbms_mole.schema_query(query_columns, injectable_field, x)
@@ -224,6 +228,8 @@ class StringUnionDataDumper:
             return result_parser(result)
 
 class IntegerUnionDataDumper:
+
+    name = 'IntegerUnionDataDumper'
 
     def get_databases(self, mole, query_columns, injectable_field):
         count_query = mole._dbms_mole.schema_integer_count_query(query_columns,
@@ -305,7 +311,7 @@ class IntegerUnionDataDumper:
         query_gen = lambda index,offset: mole._dbms_mole.dbinfo_integer_query(index,
                                                                               query_columns,
                                                                               injectable_field)
-        query_item_gen = lambda x: self._generic_integer_query_item(mole, 
+        query_item_gen = lambda x: self._generic_integer_query_item(mole,
                                                                     query_gen,
                                                                     x,
                                                                     0,
@@ -321,10 +327,10 @@ class IntegerUnionDataDumper:
     def find_tables_like(self, mole, db, table_filter, query_columns, injectable_field):
         count_query = mole._dbms_mole.tables_like_integer_count_query(db, query_columns, injectable_field, table_filter)
         query_gen = lambda index,offset: mole._dbms_mole.tables_like_integer_query(index,
-                                                                                   db, 
-                                                                                   query_columns, 
-                                                                                   injectable_field, 
-                                                                                   table_filter=table_filter, 
+                                                                                   db,
+                                                                                   query_columns,
+                                                                                   injectable_field,
+                                                                                   table_filter=table_filter,
                                                                                    offset=offset)
         length_query = lambda x: mole._dbms_mole.tables_like_integer_len_query(db,
                                                                           query_columns,
@@ -350,7 +356,7 @@ class IntegerUnionDataDumper:
         query_gen = lambda index,offset: mole._dbms_mole.read_file_integer_query(index,
                                                                               query_columns,
                                                                               injectable_field)
-        query_item_gen = lambda x: self._generic_integer_query_item(mole, 
+        query_item_gen = lambda x: self._generic_integer_query_item(mole,
                                                                     query_gen,
                                                                     x,
                                                                     0,
@@ -405,3 +411,9 @@ class IntegerUnionDataDumper:
 
 class QueryError(Exception):
     pass
+
+classes_dict = {
+    'BlindDataDumper' : BlindDataDumper,
+    'StringUnionDataDumper' : StringUnionDataDumper,
+    'IntegerUnionDataDumper' : IntegerUnionDataDumper,
+}
