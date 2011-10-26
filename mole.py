@@ -26,10 +26,10 @@ import themole
 import completion
 import output
 import signal
-from readline import get_line_buffer
 import builtins
 import commands
 import getopt, sys
+import traceback
 
 
 def sigint_handler(x, y):
@@ -121,4 +121,9 @@ if __name__ == '__main__':
     
     builtins.cmd_manager = commands.CommandManager()        
     builtins.manager = Manager(opt_map)
-    manager.start()
+    try:
+        manager.start()
+    except Exception as ex:
+        traceback.print_tb(ex)
+        print('[-] Unexpected error encountered. Please report this bug :D')
+        

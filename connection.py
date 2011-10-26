@@ -27,6 +27,7 @@ import http.client
 from urllib.parse import urlparse
 import chardet, re
 from dbmsmoles import DbmsMole
+from socket import error
 
 class HttpRequester:
     headers =  {
@@ -105,6 +106,8 @@ class HttpRequester:
             except http.client.BadStatusLine:
                 pass
             except http.client.IncompleteRead:
+                pass
+            except error:
                 pass
         try:
             if exception.code in [404, 500]:
