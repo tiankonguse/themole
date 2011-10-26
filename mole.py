@@ -26,10 +26,10 @@ import themole
 import completion
 import output
 import signal
-from readline import get_line_buffer
 import builtins
 import commands
 import getopt, sys
+import traceback
 
 
 def sigint_handler(x, y):
@@ -45,7 +45,8 @@ class Manager:
         self.output      = output.PrettyOutputManager()
         if 'url' in opt_map:
             try:
-                cmd_manager.find('url').execute(self.mole, [opt_map['url']], self.output)
+                vuln_param = opt_map['vuln_param'] if 'vuln_param' in opt_map else None
+                cmd_manager.find('url').execute(self.mole, [opt_map['url'], vuln_param], self.output)
             except commands.CommandException as ex:
                 print('[-] Error while setting URL:', ex)
                 self.mole.abort_query()
@@ -77,7 +78,7 @@ class Manager:
 def parse_options():
     if '-h' in sys.argv:
         help()
-    options = 'u:n:t:'
+    options = 'u:n:t:p:'
     args, extra = getopt.getopt(sys.argv[1:], options)
     return args
 
@@ -89,6 +90,7 @@ def help():
     print('   -u URL: The url which contains a sqli vulnerability.')
     print('   -n NEEDLE: The string which is printed on good queries.')
     print('   -t THREADS: The amount of threads to run. Defaults to 4.')
+    print('   -p PARAM: Sets the GET vulnerable param(URL must be provided).')
     exit(0)
 
 info_string = \
@@ -110,7 +112,8 @@ if __name__ == '__main__':
     option_name_mapper = {
         '-u' : 'url',
         '-n' : 'needle',
-        '-t' : 'threads'
+        '-t' : 'threads',
+        '-p' : 'vuln_param',
     }
     opt_map = {}
     for i in options:
@@ -118,4 +121,9 @@ if __name__ == '__main__':
     
     builtins.cmd_manager = commands.CommandManager()        
     builtins.manager = Manager(opt_map)
-    manager.start()
+    try:
+        manager.start()
+    except Exception as ex:
+        traceback.print_tb(ex)
+        print('[-] Unexpected error encountered. Please report this bug :D')
+        

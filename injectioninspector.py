@@ -126,7 +126,7 @@ class InjectionInspector:
                 print('[i] Trying DBMS', dbms_mole.dbms_name())
                 field = self._find_injectable_field_using(mole, dbms_mole)
                 if not field is None:
-                    print('[+] Found DBMS:', dbms_mole)
+                    print('[+] Found DBMS:', dbms_mole.dbms_name())
                     return field
         else:
             field = self._find_injectable_field_using(mole, mole._dbms_mole.__class__)

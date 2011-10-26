@@ -48,7 +48,7 @@ class CompletionManager:
                 cmd = self.manager.find(line[0])
             except:
                 return 0
-            current_params = line[1:-1] if len(line) > 2 else []
+            current_params = list(filter(lambda x: len(x.strip()) > 0, line[1:-1] if len(line) > 2 else []))
             if ',' in text:
                 text = text.split(',')[-1]
             for i in cmd.parameters(self.mole, current_params):
