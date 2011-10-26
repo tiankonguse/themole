@@ -1,0 +1,17 @@
+
+Version 0.2
+===========
+
+    + Added integer union sql injection exploitation support.
+    + Added early DBMS Detection.
+    + Added import command (only XML format supported).
+    + Added export command (only XML format supported).
+    + Added find_tables command.
+    + Added find_tables_like command.
+    + Added find_users_table command.
+    + Added readfile command (only supported in MySQL).
+    + Added xml import and export support.
+    + Fixed gathering of schemas, tables and columns in SQL Server.
+    + Fixed dumping bugs in Postgres.
+    + Fixed other minor bugs.
+

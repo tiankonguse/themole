@@ -194,7 +194,7 @@ class TablesCommand(Command):
             return schemas if schemas else []
         else:
             return []
-            
+
 class FindTablesLikeCommand(Command):
     def execute(self, mole, params, output_manager):
         if len(params) != 2:
@@ -210,10 +210,10 @@ class FindTablesLikeCommand(Command):
         for i in tables:
             output_manager.put([i])
         output_manager.end_sequence()
-    
+
     def usage(self, cmd_name):
         return cmd_name + ' <SCHEMA> <FILTER>'
-        
+
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
             schemas = mole.poll_databases()
@@ -322,7 +322,13 @@ class BruteforceTablesCommand(Command):
             mole.brute_force_tables(params[0], params[1:])
 
     def usage(self, cmd_name):
-        return cmd_name + ' DB TABLE1 [TABLE2 [...]]'
+        return cmd_name + ' <SCHEMA> TABLE1 [TABLE2 [...]]'
+
+    def parameters(self, mole, current_params):
+        if len(current_params) == 0:
+            schemas = mole.poll_databases()
+            return [] if not schemas else schemas
+        return []
 
 class BruteforceUserTableCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -334,6 +340,12 @@ class BruteforceUserTableCommand(Command):
 
     def usage(self, cmd_name):
         return cmd_name + ' <SCHEMA>'
+
+    def parameters(self, mole, current_params):
+        if len(current_params) == 0:
+            schemas = mole.poll_databases()
+            return [] if not schemas else schemas
+        return []
 
 class ExitCommand(Command):
     def execute(self, mole, params, output_manager):
