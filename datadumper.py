@@ -1,5 +1,5 @@
 
-from output import BlindSQLIOutput
+from output import BlindSQLIOutput, RowDoneCounter
 
 class BlindDataDumper:
 
@@ -208,16 +208,19 @@ class StringUnionDataDumper:
             if count == 0:
                 return []
             print('\r[+] Rows: ' + str(count))
+            rows_done = RowDoneCounter(count)
             dump_result = []
             mole.stop_query = False
-            gen_query_item = lambda i: self._generic_query_item(mole, query_generator, i, result_parser)
+            gen_query_item = lambda i: self._generic_query_item(mole, query_generator, i, rows_done, result_parser)
             dump_result = mole.threader.execute(count, gen_query_item)
+            print('') #Print a new line to show the results in the next line
             dump_result.sort()
             return dump_result
 
     def _generic_query_item(self, mole,
                                   query_generator,
                                   offset,
+                                  rows_done_counter,
                                   result_parser = lambda x: x[0]):
         if mole.stop_query:
             return None
@@ -226,6 +229,7 @@ class StringUnionDataDumper:
         if not result or len(result) < 1:
             raise QueryError()
         else:
+            rows_done_counter.increment()
             return result_parser(result)
 
 class IntegerUnionDataDumper:
@@ -308,7 +312,7 @@ class IntegerUnionDataDumper:
         req = mole.make_request(query)
         length = mole._dbms_mole.parse_results(req)
         length = int(length[0])
-        
+
         sqli_output = BlindSQLIOutput(length)
         query_gen = lambda index,offset: mole._dbms_mole.dbinfo_integer_query(index,
                                                                               query_columns,

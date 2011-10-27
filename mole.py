@@ -31,7 +31,7 @@ import commands
 import getopt, sys
 import traceback
 
-VERSION = '0.2'
+VERSION = '(dev)'
 
 def sigint_handler(x, y):
     manager.mole.abort_query()
@@ -127,4 +127,3 @@ if __name__ == '__main__':
     except Exception as ex:
         traceback.print_tb(ex)
         print('[-] Unexpected error encountered. Please report this bug :D')
-
