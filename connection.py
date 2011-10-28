@@ -101,8 +101,9 @@ class HttpRequester:
                 exception = ex 
                 pass
             except urllib.error.URLError as ex:
-                exception = ex
-                pass
+                if ex.errno != 4:
+                    # Skip interrupted syscall
+                    exception = ex
             except http.client.BadStatusLine:
                 pass
             except http.client.IncompleteRead:

