@@ -41,14 +41,16 @@ class HttpRequester:
     
     def __init__(self, url, vulnerable_param, timeout = 0, method = 'GET', cookie = None, max_retries=3):
         self.encoding = None
-        self.url = url
         self.timeout = timeout
-        if method not in ['GET',  'POST']:
-            raise Exception('[-] Error: ' + method + ' is invalid! Only GET and POST supported.')
+        if method not in ['GET']:
+            raise Exception('[-] Error: ' + method + ' is invalid! Only GET supported.')
         self.method = method
         self.max_retries = max_retries
         self.headers = HttpRequester.headers
-        self.headers['Host'] = urlparse(url).netloc
+        parsed = urlparse(url)
+        self.host = parsed.netloc
+        self.path = parsed.path
+        self.headers['Host'] = parsed.netloc
         self.vulnerable_param = vulnerable_param
         if cookie:
             self.headers['Cookie'] = cookie
@@ -89,32 +91,15 @@ class HttpRequester:
         params = list(t.split('=', 1) for t in params.split('&'))
         params_enc = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in params)
         exception = Exception()
-        if self.method == 'GET':
-            request = urllib.request.Request(self.url + '?' + params_enc, None, self.headers)
-        else:
-            request = urllib.Request(self.url, params_enc, self.headers)
+        connection = http.client.HTTPConnection(self.host)
         for i in range(self.max_retries):
             try:
-                data = self.decode(urllib.request.urlopen(request).read())
+                connection.request('GET', self.path + '?' + params_enc, None, self.headers)
+                resp = connection.getresponse()
+                data = self.decode(resp.read())
                 return self.filter(data, params)
-            except urllib.error.HTTPError as ex:
-                exception = ex 
-                pass
-            except urllib.error.URLError as ex:
-                if ex.errno != 4:
-                    # Skip interrupted syscall
-                    exception = ex
-            except http.client.BadStatusLine:
-                pass
-            except http.client.IncompleteRead:
-                pass
-            except error:
-                pass
-        try:
-            if exception.code in [404, 500]:
-                return '<html><body></body></html>'
-        except AttributeError:
-            pass
+            except Exception as ex:
+                exception = ex
         raise exception
 
     def request(self, params):
