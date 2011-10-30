@@ -30,10 +30,13 @@ class InjectionInspector:
         separator_list = ['\'', '"', ' ']
         equal_cmp = { '\'' : 'like', '"' : 'like', ' ' : '='}
         separator = None
+        mole.stop_query = False
         for parenthesis in range(0, 3):
             print('[i] Trying injection using',parenthesis,'parenthesis.')
             mole.parenthesis = parenthesis
             for sep in separator_list:
+                if mole.stop_query:
+                    raise Exception()
                 print('[i] Trying separator: "' + sep + '"')
                 mole.separator = sep
                 req = mole.make_request(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}1'.format(sep=sep))
@@ -52,10 +55,13 @@ class InjectionInspector:
     def find_comment_delimiter(self, mole):
         #Find the correct comment delimiter
         comment_list = ['#', '--', '/*', ' ']
+        mole.stop_query = False
         for parenthesis in range(0, 3):
             print('[i] Trying injection using',parenthesis,'parenthesis.')
             mole.parenthesis = parenthesis
             for com in comment_list:
+                if mole.stop_query:
+                    raise Exception()
                 print('[i] Trying injection using comment:',com)
                 mole.comment = com
                 req = mole.make_request(' order by 1')
@@ -63,7 +69,6 @@ class InjectionInspector:
                     return (com, parenthesis)
         mole.parenthesis = 0
         raise Exception()
-        #raise SQLInjectionNotExploitable()
 
     # Returns query column number
     def find_column_number(self, mole):
@@ -71,17 +76,21 @@ class InjectionInspector:
         #First get the content of needle in a wrong situation
         req = mole.make_request(' order by 15000')
         content_of_needle = mole.analyser.node_content(req)
-        
+        mole.stop_query = False
         last = 2
         done = False
         new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (last,)))
         while new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
+            if mole.stop_query:
+                raise Exception()
             last *= 2
             print('\r[i] Trying ' + str(last) + ' columns     ', end='')
             new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (last,)))
         pri = last // 2
         print('\r[i] Maximum length: ' + str(last) + '     ', end='')
         while pri < last:
+            if mole.stop_query:
+                raise Exception()
             medio = ((pri + last) // 2) + ((pri + last) & 1)
             print('\r[i] Trying ' + str(medio) + ' columns     ', end='')
             new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (medio,)))
@@ -97,6 +106,8 @@ class InjectionInspector:
         fingers = dbms_mole.injectable_field_fingers(mole.query_columns, base)
         index = 0
         for finger in fingers:
+            if mole.stop_query:
+                return None
             print('\r[+] Trying finger ' + str(index+1) + '/' + str(len(fingers)))
             index +=1
             hashes = finger.build_query()
@@ -121,8 +132,11 @@ class InjectionInspector:
         return None
 
     def find_injectable_field(self, mole):
+        mole.stop_query = False
         if mole._dbms_mole is None:
             for dbms_mole in mole.dbms_mole_list:
+                if mole.stop_query:
+                    raise Exception()
                 print('[i] Trying DBMS', dbms_mole.dbms_name())
                 field = self._find_injectable_field_using(mole, dbms_mole)
                 if not field is None:
