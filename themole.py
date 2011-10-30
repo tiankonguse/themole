@@ -132,7 +132,6 @@ class TheMole:
             self.end = ' '
 
         if self.mode == 'union':
-
             try:
                 self._detect_dbms_blind()
             except:
@@ -146,7 +145,13 @@ class TheMole:
                 self.comment, self.parenthesis = injection_inspector.find_comment_delimiter(self)
                 print('[+] Found comment delimiter: "' + self.comment + '"')
             except Exception:
-                print('[-] Could not exploit SQL Injection.')
+                print('[-] Could not find comment.')
+                if self._dbms_mole:
+                    print('[+] Using blind mode.')
+                    self.dumper = BlindDataDumper()
+                    self.initialized = True
+                else:
+                    print('[-] Could not exploit SQL Injection.')
                 return
 
             self.query_columns = injection_inspector.find_column_number(self)
@@ -156,8 +161,15 @@ class TheMole:
                 self.injectable_field = injection_inspector.find_injectable_field(self)
                 print('[+] Found injectable field:', self.injectable_field + 1)
             except Exception as ex:
-                print(ex)
-                print('[-] Could not exploit SQL Injection.')
+                if len(str(ex)) > 0:
+                    print(ex)
+                print('[-] Could not find injectable field.')
+                if self._dbms_mole:
+                    print('[+] Using blind mode.')
+                    self.dumper = BlindDataDumper()
+                    self.initialized = True
+                else:
+                    print('[-] Could not exploit SQL Injection.')
                 return
 
             if self._dbms_mole is None:
@@ -280,7 +292,8 @@ class TheMole:
     def set_url(self, url, vulnerable_param = None):
         if not '?' in url:
             raise Exception('URL requires GET parameters.')
-
+        if not url.startswith('http://') and not url.startswith('https://'):
+            url = 'http://' + url
         url = url.split('?')
         params = list(t.split('=', 1) for t in url[1].split('&'))
         if vulnerable_param is None:
