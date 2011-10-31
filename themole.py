@@ -112,7 +112,7 @@ class TheMole:
 
         injection_inspector = InjectionInspector()
 
-        original_request = self.requester.request(self.url.replace(self.wildcard, self.prefix))
+        original_request = self.requester.request(self.prefix)
         try:
             self.analyser.set_good_page(original_request, self.needle)
         except NeedleNotFound:
@@ -189,16 +189,14 @@ class TheMole:
         self.initialized = True
 
     def generate_url(self, injection_string):
-        url = self.url.replace(
-                self.wildcard,
-                ('{prefix}{sep}{par}' + injection_string + '{end}{com}').format(
+        url = ('{prefix}{sep}{par}' + injection_string + '{end}{com}').format(
                                         sep=self.separator,
                                         com=self.comment,
                                         par=(self.parenthesis * ')'),
                                         op_par=(self.parenthesis * '('),
                                         prefix=self.prefix,
-                                        end=self.end.format(op_par=(self.parenthesis * '(')))
-        )
+                                        end=self.end.format(op_par=(self.parenthesis * '('))
+            )
         if self.verbose == True:
             print('[i] Executing query:',url)
         return url
@@ -307,7 +305,7 @@ class TheMole:
             if index is None:
                 raise Exception('Vulnerable parameter given is not present in the URL.')
         params[index][1] += self.wildcard
-        self.requester = connection.HttpRequester(url[0], timeout=self.timeout, vulnerable_param = vulnerable_param)
+        self.requester = connection.HttpRequester(url[0] + '?' + url[1], timeout=self.timeout, vulnerable_param = vulnerable_param)
         self.url = '&'.join(a + '=' + b for a, b in params)
 
     def get_url(self):

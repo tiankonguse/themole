@@ -28,6 +28,7 @@ from urllib.parse import urlparse
 import chardet, re
 from dbmsmoles import DbmsMole
 from socket import error
+import copy
 
 class HttpRequester:
     headers =  {
@@ -50,6 +51,8 @@ class HttpRequester:
         parsed = urlparse(url)
         self.host = parsed.netloc
         self.path = parsed.path
+        self.get_parameters = list(t.split('=', 1) for t in parsed.query.split('&'))
+        self.post_parameters = []
         self.headers['Host'] = parsed.netloc
         self.vulnerable_param = vulnerable_param
         if cookie:
@@ -87,14 +90,31 @@ class HttpRequester:
             idx = index_l + len(old)
         return text
 
-    def do_request(self, params):
-        params = list(t.split('=', 1) for t in params.split('&'))
-        params_enc = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in params)
+    def _add_query_to_param(self, parameters, query):
+        for i in range(len(parameters)):
+            if parameters[i][0] == self.vulnerable_param:
+                parameters[i][1] = parameters[i][1] + query
+                return parameters
+        return None
+
+    def do_request(self, query):
+        #params = list(t.split('=', 1) for t in params.split('&'))
+        get_params = copy.deepcopy(self.get_parameters)
+        post_params = copy.deepcopy(self.post_parameters)
+        if self.method == 'GET':
+            get_params = self._add_query_to_param(get_params, query)
+            params = get_params
+        else:
+            post_params = self._add_query_to_param(post_params, query)
+            params = post_params
+        get_params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in get_params)
+        post_params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in post_params)
+        
         exception = Exception()
         connection = http.client.HTTPConnection(self.host)
         for i in range(self.max_retries):
             try:
-                connection.request('GET', self.path + '?' + params_enc, None, self.headers)
+                connection.request('GET', self.path + '?' + get_params, post_params, self.headers)
                 resp = connection.getresponse()
                 data = self.decode(resp.read())
                 return self.filter(data, params)
@@ -102,7 +122,7 @@ class HttpRequester:
                 exception = ex
         raise exception
 
-    def request(self, params):
+    def request(self, query):
         time.sleep(self.timeout)	
-        data = self.do_request(params)
+        data = self.do_request(query)
         return data
