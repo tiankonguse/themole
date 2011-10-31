@@ -505,6 +505,33 @@ class ReadFileCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' <filename>'
 
+class MethodCommand(Command):
+
+    accepted_methods = ['GET', 'POST']
+
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            method = mole.requester.method
+            if method == 'POST':
+                print(method, ':', '&'.join(mole.requester.post_params))
+            else:
+                print(method)
+        elif len(params) >= 1:
+            if params[0] not in accepted_methods:
+                raise CommandException('The method ' + params[0] + ' is not supported!')
+            if len(params) == 1:
+                mole.set_method(params[0])
+            else:
+                mole.set_method(params[0], params[1])
+
+    def parameters(self, mole, current_params):
+        return accepted_methods if len(current_params) == 0 else []
+
+    def usage(self, cmd_name):
+        return cmd_name + ' (GET | POST) [<POST PARAMS>]'
+
+
+
 class CommandManager:
     def __init__(self):
         self.cmds = { 'find_tables' : BruteforceTablesCommand(),
@@ -518,6 +545,7 @@ class CommandManager:
                       'export'   : ExportCommand(),
                       'fetch'    : FetchDataCommand(),
                       'import'   : ImportCommand(),
+                      'method'   : MethodCommand(),
                       'mode'     : QueryModeCommand(),
                       'needle'   : NeedleCommand(),
                       'output'   : OutputCommand(),
