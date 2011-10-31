@@ -85,6 +85,7 @@ class TheMole:
         self.query_columns = 0
         self.injectable_field = 0
         self.database_dump = DatabaseDump()
+        self.requester = connection.HttpRequester()
 
     def restart(self):
         self.initialized = False
@@ -93,10 +94,8 @@ class TheMole:
         self.analyser = DomAnalyser()
         if not self.requester:
             raise MoleAttributeRequired('Attribute requester is required')
-        if not self.url:
-            raise MoleAttributeRequired('Attribute url is required')
-        if not self.wildcard:
-            raise MoleAttributeRequired('Attribute wildcard is required')
+        if not self.requester.is_initialized():
+            raise MoleAttributeRequired('Attribute url and injectable field are required')
         if not self.needle:
             raise MoleAttributeRequired('Attribute needle is required')
 
@@ -112,7 +111,7 @@ class TheMole:
 
         injection_inspector = InjectionInspector()
 
-        original_request = self.requester.request(self.url.replace(self.wildcard, self.prefix))
+        original_request = self.requester.request(self.prefix)
         try:
             self.analyser.set_good_page(original_request, self.needle)
         except NeedleNotFound:
@@ -132,7 +131,6 @@ class TheMole:
             self.end = ' '
 
         if self.mode == 'union':
-
             try:
                 self._detect_dbms_blind()
             except:
@@ -146,7 +144,13 @@ class TheMole:
                 self.comment, self.parenthesis = injection_inspector.find_comment_delimiter(self)
                 print('[+] Found comment delimiter: "' + self.comment + '"')
             except Exception:
-                print('[-] Could not exploit SQL Injection.')
+                print('[-] Could not find comment.')
+                if self._dbms_mole:
+                    print('[+] Using blind mode.')
+                    self.dumper = BlindDataDumper()
+                    self.initialized = True
+                else:
+                    print('[-] Could not exploit SQL Injection.')
                 return
 
             self.query_columns = injection_inspector.find_column_number(self)
@@ -156,8 +160,15 @@ class TheMole:
                 self.injectable_field = injection_inspector.find_injectable_field(self)
                 print('[+] Found injectable field:', self.injectable_field + 1)
             except Exception as ex:
-                print(ex)
-                print('[-] Could not exploit SQL Injection.')
+                if len(str(ex)) > 0:
+                    print(ex)
+                print('[-] Could not find injectable field.')
+                if self._dbms_mole:
+                    print('[+] Using blind mode.')
+                    self.dumper = BlindDataDumper()
+                    self.initialized = True
+                else:
+                    print('[-] Could not exploit SQL Injection.')
                 return
 
             if self._dbms_mole is None:
@@ -177,16 +188,14 @@ class TheMole:
         self.initialized = True
 
     def generate_url(self, injection_string):
-        url = self.url.replace(
-                self.wildcard,
-                ('{prefix}{sep}{par}' + injection_string + '{end}{com}').format(
+        url = ('{prefix}{sep}{par}' + injection_string + '{end}{com}').format(
                                         sep=self.separator,
                                         com=self.comment,
                                         par=(self.parenthesis * ')'),
                                         op_par=(self.parenthesis * '('),
                                         prefix=self.prefix,
-                                        end=self.end.format(op_par=(self.parenthesis * '(')))
-        )
+                                        end=self.end.format(op_par=(self.parenthesis * '('))
+            )
         if self.verbose == True:
             print('[i] Executing query:',url)
         return url
@@ -214,7 +223,7 @@ class TheMole:
     def get_databases(self, force_fetch=False):
         if not force_fetch and self.database_dump.db_map:
             return list(self.database_dump.db_map.keys())
-        data = self.dumper.get_databases(self, self.query_columns, self.injectable_field)
+        data = self.dumper.get_databases(self, self.injectable_field)
         for i in data:
             self.database_dump.add_db(i)
         return data
@@ -229,7 +238,7 @@ class TheMole:
         if not force_fetch and db in self.database_dump.db_map and self.database_dump.db_map[db]:
             return list(self.database_dump.db_map[db].keys())
 
-        data = self.dumper.get_tables(self, db, self.query_columns, self.injectable_field)
+        data = self.dumper.get_tables(self, db, self.injectable_field)
         for i in data:
             self.database_dump.add_table(db, i)
         return data
@@ -244,31 +253,31 @@ class TheMole:
         if not force_fetch and db in self.database_dump.db_map and table in self.database_dump.db_map[db] and len(self.database_dump.db_map[db][table]) > 0:
             return list(self.database_dump.db_map[db][table])
 
-        data = self.dumper.get_columns(self, db, table, self.query_columns, self.injectable_field)
+        data = self.dumper.get_columns(self, db, table, self.injectable_field)
         for i in data:
             self.database_dump.add_column(db, table, i)
         return data
 
     def get_fields(self, db, table, fields, where="1=1"):
-        return self.dumper.get_fields(self, db, table, fields, where, self.query_columns, self.injectable_field)
+        return self.dumper.get_fields(self, db, table, fields, where, self.injectable_field)
 
     def get_dbinfo(self):
-        return self.dumper.get_dbinfo(self, self.query_columns, self.injectable_field)
+        return self.dumper.get_dbinfo(self, self.injectable_field)
 
     def find_tables_like(self, db, table_filter):
-        data = self.dumper.find_tables_like(self, db, table_filter, self.query_columns, self.injectable_field)
+        data = self.dumper.find_tables_like(self, db, table_filter, self.injectable_field)
         for i in data:
             self.database_dump.add_table(db, i)
         return data
 
     def read_file(self, filename):
-        return self.dumper.read_file(self, filename, self.query_columns, self.injectable_field)
+        return self.dumper.read_file(self, filename, self.injectable_field)
 
     def brute_force_tables(self, db, table_list):
         for table in table_list:
             print('[i] Trying table', table)
             try:
-                if self.dumper.table_exists(self, db, table, self.query_columns, self.injectable_field):
+                if self.dumper.table_exists(self, db, table, self.injectable_field):
                     self.database_dump.add_table(db, table)
                     print('[+] Table',table,'exists.')
             except:
@@ -278,30 +287,36 @@ class TheMole:
         return self.brute_force_tables(db, TheMole.users_tables)
 
     def set_url(self, url, vulnerable_param = None):
-        if not '?' in url:
-            raise Exception('URL requires GET parameters.')
+        if not url.startswith('http://') and not url.startswith('https://'):
+            url = 'http://' + url
 
-        url = url.split('?')
-        params = list(t.split('=', 1) for t in url[1].split('&'))
-        if vulnerable_param is None:
-            index = -1
-            vulnerable_param = params[index][0]
-        else:
-            index = None
-            for i in range(len(params)):
-                if params[i][0] == vulnerable_param:
-                    index = i
-            if index is None:
-                raise Exception('Vulnerable parameter given is not present in the URL.')
-        params[index][1] += self.wildcard
-        self.requester = connection.HttpRequester(url[0], timeout=self.timeout, vulnerable_param = vulnerable_param)
-        self.url = '&'.join(a + '=' + b for a, b in params)
+        self.requester.set_url(url)
+        if vulnerable_param is None and '?' in url:
+            params = list(t.split('=', 1) for t in url.split('?')[1].split('&'))
+            vulnerable_param = params[-1][0]
+            self.requester.set_vulnerable_param('GET', vulnerable_param)
+        self.initialized = False
 
     def get_url(self):
         try:
-            return (self.requester.url + '?' + self.url).replace(self.wildcard, '')
+            return self.requester.get_url()
         except AttributeError:
             return ''
+
+    def set_method(self, method):
+        self.requester.set_method(method)
+        self.initialized = False
+
+    def get_post_params(self):
+        return self.requester.get_post_params()
+
+    def set_post_params(self, params):
+        self.requester.set_post_params(params)
+        self.initialized = False
+
+    def set_vulnerable_param(self, method, param):
+        self.requester.set_vulnerable_param(method, param)
+        self.initialized = False
 
     def export_xml(self, filename):
         if not self.initialized:
@@ -345,7 +360,6 @@ class SQLInjectionNotDetected(Exception):
 
 class SQLInjectionNotExploitable(Exception):
     pass
-
 
 
 class MoleAttributeRequired(Exception):

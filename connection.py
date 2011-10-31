@@ -24,10 +24,13 @@
 
 import urllib.request, urllib.error, urllib.parse, time, difflib
 import http.client
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 import chardet, re
-from dbmsmoles import DbmsMole
 from socket import error
+import copy
+
+from dbmsmoles import DbmsMole
+from exceptions import *
 
 class HttpRequester:
     headers =  {
@@ -39,18 +42,26 @@ class HttpRequester:
         'Cache-Control': 'max-age=0',
     }
 
+    accepted_methods = ['GET', 'POST']
+
     def __init__(self, url = None, vulnerable_param = None, timeout = 0, method = 'GET', cookie = None, max_retries=3):
         self.encoding = None
         self.timeout = timeout
-        if method not in ['GET',  'POST']:
-            raise Exception('[-] Error: ' + method + ' is invalid! Only GET and POST supported.')
-        self.method = method
+        self.method = None
         self.max_retries = max_retries
-        self.headers = HttpRequester.headers
+        self.headers = HttpRequester.headers.copy()
+        self.proto = None
+        self.host = None
+        self.path = None
+        self.get_parameters = []
+        self.post_parameters = []
+        self.vulnerable_param = None
+        self.vulnerable_param_group = None
+        self.set_method(method)
         if url is not None:
             self.set_url(url)
         if vulnerable_param is not None:
-            self.vulnerable_param = vulnerable_param
+            self.set_vulnerable_param(method, vulnerable_param)
         if cookie:
             self.headers['Cookie'] = cookie
 
@@ -86,42 +97,88 @@ class HttpRequester:
             idx = index_l + len(old)
         return text
 
-    def do_request(self, params):
-        params = list(t.split('=', 1) for t in params.split('&'))
-        params_enc = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in params)
-        exception = Exception()
-        if self.method == 'GET':
-            request = urllib.request.Request(self.url + '?' + params_enc, None, self.headers)
+    def _add_query_to_param(self, parameters, query):
+        for i in range(len(parameters)):
+            if parameters[i][0] == self.vulnerable_param:
+                parameters[i][1] = parameters[i][1] + query
+                return parameters
+        return None
+
+    def do_request(self, query):
+        #params = list(t.split('=', 1) for t in params.split('&'))
+        get_params = copy.deepcopy(self.get_parameters)
+        post_params = copy.deepcopy(self.post_parameters)
+        if self.vulnerable_param_group == 'GET':
+            get_params = self._add_query_to_param(get_params, query)
+            filter_params = get_params
         else:
-            request = urllib.Request(self.url, params_enc, self.headers)
+            post_params = self._add_query_to_param(post_params, query)
+            filter_params = post_params
+        get_params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in get_params)
+        post_params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in post_params)
+
+        exception = Exception()
+        connection = http.client.HTTPConnection(self.host)
         for i in range(self.max_retries):
             try:
-                data = self.decode(urllib.request.urlopen(request).read())
-                return self.filter(data, params)
-            except urllib.error.HTTPError as ex:
+                connection.request(self.method, self.path + '?' + get_params, post_params, self.headers)
+                resp = connection.getresponse()
+                data = self.decode(resp.read())
+
+                return self.filter(data, filter_params)
+            except Exception as ex:
                 exception = ex
-                pass
-            except urllib.error.URLError as ex:
-                exception = ex
-                pass
-            except http.client.BadStatusLine:
-                pass
-            except http.client.IncompleteRead:
-                pass
-            except error:
-                pass
-        try:
-            if exception.code in [404, 500]:
-                return '<html><body></body></html>'
-        except AttributeError:
-            pass
         raise exception
 
-    def request(self, params):
+    def request(self, query):
         time.sleep(self.timeout)
-        data = self.do_request(params)
+        data = self.do_request(query)
         return data
 
+    def is_initialized(self):
+        return self.host is not None and self.vulnerable_param is not None
+
     def set_url(self, url):
-        self.url = url
-        self.headers['Host'] = urlparse(url).netloc
+        parsed = urlparse(url)
+        self.proto = parsed.scheme
+        self.host = parsed.netloc
+        self.path = parsed.path
+        if parsed.query:
+            self.get_parameters = list(t.split('=', 1) for t in parsed.query.split('&'))
+        else:
+            self.get_parameters = []
+        self.post_parameters = []
+        self.headers['Host'] = parsed.netloc
+
+    def get_url(self):
+        get_params = '&'.join(x[0] + '=' + x[1] for x in self.get_parameters)
+        return urlunparse((self.proto, self.host, self.path, '', get_params, ''))
+
+    def set_method(self, method):
+        if method not in self.accepted_methods:
+            raise InvalidMethodException('[-] Error: ' + method + ' is invalid! Only GET supported.')
+        self.method = method
+        if method == 'POST':
+            self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        else:
+            if 'Content-Type' in self.headers:
+                del self.headers['Content-Type']
+        self.vulnerable_param = None
+        self.vulnerable_param_group = None
+
+    def set_post_params(self, param_string):
+        self.post_parameters = list(t.split('=', 1) for t in param_string.split('&'))
+
+    def get_post_params(self):
+        return '&'.join(a + '=' + b for a,b in self.post_parameters)
+
+    def set_vulnerable_param(self, method, vulnerable_param):
+        if method == 'GET' and vulnerable_param not in (x[0] for x in self.get_parameters):
+            raise InvalidParamException()
+        if method == 'POST' and vulnerable_param not in (x[0] for x in self.post_parameters):
+            raise InvalidParamException()
+        self.vulnerable_param = vulnerable_param
+        self.vulnerable_param_group = method
+
+    def get_vulnerable_param(self):
+        return (self.vulnerable_param_group, self.vulnerable_param)

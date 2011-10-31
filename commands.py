@@ -24,6 +24,7 @@
 
 import connection, os, output
 import themole
+from exceptions import *
 
 class CmdNotFoundException(Exception):
     def __init__(self, message):
@@ -69,7 +70,7 @@ class URLCommand(Command):
             if not mole.get_url():
                 print('No url defined')
             else:
-                print(mole.get_url().replace(mole.wildcard, ''))
+                print(mole.get_url())
         else:
             url = params[0]
             if len(params) == 2:
@@ -513,24 +514,51 @@ class MethodCommand(Command):
         if len(params) == 0:
             method = mole.requester.method
             if method == 'POST':
-                print(method, ':', '&'.join(mole.requester.post_params))
+                print(method, ':', mole.get_post_params())
             else:
                 print(method)
         elif len(params) >= 1:
-            if params[0] not in accepted_methods:
-                raise CommandException('The method ' + params[0] + ' is not supported!')
-            if len(params) == 1:
+            try:
                 mole.set_method(params[0])
-            else:
-                mole.set_method(params[0], params[1])
+            except InvalidMethodException:
+                raise CommandException('The method ' + params[0] + ' is not supported!')
+
+            if len(params) == 2:
+                mole.set_post_params(params[1])
 
     def parameters(self, mole, current_params):
-        return accepted_methods if len(current_params) == 0 else []
+        return self.accepted_methods if len(current_params) == 0 else []
 
     def usage(self, cmd_name):
         return cmd_name + ' (GET | POST) [<POST PARAMS>]'
 
+class InjectableFieldCommand(Command):
+    accepted_methods = ['GET', 'POST']
 
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            method, param = mole.requester.get_vulnerable_param()
+            print(method, param)
+        elif len(params) == 2:
+            if params[0] not in self.accepted_methods:
+                raise CommandException('The method ' + params[0] + ' is not supported!')
+            try:
+                mole.set_vulnerable_param(params[0], params[1])
+            except InvalidParamException:
+                raise CommandException('Parameter given is not valid')
+
+    def parameters(self, mole, current_params):
+        if len(current_params) == 0:
+            return self.accepted_methods
+        if len(current_params) == 1:
+            if current_params[0] == 'GET':
+                return [x[0] for x in mole.requester.get_parameters]
+            elif current_params[0] == 'POST':
+                return [x[0] for x in mole.requester.post_parameters]
+        return []
+
+    def usage(self, cmd_name):
+        return cmd_name + ' (GET | POST) <INJECTABLE_FIELD>'
 
 class CommandManager:
     def __init__(self):
@@ -545,6 +573,7 @@ class CommandManager:
                       'export'   : ExportCommand(),
                       'fetch'    : FetchDataCommand(),
                       'import'   : ImportCommand(),
+                      'injectable_field' : InjectableFieldCommand(),
                       'method'   : MethodCommand(),
                       'mode'     : QueryModeCommand(),
                       'needle'   : NeedleCommand(),

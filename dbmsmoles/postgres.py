@@ -110,7 +110,7 @@ class PostgresMole(DbmsMole):
     def is_string_query(self):
         return self.finger.is_string_query
 
-    def forge_count_query(self, column_count, fields, table_name, injectable_field, where = None):
+    def forge_count_query(self, fields, table_name, injectable_field, where = None):
         query = " and 1 = 0 UNION ALL SELECT "
         if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             count_string = 'distinct(schemaname)'
@@ -128,7 +128,7 @@ class PostgresMole(DbmsMole):
         query += at_end
         return query
 
-    def forge_query(self, column_count, fields, table_name, injectable_field, where = None, offset = 0):
+    def forge_query(self, fields, table_name, injectable_field, where = None, offset = 0):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         # It's not beatiful but it works :D
@@ -149,7 +149,7 @@ class PostgresMole(DbmsMole):
         query += at_end
         return query
 
-    def forge_integer_count_query(self, column_count, fields, table_name, injectable_field, where = None):
+    def forge_integer_count_query(self, fields, table_name, injectable_field, where = None):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
@@ -166,7 +166,7 @@ class PostgresMole(DbmsMole):
         query += at_end
         return query
 
-    def forge_integer_len_query(self, column_count, fields, table_name, injectable_field, where = None, offset = 0):
+    def forge_integer_len_query(self, fields, table_name, injectable_field, where = None, offset = 0):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         # It's not beatiful but it works :D
@@ -187,7 +187,7 @@ class PostgresMole(DbmsMole):
         query += at_end
         return query
 
-    def forge_integer_query(self, column_count, index, fields, table_name, injectable_field, where = None, offset = 0):
+    def forge_integer_query(self, index, fields, table_name, injectable_field, where = None, offset = 0):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         # It's not beatiful but it works :D
