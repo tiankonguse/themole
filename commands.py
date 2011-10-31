@@ -523,14 +523,23 @@ class MethodCommand(Command):
             except InvalidMethodException:
                 raise CommandException('The method ' + params[0] + ' is not supported!')
 
-            if len(params) == 2:
+            if len(params) >= 2:
                 mole.set_post_params(params[1])
+            
+            if len(params) == 3:
+                mole.set_vulnerable_param(params[0], params[2])
 
     def parameters(self, mole, current_params):
-        return self.accepted_methods if len(current_params) == 0 else []
+        if len(current_params) == 0:
+            return self.accepted_methods
+        elif len(current_params) == 2:
+            return list(t.split('=', 1)[0] for t in current_params[1].split('&'))
+        else:
+            return []
+        
 
     def usage(self, cmd_name):
-        return cmd_name + ' (GET | POST) [<POST PARAMS>]'
+        return cmd_name + ' (GET | POST) [<POST PARAMS>] [VULNERABLE_PARAM]'
 
 class InjectableFieldCommand(Command):
     accepted_methods = ['GET', 'POST']
