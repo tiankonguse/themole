@@ -268,8 +268,15 @@ class QueryCommand(Command):
             self.check_initialization(mole)
             if len(params) == 4:
                 raise CommandException('Expected 3 or at least 5 parameters, got 4.')
-            condition = ' '.join(params[4:]) if len(params) > 3 else '1=1'
-            result = mole.get_fields(params[0], params[1], params[2].split(','), condition)
+            index_limit = params.index('limit') if 'limit' in params else -1
+            index_where = params.index('where') if 'where' in params else -1
+            where_end = index_limit if index_limit != -1 and index_limit > index_where else len(params)+1
+            condition = ' '.join(params[index_where+1:where_end]) if index_where != -1 else '1=1'
+            if index_limit == len(params) - 1:
+                raise CommandException('Limit argument requires row numbers.')
+            limit = int(params[index_limit+1]) if index_limit != -1 else 0x7fffffff
+            limit = max(limit, 0)
+            result = mole.get_fields(params[0], params[1], params[2].split(','), condition, limit=limit)
         except themole.QueryError as ex:
             print('[-]', ex)
             return
@@ -279,7 +286,7 @@ class QueryCommand(Command):
         output_manager.end_sequence()
 
     def usage(self, cmd_name):
-        return cmd_name + ' <SCHEMA> <TABLE> <COLUMNS> [where <CONDITION>]'
+        return cmd_name + ' <SCHEMA> <TABLE> <COLUMNS> [where <CONDITION>] [limit <NUM_ROWS>]'
 
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
@@ -296,7 +303,7 @@ class QueryCommand(Command):
             columns = mole.poll_columns(current_params[0], current_params[1])
             return columns if columns else []
         elif len(current_params) == 3 :
-            return ['where']
+            return ['where', 'limit']
         else:
             columns = mole.poll_columns(current_params[0], current_params[1])
             return columns if columns else []
