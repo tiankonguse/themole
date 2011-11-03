@@ -129,11 +129,11 @@ User, Password:
 blabla, *2B0DDEE3597240B595689260B53D411F515B806D
 foobar, *641B2485F1789F7A6BEE986648B83A899D96793B
 
-- timeout [TIMEOUT]: Gets/Sets the timeout between requests. Use this
-if the server contains some kind of IDS system that returns HTTP error
+- delay [DELAY]: Gets/Sets the delay between requests. Use this
+if the server contains some kind of IPS system that returns HTTP error
 when executing lots of requests in a short amount of time. Note that
-TIMEOUT can be a floating point number, so you can set "0.5" as the
-timeout.
+DELAY can be a floating point number, so you can set "0.5" as the
+delay.
 
 - export <TYPE> [<ARG1>, ...]: Exports the current mole configuration
 and the dumped schema's structures for later usage.

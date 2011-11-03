@@ -27,3 +27,6 @@ class InvalidParamException(Exception):
 
 class InvalidMethodException(Exception):
     pass
+
+class FilterNotFoundException(Exception):
+    pass

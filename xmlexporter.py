@@ -41,7 +41,7 @@ dtd = """<!DOCTYPE themole [
 <!ATTLIST mole_config parenthesis CDATA #REQUIRED>
 <!ATTLIST mole_config prefix CDATA #REQUIRED>
 <!ATTLIST mole_config separator CDATA #REQUIRED>
-<!ATTLIST mole_config timeout CDATA #REQUIRED>
+<!ATTLIST mole_config delay CDATA #REQUIRED>
 <!ATTLIST mole_config url CDATA #REQUIRED>
 <!ATTLIST mole_config vulnerable_param CDATA #REQUIRED>
 <!ATTLIST mole_config query_columns CDATA #REQUIRED>
@@ -150,9 +150,9 @@ class XMLExporter:
         mole_config.set('end', end)
         del end
 
-        timeout = b64encode(str(mole.timeout).encode()).decode()
-        mole_config.set("timeout", timeout)
-        del timeout
+        delay = b64encode(str(mole.delay).encode()).decode()
+        mole_config.set("delay", delay)
+        del delay
 
         separator = b64encode(mole.separator.encode()).decode()
         mole_config.set("separator", separator)
@@ -206,10 +206,10 @@ class XMLExporter:
         mole_config.end = end
         del end
 
-        value = node.get('timeout')
-        timeout = float(b64decode(value.encode()).decode())
-        mole_config.timeout = timeout
-        del timeout
+        value = node.get('delay')
+        delay = float(b64decode(value.encode()).decode())
+        mole_config.delay = delay
+        del delay
 
         value = node.get('separator')
         separator = b64decode(value.encode()).decode()
