@@ -30,3 +30,6 @@ class InvalidMethodException(Exception):
 
 class FilterNotFoundException(Exception):
     pass
+
+class FilterConfigException(Exception):
+    pass

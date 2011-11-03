@@ -48,7 +48,6 @@ class Command:
                 print('Mole error:', ex.message)
                 raise CommandException('Mole not ready yet')
             except Exception as ex:
-                raise ex
                 print(ex)
                 raise QuietCommandException()
 
@@ -494,10 +493,15 @@ class FilterCommand(Command):
                 return mole.filter.available_filters()
             elif current_params[0] == 'del':
                 return mole.filter.active_filters()
+        elif len(current_params) > 2 and current_params[0] == 'config':
+            try:
+                return mole.filter.parameters(current_params[0])
+            except FilterNotFoundException:
+                pass
         return []
 
     def usage(self, cmd_name):
-        return cmd_name + ' (add|del) [FILTER_NAME [ARGS]]'
+        return cmd_name + ' (add|del|config) [FILTER_NAME [ARGS]]'
 
 class ExportCommand(Command):
     def execute(self, mole, params, output_manager):

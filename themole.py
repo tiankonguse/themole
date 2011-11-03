@@ -123,8 +123,7 @@ class TheMole:
         try:
             self.separator, self.parenthesis = injection_inspector.find_separator(self)
             print("[+] Found separator: \"" + self.separator + "\"")
-        except Exception as ex:
-            raise ex
+        except Exception:
             print('[-] Could not detect SQL Injection.')
             return
 
