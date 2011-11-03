@@ -532,7 +532,7 @@ class MethodCommand(Command):
 
             if len(params) >= 2:
                 mole.set_post_params(params[1])
-            
+
             if len(params) == 3:
                 mole.set_vulnerable_param(params[0], params[2])
 
@@ -543,7 +543,7 @@ class MethodCommand(Command):
             return list(t.split('=', 1)[0] for t in current_params[1].split('&'))
         else:
             return []
-        
+
 
     def usage(self, cmd_name):
         return cmd_name + ' (GET | POST) [<POST PARAMS>] [VULNERABLE_PARAM]'
@@ -587,15 +587,17 @@ class RecursiveCommand(Command):
         if len(params) == 1 and params[0] == 'tables':
             raise CommandException('Recursive command needs schema name if you are retrieving tables!')
 
+        self.check_initialization(mole)
+
         if params[0] == 'schemas':
             self.__get_schemas(mole)
         elif params[0] == 'tables':
             self.__get_tables(mole, params[1])
 
     def parameters(self, mole, current_params):
-        if len(params) == 0:
+        if len(current_params) == 0:
             return self.first_param
-        if len(params) == 1 and params[0] == 'tables':
+        if len(current_params) == 1 and current_params[0] == 'tables':
             schemas = mole.poll_databases()
             return schemas if schemas else []
         return []
@@ -606,11 +608,13 @@ class RecursiveCommand(Command):
     def __get_schemas(self, mole):
         schemas = mole.get_databases()
         for schema in schemas:
+            print('[*] Dumping schema:', schema)
             self.__get_tables(mole, schema)
 
     def __get_tables(self, mole, schema):
         tables = mole.get_tables(schema)
         for table in tables:
+            print('[*] Dumping table:', table, 'from schema:', schema)
             mole.get_columns(schema, table)
 
 
