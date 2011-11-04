@@ -41,12 +41,6 @@ dtd = """<!DOCTYPE themole [
 <!ATTLIST mole_config parenthesis CDATA #REQUIRED>
 <!ATTLIST mole_config prefix CDATA #REQUIRED>
 <!ATTLIST mole_config separator CDATA #REQUIRED>
-<<<<<<< HEAD
-=======
-<!ATTLIST mole_config delay CDATA #REQUIRED>
-<!ATTLIST mole_config url CDATA #REQUIRED>
-<!ATTLIST mole_config vulnerable_param CDATA #REQUIRED>
->>>>>>> 94f033eda96f9aac5539e3e4d7df01243c45646c
 <!ATTLIST mole_config query_columns CDATA #REQUIRED>
 <!ELEMENT dbms_mole (finger)>
 <!ATTLIST dbms_mole type CDATA #REQUIRED>
