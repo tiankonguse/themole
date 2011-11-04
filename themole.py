@@ -30,6 +30,7 @@ from output import BlindSQLIOutput
 from xmlexporter import XMLExporter
 from injectioninspector import InjectionInspector
 from datadumper import *
+from qfilter import QueryFilter
 import connection
 import time,sys
 
@@ -76,7 +77,7 @@ class TheMole:
         self.prefix = ''
         self.end = ''
         self.verbose = False
-        self.timeout = 0
+        self.delay = 0
         self.separator = ''
         self.comment = ''
         self.parenthesis = 0
@@ -86,6 +87,7 @@ class TheMole:
         self.injectable_field = 0
         self.database_dump = DatabaseDump()
         self.requester = connection.HttpRequester()
+        self.filter = QueryFilter()
 
     def restart(self):
         self.initialized = False
@@ -196,6 +198,7 @@ class TheMole:
                                         prefix=self.prefix,
                                         end=self.end.format(op_par=(self.parenthesis * '('))
             )
+        url = self.filter.apply_filters(url)
         if self.verbose == True:
             print('[i] Executing query:',url)
         return url

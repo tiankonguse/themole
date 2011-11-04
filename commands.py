@@ -24,6 +24,7 @@
 
 import connection, os, output
 import themole
+import traceback
 from exceptions import *
 
 class CmdNotFoundException(Exception):
@@ -407,17 +408,17 @@ class SuffixCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' [SUFFIX]'
 
-class TimeoutCommand(Command):
+class DelayCommand(Command):
     def execute(self, mole, params, output_manager):
         if len(params) == 0:
-            print(mole.timeout)
+            print(mole.delay)
         else:
-            mole.timeout = float(params[0])
+            mole.delay = float(params[0])
             if mole.requester:
-                mole.requester.timeout = mole.timeout
+                mole.requester.delay = mole.delay
 
     def usage(self, cmd_name):
-        return cmd_name + ' [TIMEOUT]'
+        return cmd_name + ' [DELAY]'
 
 class VerboseCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -465,7 +466,53 @@ class UsageCommand(Command):
         return cmd_manager.cmds.keys() if len(current_params) == 0 else []
 
     def usage(self, cmd_name):
-        return cmd_name + ' <on|off>'
+        return cmd_name + ' <CMD_NAME>'
+
+class FilterCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            for i in mole.filter.active_filters():
+                print(i)
+        elif len(params) == 1:
+            raise CommandException(params[0] + ' requires at least one parameter.')
+        else:
+            if params[0] == 'add':
+                try:
+                    mole.filter.add_filter(params[1], params[2:])
+                except FilterNotFoundException:
+                    raise CommandException('Filter ' + params[1] + ' not found.')
+            elif params[0] == 'del':
+                mole.filter.remove_filter(params[1])
+            elif params[0] == 'config':
+                if len(params) < 3:
+                    raise CommandException('Expected more arguments.')
+                try:
+                    mole.filter.config(params[1], params[2:])
+                except Exception as ex:
+                    print(ex)
+                    print('Filter ' + params[1] + ' not found.')
+            else:
+                raise CommandException('Parameter ' + params[1] + ' is not valid.')
+
+    def parameters(self, mole, current_params):
+        if len(current_params) == 0:
+            return ['add', 'del', 'config']
+        elif len(current_params) == 1:
+            if current_params[0] == 'add':
+                return mole.filter.available_filters()
+            elif current_params[0] == 'del':
+                return mole.filter.active_filters()
+            elif current_params[0] == 'config':
+                return mole.filter.active_filters()
+        elif current_params[0] == 'config':
+            try:
+                return mole.filter.parameters(current_params[1], current_params[2:])
+            except FilterNotFoundException:
+                pass
+        return []
+
+    def usage(self, cmd_name):
+        return cmd_name + ' (add|del|config) [FILTER_NAME [ARGS]]'
 
 class ExportCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -630,6 +677,7 @@ class CommandManager:
                       'exit'     : ExitCommand(),
                       'export'   : ExportCommand(),
                       'fetch'    : FetchDataCommand(),
+                      'filter'   : FilterCommand(),
                       'import'   : ImportCommand(),
                       'injectable_field' : InjectableFieldCommand(),
                       'method'   : MethodCommand(),
@@ -643,7 +691,7 @@ class CommandManager:
                       'schemas'  : SchemasCommand(),
                       'suffix'   : SuffixCommand(),
                       'tables'   : TablesCommand(),
-                      'timeout'  : TimeoutCommand(),
+                      'delay'    : DelayCommand(),
                       'url'      : URLCommand(),
                       'usage'    : UsageCommand(),
                       'verbose'  : VerboseCommand(),

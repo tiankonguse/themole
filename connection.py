@@ -44,9 +44,9 @@ class HttpRequester:
 
     accepted_methods = ['GET', 'POST']
 
-    def __init__(self, url = None, vulnerable_param = None, timeout = 0, method = 'GET', cookie = None, max_retries=3):
+    def __init__(self, url = None, vulnerable_param = None, delay = 0, method = 'GET', cookie = None, max_retries=3):
         self.encoding = None
-        self.timeout = timeout
+        self.delay = delay
         self.method = None
         self.max_retries = max_retries
         self.headers = HttpRequester.headers.copy()
@@ -131,7 +131,7 @@ class HttpRequester:
         raise exception
 
     def request(self, query):
-        time.sleep(self.timeout)
+        time.sleep(self.delay)
         data = self.do_request(query)
         return data
 

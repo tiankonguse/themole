@@ -22,14 +22,15 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-class InvalidParamException(Exception):
-    pass
+class BaseQueryFilter:
+    def __init__(self, params):
+        pass
 
-class InvalidMethodException(Exception):
-    pass
-
-class FilterNotFoundException(Exception):
-    pass
-
-class FilterConfigException(Exception):
-    pass
+    def filter(self, query):
+        pass
+    
+    def config(self, params):
+        pass
+    
+    def parameters(self, current_params):
+        return []

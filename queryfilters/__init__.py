@@ -22,14 +22,4 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-class InvalidParamException(Exception):
-    pass
-
-class InvalidMethodException(Exception):
-    pass
-
-class FilterNotFoundException(Exception):
-    pass
-
-class FilterConfigException(Exception):
-    pass
+from queryfilters.genericfilters import *

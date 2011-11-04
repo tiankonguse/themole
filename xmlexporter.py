@@ -41,6 +41,12 @@ dtd = """<!DOCTYPE themole [
 <!ATTLIST mole_config parenthesis CDATA #REQUIRED>
 <!ATTLIST mole_config prefix CDATA #REQUIRED>
 <!ATTLIST mole_config separator CDATA #REQUIRED>
+<<<<<<< HEAD
+=======
+<!ATTLIST mole_config delay CDATA #REQUIRED>
+<!ATTLIST mole_config url CDATA #REQUIRED>
+<!ATTLIST mole_config vulnerable_param CDATA #REQUIRED>
+>>>>>>> 94f033eda96f9aac5539e3e4d7df01243c45646c
 <!ATTLIST mole_config query_columns CDATA #REQUIRED>
 <!ELEMENT dbms_mole (finger)>
 <!ATTLIST dbms_mole type CDATA #REQUIRED>
@@ -298,7 +304,7 @@ class XMLExporter:
         conn_obj = mole_config.requester
         connection = etree.Element('connection')
 
-        delay = b64encode(str(conn_obj.timeout).encode()).decode()
+        delay = b64encode(str(conn_obj.delay).encode()).decode()
         connection.set('delay', delay)
         del delay
 
@@ -334,7 +340,7 @@ class XMLExporter:
 
         field = node.get('delay')
         value = int(b64decode(field.encode()).decode())
-        conn_obj.timeout = value
+        conn_obj.delay = value
 
         field = node.get('method')
         value = b64decode(field.encode()).decode()

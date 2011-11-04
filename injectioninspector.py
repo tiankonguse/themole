@@ -41,13 +41,10 @@ class InjectionInspector:
                 mole.separator = sep
                 req = mole.make_request(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}1'.format(sep=sep))
                 if mole.analyser.is_valid(req):
-                    separator = sep
-                    break
-            if separator:
-                # Validate the negation of the query
-                req = mole.make_request(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}0'.format(sep=sep))
-                if not mole.analyser.is_valid(req):
-                    return (separator, parenthesis)
+                    # Validate the negation of the query
+                    req = mole.make_request(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}0'.format(sep=sep))
+                    if not mole.analyser.is_valid(req):
+                        return (sep, parenthesis)
         if not separator:
             raise Exception()
 
