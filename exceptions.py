@@ -22,10 +22,72 @@
 # Santiago Alessandri
 # Gastón Traberg
 
+#General Exceptions
+
+class StoppedQueryException(Exception):
+    pass
+
+
+#Commands exceptions
+
+class CmdNotFoundException(Exception):
+    pass
+
+class CommandException(Exception):
+    pass
+
+class QuietCommandException(Exception):
+    pass
+
+#The Mole Exceptions
+
+class SQLInjectionNotDetected(Exception):
+    pass
+
+class SQLInjectionNotExploitable(Exception):
+    pass
+
+class MoleAttributeRequired(Exception):
+    pass
+
+class DbmsDetectionFailed(Exception):
+    pass
+
+#Command Exceptions
+
+class CmdNotFoundException(Exception):
+    pass
+
+class CommandException(Exception):
+    pass
+
+class QuietCommandException(Exception):
+    pass
+
+
+#Domanalyser Exception
+
+class NeedleNotFound(Exception):
+    pass
+
+#InjectionInspector Exceptions
+
+class SeparatorNotFound(Exception):
+    pass
+
+class CommentNotFound(Exception):
+    pass
+
+class InjectableFieldNotFound(Exception):
+    pass
+
 class InvalidParamException(Exception):
     pass
 
 class InvalidMethodException(Exception):
+    pass
+
+class ConnectionException(Exception):
     pass
 
 class FilterNotFoundException(Exception):

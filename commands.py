@@ -27,17 +27,6 @@ import themole
 import traceback
 from exceptions import *
 
-class CmdNotFoundException(Exception):
-    def __init__(self, message):
-        self.message = message
-
-class CommandException(Exception):
-    def __init__(self, message):
-        self.message = message
-
-class QuietCommandException(Exception):
-    pass
-
 class Command:
     def check_initialization(self, mole):
         if not mole.initialized:
@@ -45,12 +34,20 @@ class Command:
                 mole.initialize()
                 if not mole.initialized:
                     raise QuietCommandException()
-            except themole.MoleAttributeRequired as ex:
-                print('Mole error:', ex.message)
-                raise CommandException('Mole not ready yet')
-            except Exception as ex:
-                print(ex)
-                raise QuietCommandException()
+            except MoleAttributeRequired as ex:
+                raise CommandException('[-] Mole not ready: ' + str(ex))
+            except NeedleNotFound as ex:
+                raise CommandException('[-] Needle not found')
+            except SeparatorNotFound as ex:
+                raise CommandException('[-] Could not detect SQL Injection: Separator not found')
+            except CommentNotFound as ex:
+                raise CommandException('[-] Could not detect SQL Injection: Comment marker not found')
+            except InjectableFieldNotFound as ex:
+                raise CommandException('[-] Could not detect SQL Injection: Injectable field not found')
+            except StoppedQueryException:
+                raise QuiteCommandException()
+
+
 
     def execute(self, mole, params, output_manager):
         pass

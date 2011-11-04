@@ -22,7 +22,11 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-from domanalyser import DomAnalyser,NeedleNotFound
+import time
+import sys
+
+from exceptions import *
+from domanalyser import DomAnalyser
 from dbmsmoles import DbmsMole, MysqlMole, PostgresMole, SQLServerMole, OracleMole
 from dbdump import DatabaseDump
 from threader import Threader
@@ -32,7 +36,6 @@ from injectioninspector import InjectionInspector
 from datadumper import *
 from qfilter import QueryFilter
 import connection
-import time,sys
 
 class TheMole:
 
@@ -94,8 +97,6 @@ class TheMole:
 
     def initialize(self):
         self.analyser = DomAnalyser()
-        if not self.requester:
-            raise MoleAttributeRequired('Attribute requester is required')
         if not self.requester.is_initialized():
             raise MoleAttributeRequired('Attribute url and injectable field are required')
         if not self.needle:
@@ -114,18 +115,10 @@ class TheMole:
         injection_inspector = InjectionInspector()
 
         original_request = self.requester.request(self.prefix)
-        try:
-            self.analyser.set_good_page(original_request, self.needle)
-        except NeedleNotFound:
-            print('[-] Could not find needle.')
-            return
+        self.analyser.set_good_page(original_request, self.needle)
 
-        try:
-            self.separator, self.parenthesis = injection_inspector.find_separator(self)
-            print("[+] Found separator: \"" + self.separator + "\"")
-        except Exception:
-            print('[-] Could not detect SQL Injection.')
-            return
+        self.separator, self.parenthesis = injection_inspector.find_separator(self)
+        print("[+] Found separator: \"" + self.separator + "\"")
 
         if not self.separator == ' ':
             self.end = 'and {op_par}' + '{sep}1{sep} like {sep}1'.format(sep=self.separator, par=(self.parenthesis * ')'))
@@ -135,7 +128,7 @@ class TheMole:
         if self.mode == 'union':
             try:
                 self._detect_dbms_blind()
-            except:
+            except DbmsDetectionFailed:
                 print('[i] Early DBMS detection failed. Retrying later.')
 
             self.end = ''
@@ -145,15 +138,14 @@ class TheMole:
             try:
                 self.comment, self.parenthesis = injection_inspector.find_comment_delimiter(self)
                 print('[+] Found comment delimiter: "' + self.comment + '"')
-            except Exception:
-                print('[-] Could not find comment.')
+            except CommentNotFound:
                 if self._dbms_mole:
+                    print('[-] Could not find comment.')
                     print('[+] Using blind mode.')
                     self.dumper = BlindDataDumper()
                     self.initialized = True
-                else:
-                    print('[-] Could not exploit SQL Injection.')
-                return
+                    return
+                raise
 
             self.query_columns = injection_inspector.find_column_number(self)
             print('[+] Query columns count:', self.query_columns)
@@ -161,17 +153,14 @@ class TheMole:
             try:
                 self.injectable_field = injection_inspector.find_injectable_field(self)
                 print('[+] Found injectable field:', self.injectable_field + 1)
-            except Exception as ex:
-                if len(str(ex)) > 0:
-                    print(ex)
-                print('[-] Could not find injectable field.')
+            except InjectableFieldNotFound as ex:
                 if self._dbms_mole:
+                    print('[-] Could not find injectable field.')
                     print('[+] Using blind mode.')
                     self.dumper = BlindDataDumper()
                     self.initialized = True
-                else:
-                    print('[-] Could not exploit SQL Injection.')
-                return
+                    return
+                raise
 
             if self._dbms_mole is None:
                 print('[-] Could not detect DBMS.')
@@ -357,17 +346,6 @@ class TheMole:
                 self._dbms_mole = dbms_mole_class()
                 print('[+] Found DBMS:', dbms_mole_class.dbms_name())
                 return
-        raise Exception('[-] Could not detect DBMS')
+        raise DbmsDetectionFailed()
 
 
-
-class SQLInjectionNotDetected(Exception):
-    pass
-
-class SQLInjectionNotExploitable(Exception):
-    pass
-
-
-class MoleAttributeRequired(Exception):
-    def __init__(self, msg):
-        self.message = msg

@@ -22,13 +22,15 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-import urllib.request, urllib.error, urllib.parse, time, difflib
+import time
 import http.client
+import re
+import socket
+import urllib.parse
 from urllib.parse import urlparse, urlunparse
-import chardet, re
-from socket import error
 import copy
 
+import chardet
 from dbmsmoles import DbmsMole
 from exceptions import *
 
@@ -117,18 +119,37 @@ class HttpRequester:
         get_params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in get_params)
         post_params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in post_params)
 
-        exception = Exception()
-        connection = http.client.HTTPConnection(self.host)
+        try:
+            if self.proto == 'https':
+                connection = http.client.HTTPSConnection(self.host)
+            else:
+                connection = http.client.HTTPConnection(self.host)
+        except (http.client.NotConnected,
+                http.client.InvalidURL,
+                http.client.UnknownProtocol,
+                http.client.BadStatusLine) as e:
+            raise ConnectionException(str(e))
+
         for i in range(self.max_retries):
             try:
                 connection.request(self.method, self.path + '?' + get_params, post_params, self.headers)
                 resp = connection.getresponse()
                 data = self.decode(resp.read())
-
-                return self.filter(data, filter_params)
-            except Exception as ex:
+                break
+            except (socket.error,
+                    socket.timeout,
+                    http.client.IncompleteRead,
+                    http.client.CannotSendRequest,
+                    http.client.CannotSendHeader,
+                    http.client.ResponseNotReady,
+                    http.client.BadStatusLine) as ex:
+                data = None
                 exception = ex
-        raise exception
+
+        if data is None:
+            raise ConnectionException(str(exception))
+
+        return self.filter(data, filter_params)
 
     def request(self, query):
         time.sleep(self.delay)
