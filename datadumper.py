@@ -26,11 +26,11 @@ class BlindDataDumper:
         data = self._blind_query(mole, count_fun, length_fun, query_fun)
         return list(map(lambda x: x[0], data))
 
-    def get_fields(self, mole, db, table, fields, where, injectable_field, limit=0x7fffffff):
+    def get_fields(self, mole, db, table, fields, where, injectable_field, start=0, limit=0x7fffffff):
         count_fun = lambda x,y: mole._dbms_mole.fields_blind_count_query(x, y, db=db, table=table, where=where)
         length_fun = lambda x: lambda y,z: mole._dbms_mole.fields_blind_len_query(y, z, fields=fields, db=db, table=table, offset=x, where=where)
         query_fun = lambda x,y,z: mole._dbms_mole.fields_blind_data_query(x, y, fields=fields, db=db, table=table, offset=z, where=where)
-        return self._blind_query(mole, count_fun, length_fun, query_fun, limit=limit)
+        return self._blind_query(mole, count_fun, length_fun, query_fun, start=start, limit=limit)
 
     def get_dbinfo(self, mole, injectable_field):
         count_fun = None
@@ -56,7 +56,7 @@ class BlindDataDumper:
     def read_file(self, mole, filename, injectable_field):
         return 'Not implemented.'
 
-    def _blind_query(self, mole, count_fun, length_fun, query_fun, limit=0x7fffffff, row_count=None):
+    def _blind_query(self, mole, count_fun, length_fun, query_fun, limit=0x7fffffff, start=0, row_count=None):
         mole.stop_query = False
         if count_fun is None:
             count = row_count
@@ -67,9 +67,10 @@ class BlindDataDumper:
                 lambda x: '\rTrying count: ' + str(x),
                 lambda x: '\rAt most count: ' + str(x)
             )
+            count = min(count, limit+start)
             print('\r[+] Found row count:', count)
         results = []
-        for row in range(min(count, limit)):
+        for row in range(start, count):
             if mole.stop_query:
                 return results
             length = self._generic_blind_len(
@@ -166,10 +167,10 @@ class StringUnionDataDumper:
         query_gen = lambda x: mole._dbms_mole.columns_query(db, table, injectable_field, x)
         return self._generic_query(mole, count_query, query_gen)
 
-    def get_fields(self, mole, db, table, fields, where, injectable_field, limit=0x7fffffff):
+    def get_fields(self, mole, db, table, fields, where, injectable_field, start=0, limit=0x7fffffff):
         count_query = mole._dbms_mole.fields_count_query(db, table, injectable_field, where=where)
-        query_gen = lambda x: mole._dbms_mole.fields_query(db, table, fields, injectable_field, x, where=where)
-        return self._generic_query(mole, count_query, query_gen, lambda x: x, limit=limit)
+        query_gen = lambda x: mole._dbms_mole.fields_query(db, table, fields, injectable_field, offset=x+start, where=where)
+        return self._generic_query(mole, count_query, query_gen, lambda x: x, start=start, limit=limit)
 
     def get_dbinfo(self, mole, injectable_field):
         query = mole._dbms_mole.dbinfo_query(injectable_field)
@@ -199,7 +200,7 @@ class StringUnionDataDumper:
                              count_query,
                              query_generator,
                              result_parser = lambda x: x[0],
-                             limit=0x7fffffff):
+                             start=0, limit=0x7fffffff):
         req = mole.get_requester().request(mole.generate_url(count_query))
         result = mole._dbms_mole.parse_results(req)
         if not result or len(result) != 1:
@@ -208,13 +209,15 @@ class StringUnionDataDumper:
             count = int(result[0])
             if count == 0:
                 return []
-            count = min(count, limit)
+            count = min(count, limit+start)
+            if start >= count:
+                return []
             print('\r[+] Rows: ' + str(count))
             rows_done = RowDoneCounter(count)
             dump_result = []
             mole.stop_query = False
             gen_query_item = lambda i: self._generic_query_item(mole, query_generator, i, rows_done, result_parser)
-            dump_result = mole.threader.execute(count, gen_query_item)
+            dump_result = mole.threader.execute(count-start, gen_query_item)
             print('') #Print a new line to show the results in the next line
             dump_result.sort()
             return dump_result
@@ -274,7 +277,7 @@ class IntegerUnionDataDumper:
                                                                                 offset=offset)
         return self._generic_integer_query(mole, count_query, length_query, query_gen)
 
-    def get_fields(self, mole, db, table, fields, where, injectable_field, limit=0x7fffffff):
+    def get_fields(self, mole, db, table, fields, where, injectable_field, start=0, limit=0x7fffffff):
         count_query = mole._dbms_mole.fields_integer_count_query(db,
                                                                  table,
                                                                  injectable_field,
@@ -292,7 +295,7 @@ class IntegerUnionDataDumper:
                                                                                injectable_field,
                                                                                offset=offset,
                                                                                where=where)
-        data = self._generic_integer_query(mole, count_query, length_query, query_gen, limit=limit)
+        data = self._generic_integer_query(mole, count_query, length_query, query_gen, start=start, limit=limit)
 
         return map(lambda x: x.split(mole._dbms_mole.blind_field_delimiter()), data)
 
@@ -368,7 +371,7 @@ class IntegerUnionDataDumper:
                                      length_query,
                                      query_generator,
                                      result_parser = lambda x: x[0],
-                                     limit=0x7fffffff):
+                                     start=0, limit=0x7fffffff):
         req = mole.get_requester().request(mole.generate_url(count_query))
         result = mole._dbms_mole.parse_results(req)
         if not result:
@@ -377,11 +380,11 @@ class IntegerUnionDataDumper:
             count = int(result[0])
             if count == 0:
                 return []
-            count = min(count, limit)
+            count = min(count, limit+start)
             print('\r[+] Rows:', count)
             dump_result = []
             mole.stop_query = False
-            for i in range(count):
+            for i in range(start,count):
                 if mole.stop_query:
                     break
                 req = mole.requester.request(mole.generate_url(length_query(i)))

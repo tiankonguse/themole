@@ -79,12 +79,17 @@ class SQLServerCollationFilter(BaseQueryFilter):
             if len(params) != 2:
                 raise FilterConfigException('Expected argument after "del".')
             self.blacklist.remove(params[1])
+        elif params[0] == 'collation':
+            if len(params) != 2:
+                print(self.collation)
+            else:
+                self.collation = params[1]
         else:
             raise FilterConfigException('Argument ' + params[0] + ' is invalid.')
 
     def parameters(self, current_params):
         if len(current_params) == 0:
-            return ['add', 'del', 'show']
+            return ['add', 'del', 'show', 'collation']
         else:
             return self.blacklist if current_params[0] == 'del' else []
                 

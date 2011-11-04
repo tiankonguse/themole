@@ -32,13 +32,13 @@ class DatabaseDump():
     def add_table(self, db, table):
         if not db in self.db_map:
             self.add_db(db)
-        self.db_map[db][table] = []
+        self.db_map[db][table] = set()
     
     def add_column(self, db, table, column):
         if not db in self.db_map:
             self.add_db(db)
         if not table in self.db_map[db]:
             self.add_table(db, table)
-        self.db_map[db][table].append(column)
+        self.db_map[db][table].add(column)
         
     

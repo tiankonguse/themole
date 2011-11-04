@@ -241,6 +241,7 @@ class ColumnsCommand(Command):
         except themole.QueryError as ex:
             print('[-]', ex)
             return
+        columns.sort()
         output_manager.begin_sequence(['Columns for table ' + params[1]])
         for i in columns:
             output_manager.put([i])
@@ -271,13 +272,24 @@ class QueryCommand(Command):
                 raise CommandException('Expected 3 or at least 5 parameters, got 4.')
             index_limit = params.index('limit') if 'limit' in params else -1
             index_where = params.index('where') if 'where' in params else -1
-            where_end = index_limit if index_limit != -1 and index_limit > index_where else len(params)+1
+            index_offset = params.index('offset') if 'offset' in params else -1
+            min_end = min(index_limit if index_limit != -1 else 0x7fffff, index_offset if index_offset != -1 else 0x7fffff)
+            if min_end == 0x7fffff:
+                min_end = -1
+            where_end = min_end if min_end != -1 and min_end > index_where else len(params)+1
             condition = ' '.join(params[index_where+1:where_end]) if index_where != -1 else '1=1'
             if index_limit == len(params) - 1:
                 raise CommandException('Limit argument requires row numbers.')
-            limit = int(params[index_limit+1]) if index_limit != -1 else 0x7fffffff
-            limit = max(limit, 0)
-            result = mole.get_fields(params[0], params[1], params[2].split(','), condition, limit=limit)
+            if index_offset == len(params) - 1:
+                raise CommandException('Offset argument requires row index.')
+            try:
+                limit = int(params[index_limit+1]) if index_limit != -1 else 0x7fffffff
+                limit = max(limit, 0)
+                offset = int(params[index_offset+1]) if index_offset != -1 else 0
+                offset = max(offset, 0)
+            except ValueError:
+                raise CommandException("Non-int value given.")
+            result = mole.get_fields(params[0], params[1], params[2].split(','), condition, start=offset, limit=limit)
         except themole.QueryError as ex:
             print('[-]', ex)
             return
@@ -304,7 +316,7 @@ class QueryCommand(Command):
             columns = mole.poll_columns(current_params[0], current_params[1])
             return columns if columns else []
         elif len(current_params) == 3 :
-            return ['where', 'limit']
+            return ['where', 'limit', 'start']
         else:
             columns = mole.poll_columns(current_params[0], current_params[1])
             return columns if columns else []
