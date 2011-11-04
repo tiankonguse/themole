@@ -33,6 +33,7 @@ class MysqlMole(DbmsMole):
     integer_field_finger_result = '2288989'
     integer_out_delimiter = '3133707'
     integer_inner_delimiter = '0x3e3c'
+    comment_list = ['#', '--', '/*', ' ']
 
     def __init__(self):
         self.finger = FingerBase([], [], False)

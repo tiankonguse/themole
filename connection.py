@@ -167,7 +167,11 @@ class HttpRequester:
         self.vulnerable_param_group = None
 
     def set_post_params(self, param_string):
-        self.post_parameters = list(t.split('=', 1) for t in param_string.split('&'))
+        if '=' not in param_string:
+            param_string_lst = []
+        else:
+            param_string_lst = list(t.split('=', 1) for t in param_string.split('&'))
+        self.post_parameters = param_string_lst
 
     def get_post_params(self):
         return '&'.join(a + '=' + b for a,b in self.post_parameters)

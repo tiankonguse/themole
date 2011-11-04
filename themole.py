@@ -331,6 +331,8 @@ class TheMole:
             exporter.export(self, self.database_dump.db_map, filename)
             print("[+] Exportation successful.")
         except Exception:
+            import traceback, sys
+            traceback.print_exc(file=sys.stdout)
             print("[-] Exportation NOT successful.")
 
     def import_xml(self, filename):

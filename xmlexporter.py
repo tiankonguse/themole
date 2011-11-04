@@ -32,7 +32,7 @@ from domanalyser import DomAnalyser
 
 dtd = """<!DOCTYPE themole [
 <!ELEMENT themole (config, data_schema)>
-<!ELEMENT config (mole_config, dbms_mole, data_dumper)>
+<!ELEMENT config (mole_config, dbms_mole, data_dumper, connection)>
 <!ELEMENT mole_config EMPTY>
 <!ATTLIST mole_config comment CDATA #REQUIRED>
 <!ATTLIST mole_config end CDATA #REQUIRED>
@@ -41,11 +41,7 @@ dtd = """<!DOCTYPE themole [
 <!ATTLIST mole_config parenthesis CDATA #REQUIRED>
 <!ATTLIST mole_config prefix CDATA #REQUIRED>
 <!ATTLIST mole_config separator CDATA #REQUIRED>
-<!ATTLIST mole_config delay CDATA #REQUIRED>
-<!ATTLIST mole_config url CDATA #REQUIRED>
-<!ATTLIST mole_config vulnerable_param CDATA #REQUIRED>
 <!ATTLIST mole_config query_columns CDATA #REQUIRED>
-<!ATTLIST mole_config injectable_field CDATA #REQUIRED>
 <!ELEMENT dbms_mole (finger)>
 <!ATTLIST dbms_mole type CDATA #REQUIRED>
 <!ELEMENT finger EMPTY>
@@ -54,6 +50,14 @@ dtd = """<!DOCTYPE themole [
 <!ATTLIST finger is_string_query CDATA #REQUIRED>
 <!ELEMENT data_dumper EMPTY>
 <!ATTLIST data_dumper type CDATA #REQUIRED>
+<!ELEMENT connection EMPTY>
+<!ATTLIST connection delay CDATA #REQUIRED>
+<!ATTLIST connection method CDATA #REQUIRED>
+<!ATTLIST connection headers CDATA #REQUIRED>
+<!ATTLIST connection url CDATA #REQUIRED>
+<!ATTLIST connection post_parameters CDATA #REQUIRED>
+<!ATTLIST connection vulnerable_param CDATA #REQUIRED>
+<!ATTLIST connection vulnerable_param_method CDATA #REQUIRED>
 <!ELEMENT data_schema (schema*)>
 <!ELEMENT schema (table*)>
 <!ATTLIST schema name CDATA #REQUIRED>
@@ -84,6 +88,10 @@ class XMLExporter:
         data_dumper = self.__export_data_dumper(mole)
         config.append(data_dumper)
         del data_dumper
+
+        connection = self.__export_connection(mole)
+        config.append(connection)
+        del connection
 
         root.append(config)
         del config
@@ -117,6 +125,7 @@ class XMLExporter:
         self.__import_mole_config(config[0], mole_config)
         self.__import_dbms_mole(config[1], mole_config)
         self.__import_data_dumper(config[2], mole_config)
+        self.__import_connection(config[3], mole_config)
 
         schemata.clear()
         data_schema = root[1]
@@ -125,14 +134,6 @@ class XMLExporter:
 
     def __export_mole_config(self, mole):
         mole_config = etree.Element('mole_config')
-
-        url = b64encode(mole.get_url().encode()).decode()
-        mole_config.set('url', url)
-        del url
-
-        vulnerable_param = b64encode(mole.requester.vulnerable_param.encode()).decode()
-        mole_config.set('vulnerable_param', vulnerable_param)
-        del vulnerable_param
 
         needle = b64encode(mole.needle.encode()).decode()
         mole_config.set('needle', needle)
@@ -150,10 +151,6 @@ class XMLExporter:
         mole_config.set('end', end)
         del end
 
-        delay = b64encode(str(mole.delay).encode()).decode()
-        mole_config.set("delay", delay)
-        del delay
-
         separator = b64encode(mole.separator.encode()).decode()
         mole_config.set("separator", separator)
         del separator
@@ -170,21 +167,9 @@ class XMLExporter:
         mole_config.set("query_columns", query_columns)
         del query_columns
 
-        injectable_field = b64encode(str(mole.injectable_field).encode()).decode()
-        mole_config.set("injectable_field", injectable_field)
-        del injectable_field
-
         return mole_config
 
     def __import_mole_config(self, node, mole_config):
-
-        value = node.get('url')
-        url = b64decode(value.encode()).decode()
-        value = node.get('vulnerable_param')
-        vulnerable_param = b64decode(value.encode()).decode()
-        mole_config.set_url(url, vulnerable_param)
-        del url
-        del vulnerable_param
 
         value = node.get('needle')
         needle = b64decode(value.encode()).decode()
@@ -206,11 +191,6 @@ class XMLExporter:
         mole_config.end = end
         del end
 
-        value = node.get('delay')
-        delay = float(b64decode(value.encode()).decode())
-        mole_config.delay = delay
-        del delay
-
         value = node.get('separator')
         separator = b64decode(value.encode()).decode()
         mole_config.separator = separator
@@ -230,11 +210,6 @@ class XMLExporter:
         query_columns = int(b64decode(value.encode()).decode())
         mole_config.query_columns = query_columns
         del query_columns
-
-        value = node.get('injectable_field')
-        injectable_field = int(b64decode(value.encode()).decode())
-        mole_config.injectable_field = injectable_field
-        del injectable_field
 
         return mole_config
 
@@ -317,6 +292,73 @@ class XMLExporter:
 
         data_dumper_obj = data_dumper_class()
         mole_config.dumper = data_dumper_obj
+
+    def __export_connection(self, mole_config):
+
+        conn_obj = mole_config.requester
+        connection = etree.Element('connection')
+
+        delay = b64encode(str(conn_obj.delay).encode()).decode()
+        connection.set('delay', delay)
+        del delay
+
+        method = b64encode(conn_obj.method.encode()).decode()
+        connection.set('method', method)
+        del method
+
+        headers = b64encode(dumps(conn_obj.headers)).decode()
+        connection.set('headers', headers)
+        del headers
+
+        url = b64encode(conn_obj.get_url().encode()).decode()
+        connection.set('url', url)
+        del url
+
+        post_params = b64encode(conn_obj.get_post_params().encode()).decode()
+        connection.set('post_parameters', post_params)
+        del post_params
+
+        vulnerable_param = b64encode(conn_obj.vulnerable_param.encode()).decode()
+        connection.set('vulnerable_param', vulnerable_param)
+        del vulnerable_param
+
+        vulnerable_param_method = b64encode(conn_obj.vulnerable_param_group.encode()).decode()
+        connection.set('vulnerable_param_method', vulnerable_param_method)
+        del vulnerable_param_method
+
+        return connection
+
+    def __import_connection(self, node, mole_config):
+
+        conn_obj = mole_config.requester
+
+        field = node.get('delay')
+        value = int(b64decode(field.encode()).decode())
+        conn_obj.delay = value
+
+        field = node.get('method')
+        value = b64decode(field.encode()).decode()
+        conn_obj.method = value
+
+        field = node.get('headers')
+        value = loads(b64decode(field.encode()))
+        conn_obj.headers = value
+
+        field = node.get('url')
+        value = b64decode(field.encode()).decode()
+        conn_obj.set_url(value)
+
+        field = node.get('post_parameters')
+        value = b64decode(field.encode()).decode()
+        conn_obj.set_post_params(value)
+
+        field = node.get('vulnerable_param')
+        value = b64decode(field.encode()).decode()
+        conn_obj.vulnerable_param = value
+
+        field = node.get('vulnerable_param_method')
+        value = b64decode(field.encode()).decode()
+        conn_obj.vulnerable_param_group = value
 
     def __export_schema(self, name, db):
         #Create the schema entry

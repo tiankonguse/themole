@@ -24,7 +24,7 @@
 from dbmsmoles import DbmsMole
 
 class InjectionInspector:
-    
+
     # Returns a tuple (separator, parenthesis count)
     def find_separator(self, mole):
         separator_list = ['\'', '"', ' ']
@@ -51,7 +51,10 @@ class InjectionInspector:
     # Returns a tuple (comment, parentesis count)
     def find_comment_delimiter(self, mole):
         #Find the correct comment delimiter
-        comment_list = ['#', '--', '/*', ' ']
+        if mole._dbms_mole is None:
+            comment_list = ['#', '--', '/*', ' ']
+        else:
+            comment_list  = mole._dbms_mole.comment_list
         mole.stop_query = False
         for parenthesis in range(0, 3):
             print('[i] Trying injection using',parenthesis,'parenthesis.')
