@@ -24,6 +24,7 @@
 
 import connection, os, output
 import themole
+import traceback
 from exceptions import *
 
 class CmdNotFoundException(Exception):
@@ -482,20 +483,30 @@ class FilterCommand(Command):
                     raise CommandException('Filter ' + params[1] + ' not found.')
             elif params[0] == 'del':
                 mole.filter.remove_filter(params[1])
+            elif params[0] == 'config':
+                if len(params) < 3:
+                    raise CommandException('Expected more arguments.')
+                try:
+                    mole.filter.config(params[1], params[2:])
+                except Exception as ex:
+                    print(ex)
+                    print('Filter ' + params[1] + ' not found.')
             else:
                 raise CommandException('Parameter ' + params[1] + ' is not valid.')
 
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
-            return ['add', 'del']
+            return ['add', 'del', 'config']
         elif len(current_params) == 1:
             if current_params[0] == 'add':
                 return mole.filter.available_filters()
             elif current_params[0] == 'del':
                 return mole.filter.active_filters()
-        elif len(current_params) > 2 and current_params[0] == 'config':
+            elif current_params[0] == 'config':
+                return mole.filter.active_filters()
+        elif current_params[0] == 'config':
             try:
-                return mole.filter.parameters(current_params[0])
+                return mole.filter.parameters(current_params[1], current_params[2:])
             except FilterNotFoundException:
                 pass
         return []

@@ -54,7 +54,13 @@ class QueryFilter:
         return self.filter_map.keys()
 
     def parameters(self, name, args):
-        if not name in self.active_filters:
+        if not name in self.active_filters():
             raise FilterNotFoundException()
         else:
-            return self.filters[self.filters.index(name)][1].parameters(args)
+            return self.filters[self.active_filters().index(name)][1].parameters(args)
+
+    def config(self, name, params):
+        if not name in self.active_filters():
+            raise FilterNotFoundException()
+        else:
+            self.filters[self.active_filters().index(name)][1].config(params)

@@ -51,20 +51,26 @@ class SQLServerCollationFilter(BaseQueryFilter):
         self.collation = params[0] if len(params) == 1 else 'DATABASE_DEFAULT'
 
     def filter(self, query):
-        matches = self.cast_match.findall(query)
-        for i in matches:
-            field = self.field_match.findall(i)
-            if not field in self.blacklist:
-                replaced = i.replace(field, '(' + field + ' ' + self.collation + ')')
-                query = query.replace(i, replaced)
+        try:
+            matches = self.cast_match.findall(query)
+            for i in matches:
+                field = self.field_match.findall(i)[0]
+                if not field in self.blacklist:
+                    replaced = i.replace(field, '(' + field + ' COLLATE ' + self.collation + ')')
+                    query = query.replace(i, replaced)
+        except Exception as ex:
+            print(ex)
         return query
 
     def config(self, params):
         if len(params) == 0:
             raise FilterConfigException('At least one argument required.')
         if params[0] == 'show':
-            for i in self.blacklist:
-                print(i)
+            if len(self.blacklist) == 0:
+                print('No fields in blacklist.')
+            else:
+                for i in self.blacklist:
+                    print(i)
         elif params[0] == 'add':
             if len(params) != 2:
                 raise FilterConfigException('Expected argument after "add".')
