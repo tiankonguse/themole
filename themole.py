@@ -114,7 +114,10 @@ class TheMole:
 
         injection_inspector = InjectionInspector()
 
-        original_request = self.requester.request(self.prefix)
+        try:
+            original_request = self.requester.request(self.prefix)
+        except ConnectionException as ex:
+            raise PageNotFound(str(ex))
         self.analyser.set_good_page(original_request, self.needle)
 
         self.separator, self.parenthesis = injection_inspector.find_separator(self)
@@ -147,8 +150,17 @@ class TheMole:
                     return
                 raise
 
-            self.query_columns = injection_inspector.find_column_number(self)
-            print('[+] Query columns count:', self.query_columns)
+            try:
+                self.query_columns = injection_inspector.find_column_number(self)
+                print('[+] Query columns count:', self.query_columns)
+            except ColumnNumberNotFound as ex:
+                if self._dbms_mole:
+                    print('[-] Could not find number of columns. (' + str(ex) + ')')
+                    print('[+] Using blind mode.')
+                    self.dumper = BlindDataDumper()
+                    self.initialized = True
+                    return
+                raise
 
             try:
                 self.injectable_field = injection_inspector.find_injectable_field(self)
@@ -163,8 +175,7 @@ class TheMole:
                 raise
 
             if self._dbms_mole is None:
-                print('[-] Could not detect DBMS.')
-                return
+                raise DbmsDetectionFailed()
 
             if self._dbms_mole.is_string_query():
                 print('[+] Using string union technique.')

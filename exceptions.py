@@ -41,6 +41,9 @@ class QuietCommandException(Exception):
 
 #The Mole Exceptions
 
+class PageNotFound(Exception):
+    pass
+
 class SQLInjectionNotDetected(Exception):
     pass
 
@@ -59,7 +62,9 @@ class CmdNotFoundException(Exception):
     pass
 
 class CommandException(Exception):
-    pass
+    def __init__(self, message, print_usage=True):
+        Exception.__init__(self, message)
+        self.print_usage = print_usage
 
 class QuietCommandException(Exception):
     pass
@@ -71,6 +76,9 @@ class NeedleNotFound(Exception):
     pass
 
 #InjectionInspector Exceptions
+
+class ColumnNumberNotFound(Exception):
+    pass
 
 class SeparatorNotFound(Exception):
     pass
@@ -87,11 +95,18 @@ class InvalidParamException(Exception):
 class InvalidMethodException(Exception):
     pass
 
-class ConnectionException(Exception):
-    pass
-
 class FilterNotFoundException(Exception):
     pass
 
 class FilterConfigException(Exception):
+    pass
+
+#DataDumper Exceptions
+
+class QueryError(Exception):
+    pass
+
+#Connection Exceptions
+
+class ConnectionException(Exception):
     pass

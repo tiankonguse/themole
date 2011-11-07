@@ -32,22 +32,24 @@ class Command:
         if not mole.initialized:
             try:
                 mole.initialize()
-                if not mole.initialized:
-                    raise QuietCommandException()
             except MoleAttributeRequired as ex:
-                raise CommandException('[-] Mole not ready: ' + str(ex))
+                raise CommandException('Mole not ready: ' + str(ex), False)
+            except PageNotFound as ex:
+                raise CommandException('Could not detect SQL Injection: Page not found (' + str(ex) + ')', False)
             except NeedleNotFound as ex:
-                raise CommandException('[-] Needle not found')
+                raise CommandException('Could not detect SQL Injection: Needle not found (' + str(ex) + ')', False)
             except SeparatorNotFound as ex:
-                raise CommandException('[-] Could not detect SQL Injection: Separator not found')
+                raise CommandException('Could not exploit SQL Injection: Separator not found (' + str(ex) + ')', False)
             except CommentNotFound as ex:
-                raise CommandException('[-] Could not detect SQL Injection: Comment marker not found')
+                raise CommandException('Could not exploit SQL Injection: Comment marker not found (' + str(ex) + ')', False)
+            except ColumnNumberNotFound as ex:
+                raise CommandException('Could not exploit SQL Injection: Number of columns not found (' + str(ex) + ')', False)
             except InjectableFieldNotFound as ex:
-                raise CommandException('[-] Could not detect SQL Injection: Injectable field not found')
+                raise CommandException('Could not exploit SQL Injection: Injectable field not found (' + str(ex) + ')', False)
+            except DbmsDetectionFailed as ex:
+                raise CommandException('Could not exploit SQL Injection: DBMS detection failed (' + str(ex) + ')', False)
             except StoppedQueryException:
-                raise QuiteCommandException()
-
-
+                raise QuietCommandException()
 
     def execute(self, mole, params, output_manager):
         pass
@@ -153,12 +155,11 @@ class SchemasCommand(Command):
         self.check_initialization(mole)
         try:
             schemas = mole.get_databases(self.force_fetch)
-        except themole.QueryError as ex:
-            print('[-]', ex)
+        except QueryError as ex:
+            print('[-] Query error:', ex)
             return
         except Exception as ex:
-            raise ex
-            print('[-]', str(ex))
+            print('[-]', ex)
             return
 
         output_manager.begin_sequence(['Databases'])
@@ -180,8 +181,8 @@ class TablesCommand(Command):
         try:
             self.check_initialization(mole)
             tables = mole.get_tables(params[0], self.force_fetch)
-        except themole.QueryError as ex:
-            print('[-]', ex)
+        except QueryError as ex:
+            print('[-] Query error:', ex)
             return
         output_manager.begin_sequence(['Tables'])
         tables.sort()
@@ -206,8 +207,8 @@ class FindTablesLikeCommand(Command):
         try:
             self.check_initialization(mole)
             tables = mole.find_tables_like(params[0], "'"  + ' '.join(params[1:]) + "'")
-        except themole.QueryError as ex:
-            print('[-]', ex)
+        except QueryError as ex:
+            print('[-] Query error:', ex)
             return
         output_manager.begin_sequence(['Tables'])
         tables.sort()
@@ -235,8 +236,8 @@ class ColumnsCommand(Command):
         try:
             self.check_initialization(mole)
             columns = mole.get_columns(params[0], params[1], force_fetch=self.force_fetch)
-        except themole.QueryError as ex:
-            print('[-]', ex)
+        except QueryError as ex:
+            print('[-] Query error:', ex)
             return
         columns.sort()
         output_manager.begin_sequence(['Columns for table ' + params[1]])
@@ -326,7 +327,7 @@ class DBInfoCommand(Command):
         self.check_initialization(mole)
         try:
             info = mole.get_dbinfo()
-        except themole.QueryError:
+        except QueryError:
             print('[-] There was an error with the query.')
             return
         print(" User:     ", info[0])

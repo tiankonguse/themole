@@ -23,6 +23,7 @@
 # Gastón Traberg
 
 from threading import Thread, Event, Lock
+from exceptions import *
 
 class Threader:
     def __init__(self, max_threads):
@@ -60,7 +61,7 @@ class Threader:
                     if result is None:
                         break
                     data.append(result)
-            except:
+            except (ConnectionException, QueryError):
                 pass
             self.results[index] = data
             self.task_end_lock.acquire()
