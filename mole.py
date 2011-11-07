@@ -126,5 +126,6 @@ if __name__ == '__main__':
     try:
         manager.start()
     except Exception as ex:
-        traceback.print_tb(ex)
+        import traceback, sys
+        traceback.print_exc(file=sys.stdout)
         print('[-] Unexpected error encountered. Please report this bug :D')

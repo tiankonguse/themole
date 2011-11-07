@@ -24,11 +24,13 @@
 from pickle import dumps, loads
 
 from base64 import b64encode, b64decode
+import binascii
 from lxml import etree
 
 from dbmsmoles.dbmsmole import FingerBase
 from datadumper import classes_dict as datadumper_classes
 from domanalyser import DomAnalyser
+from exceptions import *
 
 dtd = """<!DOCTYPE themole [
 <!ELEMENT themole (config, data_schema)>
@@ -107,29 +109,41 @@ class XMLExporter:
         root.append(data_schema)
 
         xml_doc = etree.ElementTree(root)
-        f = open(file_name, "wb")
-        xml_doc.write(f, pretty_print=True)
-        f.close()
+        try:
+            f = open(file_name, "wb")
+            xml_doc.write(f, pretty_print=True)
+            f.close()
+        except IOError:
+            raise FileOpenException()
 
     def load(self, mole_config, schemata, file_name):
-        f = open(file_name, "r")
-        xml_string = '<?xml version="1.0" ?>' + dtd + f.read().replace('<?xml version="1.0" ?>', '')
-        f.close()
+        try:
+            f = open(file_name, "r")
+            xml_string = '<?xml version="1.0" ?>' + dtd + f.read().replace('<?xml version="1.0" ?>', '')
+            f.close()
+        except IOError:
+            raise FileOpenException()
 
         mole_config.analyser = DomAnalyser()
 
-        parser = etree.XMLParser(dtd_validation = True)
-        root = etree.fromstring(xml_string, parser)
+        try:
+            parser = etree.XMLParser(dtd_validation = True)
+            root = etree.fromstring(xml_string, parser)
+        except etree.XMLSyntaxError:
+            raise InvalidFormatException()
 
         config = root[0]
-        self.__import_mole_config(config[0], mole_config)
-        self.__import_dbms_mole(config[1], mole_config)
-        self.__import_data_dumper(config[2], mole_config)
-        self.__import_connection(config[3], mole_config)
+        try:
+            self.__import_mole_config(config[0], mole_config)
+            self.__import_dbms_mole(config[1], mole_config)
+            self.__import_data_dumper(config[2], mole_config)
+            self.__import_connection(config[3], mole_config)
 
-        schemata.clear()
-        data_schema = root[1]
-        self.__import_schemas(data_schema, schemata)
+            schemata.clear()
+            data_schema = root[1]
+            self.__import_schemas(data_schema, schemata)
+        except binascii.Error:
+            raise InvalidDataException()
 
 
     def __export_mole_config(self, mole):
@@ -249,9 +263,9 @@ class XMLExporter:
         dbms_mole_type = b64decode(node.get('type').encode()).decode()
         dbms_mole_class = [c for c in mole_config.dbms_mole_list if c.dbms_name() == dbms_mole_type]
         if len(dbms_mole_class) == 0:
-            raise Exception('Could not find the dbms_mole indicated in the XML file.')
+            raise InvalidDataException('Could not find the dbms_mole indicated in the XML file.')
         if len(dbms_mole_class) > 1:
-            raise Exception('Too many dbms_moles match the type string. This should never happen :S')
+            raise InvalidDataException('Too many dbms_moles match the type string. This should never happen')
         dbms_mole_obj = dbms_mole_class[0]()
 
         finger = node[0]
@@ -288,7 +302,7 @@ class XMLExporter:
         data_dumper_class = datadumper_classes.get(value, None)
 
         if data_dumper_class is None:
-            Exception('Could not find the data_dumper indicated in the XML file.')
+            InvalidDataException('Could not find the data_dumper indicated in the XML file.')
 
         data_dumper_obj = data_dumper_class()
         mole_config.dumper = data_dumper_obj

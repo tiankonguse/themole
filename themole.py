@@ -324,35 +324,24 @@ class TheMole:
 
     def export_xml(self, filename):
         if not self.initialized:
-            print("[-] Cannot export if mole isn't initialized")
-            return
+            raise NotInitializedException()
         exporter = XMLExporter()
-        try:
-            exporter.export(self, self.database_dump.db_map, filename)
-            print("[+] Exportation successful.")
-        except Exception:
-            import traceback, sys
-            traceback.print_exc(file=sys.stdout)
-            print("[-] Exportation NOT successful.")
+        exporter.export(self, self.database_dump.db_map, filename)
 
     def import_xml(self, filename):
         exporter = XMLExporter()
-        try:
-            exporter.load(self, self.database_dump.db_map, filename)
-            self.initialized = True
-            print("[+] Importation successful")
-        except Exception as e:
-            import traceback
-            traceback.print_exc(file=sys.stdout)
-            print(e)
-            print("[-] Importation NOT successful")
+        exporter.load(self, self.database_dump.db_map, filename)
+        self.initialized = True
 
     def _detect_dbms_blind(self):
         for dbms_mole_class in TheMole.dbms_mole_list:
             print('[i] Trying DBMS', dbms_mole_class.dbms_name())
             query = dbms_mole_class.dbms_check_blind_query()
             url_query = self.generate_url(query)
-            req = self.get_requester().request(url_query)
+            try:
+                req = self.get_requester().request(url_query)
+            except ConnectionException as ex:
+                raise DbmsDetectionFailed(str(ex))
             if self.analyser.is_valid(req):
                 self._dbms_mole = dbms_mole_class()
                 print('[+] Found DBMS:', dbms_mole_class.dbms_name())

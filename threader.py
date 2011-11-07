@@ -63,6 +63,9 @@ class Threader:
                     data.append(result)
             except (ConnectionException, QueryError):
                 pass
+            except Exception as ex:
+                import traceback, sys
+                traceback.print_exc(file=sys.stdout)
             self.results[index] = data
             self.task_end_lock.acquire()
             self.finished = self.finished + 1

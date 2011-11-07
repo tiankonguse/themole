@@ -530,7 +530,13 @@ class ExportCommand(Command):
             raise CommandException('Expected type and filename as parameter')
         if params[0] not in ['xml']:
             raise CommandException('Unknown export format.')
-        mole.export_xml(params[1])
+        try:
+            mole.export_xml(params[1])
+            print('[+] Exportation successful')
+        except FileOpenException:
+            raise CommandException('The file given could not be opened', False)
+        except NotInitializedException:
+            raise CommandException('Mole must be initialized in order to export', False)
 
     def parameters(self, mole, current_params):
         return ['xml'] if len(current_params) == 0 else []
@@ -544,14 +550,21 @@ class ImportCommand(Command):
             raise CommandException('Expected type and filename as parameter')
         if params[0] not in ['xml']:
             raise CommandException('Unknown import format.')
-        mole.import_xml(params[1])
+        try:
+            mole.import_xml(params[1])
+            print('[+] Importation successful')
+        except FileOpenException:
+            raise CommandException('The file given could not be opened', False)
+        except InvalidFormatException:
+            raise CommandException('The file given has an invalid format', False)
+        except InvalidDataException:
+            raise CommandException('The file given has invalid data', False)
 
     def parameters(self, mole, current_params):
         return ['xml'] if len(current_params) == 0 else []
 
     def usage(self, cmd_name):
         return cmd_name + ' <format> <input_filename>'
-
 
 class ReadFileCommand(Command):
     def execute(self, mole, params, output_manager):

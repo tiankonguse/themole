@@ -56,6 +56,9 @@ class MoleAttributeRequired(Exception):
 class DbmsDetectionFailed(Exception):
     pass
 
+class NotInitializedException(Exception):
+    pass
+
 #Command Exceptions
 
 class CmdNotFoundException(Exception):
@@ -109,4 +112,15 @@ class QueryError(Exception):
 #Connection Exceptions
 
 class ConnectionException(Exception):
+    pass
+
+# XML Exporter
+
+class FileOpenException(Exception):
+    pass
+
+class InvalidFormatException(Exception):
+    pass
+
+class InvalidDataException(Exception):
     pass

@@ -74,7 +74,10 @@ class BlindDataDumper:
         return list(map(lambda x: x[0], data))
 
     def table_exists(self, mole, db, table, injectable_field):
-        req = mole.make_request(mole._dbms_mole.fields_blind_count_query('>', 100000000, db=db, table=table))
+        try:
+            req = mole.make_request(mole._dbms_mole.fields_blind_count_query('>', 100000000, db=db, table=table))
+        except ConnectionException as ex:
+            raise QueryError('Connection Error: (' + str(ex) + ')')
         return mole.analyser.is_valid(req)
 
     def read_file(self, mole, filename, injectable_field):
@@ -121,11 +124,14 @@ class BlindDataDumper:
         length = 0
         last = 1
         while True and not mole.stop_query:
-            req = mole.get_requester().request(
-                mole.generate_url(
-                    count_fun('>', last)
+            try:
+                req = mole.get_requester().request(
+                    mole.generate_url(
+                        count_fun('>', last)
+                    )
                 )
-            )
+            except ConnectionException as ex:
+                raise QueryError('Connection Error: (' + str(ex) + ')')
             print(trying_msg(last), end='')
             if mole.needle in req:
                 break;
@@ -136,11 +142,14 @@ class BlindDataDumper:
             if mole.stop_query:
                 return pri
             medio = ((pri + last) // 2) + ((pri + last) & 1)
-            req = mole.get_requester().request(
-                mole.generate_url(
-                    count_fun('<', medio - 1)
+            try:
+                req = mole.get_requester().request(
+                    mole.generate_url(
+                        count_fun('<', medio - 1)
+                    )
                 )
-            )
+            except ConnectionException as ex:
+                raise QueryError('Connection Error: (' + str(ex) + ')')
             if mole.needle in req:
                 pri = medio
             else:
@@ -155,9 +164,12 @@ class BlindDataDumper:
             if mole.stop_query:
                 return None
             medio = (pri + last)//2
-            response = mole.requester.request(
-                        mole.generate_url(query_fun(index, medio, offset))
-                       )
+            try:
+                response = mole.requester.request(
+                            mole.generate_url(query_fun(index, medio, offset))
+                           )
+            except ConnectionException as ex:
+                raise QueryError('Connection Error: (' + str(ex) + ')')
             if mole.needle in response:
                 pri = medio+1
             else:
@@ -199,7 +211,10 @@ class StringUnionDataDumper:
     def get_dbinfo(self, mole, injectable_field):
         query = mole._dbms_mole.dbinfo_query(injectable_field)
         req = mole.get_requester().request(mole.generate_url(query))
-        data = mole._dbms_mole.parse_results(req)
+        try:
+            data = mole._dbms_mole.parse_results(req)
+        except ConnectionException as ex:
+            raise QueryError('Connection Error: (' + str(ex) + ')')
         if not data or len(data) != 3:
             raise QueryError('Query did not generate any output.')
         else:
@@ -216,7 +231,10 @@ class StringUnionDataDumper:
 
     def read_file(self, mole, filename, injectable_field):
         query = mole._dbms_mole.read_file_query(filename, injectable_field)
-        req = mole.make_request(query)
+        try:
+            req = mole.make_request(query)
+        except ConnectionException as ex:
+            raise QueryError('Connection Error: (' + str(ex) + ')')
         result = mole._dbms_mole.parse_results(req)
         return result[0] if not result is None else ''
 
@@ -225,7 +243,10 @@ class StringUnionDataDumper:
                              query_generator,
                              result_parser = lambda x: x[0],
                              start=0, limit=0x7fffffff):
-        req = mole.get_requester().request(mole.generate_url(count_query))
+        try:
+            req = mole.get_requester().request(mole.generate_url(count_query))
+        except ConnectionException as ex:
+            raise QueryError('Connection Error: (' + str(ex) + ')')
         result = mole._dbms_mole.parse_results(req)
         if not result or len(result) != 1:
             raise QueryError('Count query failed.')
@@ -253,7 +274,10 @@ class StringUnionDataDumper:
                                   result_parser = lambda x: x[0]):
         if mole.stop_query:
             return None
-        req = mole.get_requester().request(mole.generate_url(query_generator(offset)))
+        try:
+            req = mole.get_requester().request(mole.generate_url(query_generator(offset)))
+        except ConnectionException as ex:
+            raise QueryError('Connection Error: (' + str(ex) + ')')
         result = mole._dbms_mole.parse_results(req)
         if not result or len(result) < 1:
             raise QueryError('Query did not generate any output.')
@@ -326,7 +350,10 @@ class IntegerUnionDataDumper:
     def get_dbinfo(self, mole, injectable_field):
         mole.stop_query = False
         query = mole._dbms_mole.dbinfo_integer_len_query(injectable_field)
-        req = mole.make_request(query)
+        try:
+            req = mole.make_request(query)
+        except ConnectionException as ex:
+            raise QueryError('Connection Error: (' + str(ex) + ')')
         length = mole._dbms_mole.parse_results(req)
         length = int(length[0])
 
@@ -361,13 +388,19 @@ class IntegerUnionDataDumper:
         return data
 
     def table_exists(self, mole, db, table, injectable_field):
-        req = mole.make_request(mole._dbms_mole.fields_integer_count_query(db, table, injectable_field))
+        try:
+            req = mole.make_request(mole._dbms_mole.fields_integer_count_query(db, table, injectable_field))
+        except ConnectionException as ex:
+            raise QueryError('Connection Error: (' + str(ex) + ')')
         return not mole._dbms_mole.parse_results(req) is None
 
     def read_file(self, mole, filename, injectable_field):
         mole.stop_query = False
         query = mole._dbms_mole.read_file_integer_len_query(filename, injectable_field)
-        req = mole.make_request(query)
+        try:
+            req = mole.make_request(query)
+        except ConnectionException as es:
+            raise QueryError('Connection Error: (' + str(ex) + ')')
         length = mole._dbms_mole.parse_results(req)
         if length is None or len(length) == 0:
             return ''
@@ -396,7 +429,10 @@ class IntegerUnionDataDumper:
                                      query_generator,
                                      result_parser = lambda x: x[0],
                                      start=0, limit=0x7fffffff):
-        req = mole.get_requester().request(mole.generate_url(count_query))
+        try:
+            req = mole.get_requester().request(mole.generate_url(count_query))
+        except ConnectionException as ex:
+            raise QueryError('Connection Error: (' + str(ex) + ')')
         result = mole._dbms_mole.parse_results(req)
         if not result:
             raise QueryError('Count query failed.')
@@ -411,7 +447,10 @@ class IntegerUnionDataDumper:
             for i in range(start,count):
                 if mole.stop_query:
                     break
-                req = mole.requester.request(mole.generate_url(length_query(i)))
+                try:
+                    req = mole.requester.request(mole.generate_url(length_query(i)))
+                except ConnectionException as ex:
+                    raise QueryError('Connection Error: (' + str(ex) + ')')
                 length = mole._dbms_mole.parse_results(req)
                 if length is None:
                     break
@@ -427,7 +466,10 @@ class IntegerUnionDataDumper:
     def _generic_integer_query_item(self, mole, query_generator, index, offset, sqli_output):
         if mole.stop_query:
             return None
-        req = mole.get_requester().request(mole.generate_url(query_generator(index+1, offset=offset)))
+        try:
+            req = mole.get_requester().request(mole.generate_url(query_generator(index+1, offset=offset)))
+        except ConnectionException as ex:
+            raise QueryError('Connection Error: (' + str(ex) + ')')
         result = mole._dbms_mole.parse_results(req)
         if not result or len(result) < 1:
             raise QueryError('Query did not generate any output.')
