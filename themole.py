@@ -250,9 +250,9 @@ class TheMole:
             self.database_dump.add_column(db, table, i)
         return data
 
-    def get_fields(self, db, table, fields, where="1=1", limit=0x7fffffff):
+    def get_fields(self, db, table, fields, where="1=1", start=0, limit=0x7fffffff):
         limit = max(limit, 0)
-        return self.dumper.get_fields(self, db, table, fields, where, self.injectable_field, limit=limit)
+        return self.dumper.get_fields(self, db, table, fields, where, self.injectable_field, start=start, limit=limit)
 
     def get_dbinfo(self):
         return self.dumper.get_dbinfo(self, self.injectable_field)
