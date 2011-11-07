@@ -1,5 +1,29 @@
+#!/usr/bin/python3
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+# MA 02110-1301, USA.
+#
+# Developed by: Nasel(http://www.nasel.com.ar)
+#
+# Authors:
+# Matías Fontanini
+# Santiago Alessandri
+# Gastón Traberg
 
 from output import BlindSQLIOutput, RowDoneCounter
+from exceptions import *
 
 class BlindDataDumper:
 
@@ -39,7 +63,7 @@ class BlindDataDumper:
 
         data = self._blind_query(mole, count_fun, length_fun, query_fun, row_count=1)
         if len(data) != 1 or len(data[0]) != 3:
-            raise QueryError()
+            raise QueryError('Query did not generate any output.')
         return [data[0][0], data[0][1], data[0][2]]
 
     def find_tables_like(self, mole, db, table_filter, injectable_field):
@@ -176,7 +200,7 @@ class StringUnionDataDumper:
         req = mole.get_requester().request(mole.generate_url(query))
         data = mole._dbms_mole.parse_results(req)
         if not data or len(data) != 3:
-            raise QueryError()
+            raise QueryError('Query did not generate any output.')
         else:
             return data
 
@@ -229,7 +253,7 @@ class StringUnionDataDumper:
         req = mole.get_requester().request(mole.generate_url(query_generator(offset)))
         result = mole._dbms_mole.parse_results(req)
         if not result or len(result) < 1:
-            raise QueryError()
+            raise QueryError('Query did not generate any output.')
         else:
             rows_done_counter.increment()
             return result_parser(result)
@@ -315,7 +339,7 @@ class IntegerUnionDataDumper:
         sqli_output.finish()
         data = data.split(mole._dbms_mole.blind_field_delimiter())
         if not data or len(data) != 3:
-            raise QueryError()
+            raise QueryError('Query did not generate any output.')
         else:
             return data
 
@@ -359,7 +383,7 @@ class IntegerUnionDataDumper:
         sqli_output.finish()
         data = data.split(mole._dbms_mole.blind_field_delimiter())
         if not data or len(data) != 1:
-            raise QueryError()
+            raise QueryError('Query did not generate any output.')
         else:
             return data[0]
 
@@ -403,14 +427,11 @@ class IntegerUnionDataDumper:
         req = mole.get_requester().request(mole.generate_url(query_generator(index+1, offset=offset)))
         result = mole._dbms_mole.parse_results(req)
         if not result or len(result) < 1:
-            raise QueryError()
+            raise QueryError('Query did not generate any output.')
         else:
             result = chr(int(result[0]))
             sqli_output.set(result, index)
             return result
-
-class QueryError(Exception):
-    pass
 
 classes_dict = {
     'BlindDataDumper' : BlindDataDumper,

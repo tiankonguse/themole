@@ -59,7 +59,9 @@ class CmdNotFoundException(Exception):
     pass
 
 class CommandException(Exception):
-    pass
+    def __init__(self, message, print_usage=True):
+        Exception.__init__(self, message)
+        self.print_usage = print_usage
 
 class QuietCommandException(Exception):
     pass
@@ -94,4 +96,9 @@ class FilterNotFoundException(Exception):
     pass
 
 class FilterConfigException(Exception):
+    pass
+
+#DataDumper Exceptions
+
+class QueryError(Exception):
     pass

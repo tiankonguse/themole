@@ -35,19 +35,17 @@ class Command:
                 if not mole.initialized:
                     raise QuietCommandException()
             except MoleAttributeRequired as ex:
-                raise CommandException('[-] Mole not ready: ' + str(ex))
+                raise CommandException('Mole not ready: ' + str(ex), False)
             except NeedleNotFound as ex:
-                raise CommandException('[-] Needle not found')
+                raise CommandException('Needle not found', False)
             except SeparatorNotFound as ex:
-                raise CommandException('[-] Could not detect SQL Injection: Separator not found')
+                raise CommandException('Could not detect SQL Injection: Separator not found', False)
             except CommentNotFound as ex:
-                raise CommandException('[-] Could not detect SQL Injection: Comment marker not found')
+                raise CommandException('Could not detect SQL Injection: Comment marker not found', False)
             except InjectableFieldNotFound as ex:
-                raise CommandException('[-] Could not detect SQL Injection: Injectable field not found')
+                raise CommandException('Could not detect SQL Injection: Injectable field not found', False)
             except StoppedQueryException:
-                raise QuiteCommandException()
-
-
+                raise QuietCommandException()
 
     def execute(self, mole, params, output_manager):
         pass
@@ -153,12 +151,11 @@ class SchemasCommand(Command):
         self.check_initialization(mole)
         try:
             schemas = mole.get_databases(self.force_fetch)
-        except themole.QueryError as ex:
-            print('[-]', ex)
+        except QueryError as ex:
+            print('[-] Query error:', ex)
             return
         except Exception as ex:
-            raise ex
-            print('[-]', str(ex))
+            print('[-]', ex)
             return
 
         output_manager.begin_sequence(['Databases'])
@@ -180,8 +177,8 @@ class TablesCommand(Command):
         try:
             self.check_initialization(mole)
             tables = mole.get_tables(params[0], self.force_fetch)
-        except themole.QueryError as ex:
-            print('[-]', ex)
+        except QueryError as ex:
+            print('[-] Query error:', ex)
             return
         output_manager.begin_sequence(['Tables'])
         tables.sort()
@@ -206,8 +203,8 @@ class FindTablesLikeCommand(Command):
         try:
             self.check_initialization(mole)
             tables = mole.find_tables_like(params[0], "'"  + ' '.join(params[1:]) + "'")
-        except themole.QueryError as ex:
-            print('[-]', ex)
+        except QueryError as ex:
+            print('[-] Query error:', ex)
             return
         output_manager.begin_sequence(['Tables'])
         tables.sort()
@@ -235,8 +232,8 @@ class ColumnsCommand(Command):
         try:
             self.check_initialization(mole)
             columns = mole.get_columns(params[0], params[1], force_fetch=self.force_fetch)
-        except themole.QueryError as ex:
-            print('[-]', ex)
+        except QueryError as ex:
+            print('[-] Query error:', ex)
             return
         output_manager.begin_sequence(['Columns for table ' + params[1]])
         for i in columns:
@@ -275,8 +272,8 @@ class QueryCommand(Command):
             limit = int(params[index_limit+1]) if index_limit != -1 else 0x7fffffff
             limit = max(limit, 0)
             result = mole.get_fields(params[0], params[1], params[2].split(','), condition, limit=limit)
-        except themole.QueryError as ex:
-            print('[-]', ex)
+        except QueryError as ex:
+            print('[-] Query error:', ex)
             return
         output_manager.begin_sequence(params[2].split(','))
         for i in result:
@@ -314,7 +311,7 @@ class DBInfoCommand(Command):
         self.check_initialization(mole)
         try:
             info = mole.get_dbinfo()
-        except themole.QueryError:
+        except QueryError:
             print('[-] There was an error with the query.')
             return
         print(" User:     ", info[0])

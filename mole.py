@@ -64,10 +64,11 @@ class Manager:
                     cmd = cmd_manager.find(line[0])
                     cmd.execute(self.mole, line[1:] if len(line) > 1 else [], self.output)
             except commands.CommandException as ex:
-                print(' Error: ' + ex.message)
-                print(' Usage: ' + cmd.usage(line[0]))
+                print('[-]', ex)
+                if ex.print_usage:
+                    print(' Usage:', cmd.usage(line[0]))
             except commands.CmdNotFoundException as ex:
-                print(' Error: ' + ex.message)
+                print(' Error:', ex)
             except commands.QuietCommandException:
                 pass
             except EOFError:
