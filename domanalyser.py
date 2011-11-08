@@ -32,7 +32,7 @@ class DomAnalyser():
         dom_page = lxml.fromstring(self.normalize(page))
         self._good_index_list = self._dfs(dom_page, [search_needle], [])
         if self._good_index_list is None:
-            raise NeedleNotFound()
+            raise NeedleNotFound('Needle not in page')
         self._good_content = self._lookup_node(dom_page,
                                                       self._good_index_list)
         del dom_page

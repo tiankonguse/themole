@@ -646,6 +646,34 @@ class InjectableFieldCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' (GET | POST) <INJECTABLE_FIELD>'
 
+class HTTPHeadersCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            for key in mole.requester.headers:
+                print(key, '->', mole.requester.headers[key])
+        elif params[0] == 'set':
+            if len(params) < 3:
+                raise CommandException('"set" expects header key and value as arguments.')
+            mole.requester.headers[params[1]] = ' '.join(params[2:])
+        elif params[0] == 'del':
+            if len(params) != 2:
+                raise CommandException('"del" expects header key as argument.')
+            del mole.requester.headers[params[1]]
+        else:
+            raise CommandException("Invalid argument.")
+
+    def parameters(self, mole, current_params):
+        if len(current_params) == 0:
+            return ['set', 'del']
+        elif len(current_params) == 1:
+            if current_params[0] in ['set', 'del']:
+                return mole.requester.headers.keys()
+        return []
+
+    def usage(self, cmd_name):
+        return cmd_name + ' [add|del] [NAME [VALUE]]'
+            
+
 class RecursiveCommand(Command):
     first_param = ['schemas', 'tables']
 
@@ -701,6 +729,7 @@ class CommandManager:
                       'export'   : ExportCommand(),
                       'fetch'    : FetchDataCommand(),
                       'filter'   : FilterCommand(),
+                      'headers'  : HTTPHeadersCommand(),
                       'import'   : ImportCommand(),
                       'injectable_field' : InjectableFieldCommand(),
                       'method'   : MethodCommand(),
