@@ -287,7 +287,13 @@ class QueryCommand(Command):
                 offset = max(offset, 0)
             except ValueError:
                 raise CommandException("Non-int value given.")
-            result = mole.get_fields(params[0], params[1], params[2].split(','), condition, start=offset, limit=limit)
+            if params[2] != '*':
+                columns = params[2].split(',')
+            else:
+                columns = mole.poll_columns(params[0], params[1])
+                if columns is None:
+                    raise CommandException("Columns must be dumped first in order to use '*'.")
+            result = mole.get_fields(params[0], params[1], columns, condition, start=offset, limit=limit)
         except themole.QueryError as ex:
             print('[-]', ex)
             return
