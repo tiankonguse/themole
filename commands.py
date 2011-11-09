@@ -478,47 +478,80 @@ class UsageCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' <CMD_NAME>'
 
-class FilterCommand(Command):
+class BaseFilterCommand(Command):
+    def __init__(self, functor):
+        self.functor = functor
+    
     def execute(self, mole, params, output_manager):
         if len(params) == 0:
-            for i in mole.filter.active_filters():
+            for i in self.functor(mole).active_filters():
                 print(i)
         elif len(params) == 1:
             raise CommandException(params[0] + ' requires at least one parameter.')
         else:
             if params[0] == 'add':
                 try:
-                    mole.filter.add_filter(params[1], params[2:])
+                    self.functor(mole).add_filter(params[1], params[2:])
                 except FilterNotFoundException:
                     raise CommandException('Filter ' + params[1] + ' not found.')
             elif params[0] == 'del':
-                mole.filter.remove_filter(params[1])
-            elif params[0] == 'config':
-                if len(params) < 3:
-                    raise CommandException('Expected more arguments.')
-                try:
-                    mole.filter.config(params[1], params[2:])
-                except Exception as ex:
-                    print(ex)
-                    print('Filter ' + params[1] + ' not found.')
+                self.functor(mole).remove_filter(params[1])
             else:
                 raise CommandException('Parameter ' + params[1] + ' is not valid.')
 
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
-            return ['add', 'del', 'config']
+            return ['add', 'del']
         elif len(current_params) == 1:
             if current_params[0] == 'add':
-                return mole.filter.available_filters()
+                return self.functor(mole).available_filters()
             elif current_params[0] == 'del':
-                return mole.filter.active_filters()
+                return self.functor(mole).active_filters()
+
+class HTMLFilterCommand(BaseFilterCommand):
+    def __init__(self):
+        BaseFilterCommand.__init__(self, lambda x: x.html_filter)
+
+    def execute(self, mole, params, output_manager):
+        try:
+            BaseFilterCommand.execute(self, mole, params, output_manager)
+        except FilterCreationError as ex:
+            raise CommandException('Filter creation error({msg})'.format(msg=str(ex)), False)
+
+class QueryFilterCommand(BaseFilterCommand):
+    def __init__(self):
+        BaseFilterCommand.__init__(self, lambda x: x.query_filter)
+    
+    def execute(self, mole, params, output_manager):
+        try:
+            BaseFilterCommand.execute(self, mole, params, output_manager)
+        except CommandException as ex:
+            if len(params) > 1 and params[0] == 'config':
+                if len(params) < 3:
+                    raise CommandException('Expected more arguments.')
+                try:
+                    mole.query_filter.config(params[1], params[2:])
+                except Exception as ex:
+                    print(ex)
+                    print('Filter ' + params[1] + ' not found.')
+            else:
+                raise ex
+
+    def parameters(self, mole, current_params):
+        params = BaseFilterCommand.parameters(self, mole, current_params)
+        
+        if len(current_params) == 0:
+            return params + ['config']
+        if len(params) > 0:
+            return params
+        if len(current_params) == 1:
+            if current_params[0] == 'config':
+                return mole.query_filter.active_filters()
             elif current_params[0] == 'config':
-                return mole.filter.active_filters()
-        elif current_params[0] == 'config':
-            try:
-                return mole.filter.parameters(current_params[1], current_params[2:])
-            except FilterNotFoundException:
-                pass
+                try:
+                    return mole.query_filter.parameters(current_params[1], current_params[2:])
+                except FilterNotFoundException:
+                    pass
         return []
 
     def usage(self, cmd_name):
@@ -725,11 +758,12 @@ class CommandManager:
                       'columns'  : ColumnsCommand(),
                       'cookie'   : CookieCommand(),
                       'dbinfo'   : DBInfoCommand(),
+                      'delay'    : DelayCommand(),
                       'exit'     : ExitCommand(),
                       'export'   : ExportCommand(),
                       'fetch'    : FetchDataCommand(),
-                      'filter'   : FilterCommand(),
                       'headers'  : HTTPHeadersCommand(),
+                      'htmlfilter'  : HTMLFilterCommand(),
                       'import'   : ImportCommand(),
                       'injectable_field' : InjectableFieldCommand(),
                       'method'   : MethodCommand(),
@@ -738,12 +772,12 @@ class CommandManager:
                       'output'   : OutputCommand(),
                       'prefix'   : PrefixCommand(),
                       'query'    : QueryCommand(),
+                      'queryfilter' : QueryFilterCommand(),
                       'readfile' : ReadFileCommand(),
                       'recursive': RecursiveCommand(),
                       'schemas'  : SchemasCommand(),
                       'suffix'   : SuffixCommand(),
                       'tables'   : TablesCommand(),
-                      'delay'    : DelayCommand(),
                       'url'      : URLCommand(),
                       'usage'    : UsageCommand(),
                       'verbose'  : VerboseCommand(),

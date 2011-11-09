@@ -124,3 +124,8 @@ class InvalidFormatException(Exception):
 
 class InvalidDataException(Exception):
     pass
+
+# HTMLFilter
+
+class FilterCreationError(Exception):
+    pass

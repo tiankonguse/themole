@@ -125,11 +125,7 @@ class BlindDataDumper:
         last = 1
         while True and not mole.stop_query:
             try:
-                req = mole.get_requester().request(
-                    mole.generate_url(
-                        count_fun('>', last)
-                    )
-                )
+                req = mole.make_request(count_fun('>', last))
             except ConnectionException as ex:
                 raise QueryError('Connection Error: (' + str(ex) + ')')
             print(trying_msg(last), end='')
@@ -143,11 +139,7 @@ class BlindDataDumper:
                 return pri
             medio = ((pri + last) // 2) + ((pri + last) & 1)
             try:
-                req = mole.get_requester().request(
-                    mole.generate_url(
-                        count_fun('<', medio - 1)
-                    )
-                )
+                req = mole.make_request(count_fun('<', medio - 1))
             except ConnectionException as ex:
                 raise QueryError('Connection Error: (' + str(ex) + ')')
             if mole.needle in req:
@@ -210,7 +202,7 @@ class StringUnionDataDumper:
 
     def get_dbinfo(self, mole, injectable_field):
         query = mole._dbms_mole.dbinfo_query(injectable_field)
-        req = mole.get_requester().request(mole.generate_url(query))
+        req = mole.make_request(query)
         try:
             data = mole._dbms_mole.parse_results(req)
         except ConnectionException as ex:
@@ -244,7 +236,7 @@ class StringUnionDataDumper:
                              result_parser = lambda x: x[0],
                              start=0, limit=0x7fffffff):
         try:
-            req = mole.get_requester().request(mole.generate_url(count_query))
+            req = mole.make_request(count_query)
         except ConnectionException as ex:
             raise QueryError('Connection Error: (' + str(ex) + ')')
         result = mole._dbms_mole.parse_results(req)
@@ -275,7 +267,7 @@ class StringUnionDataDumper:
         if mole.stop_query:
             return None
         try:
-            req = mole.get_requester().request(mole.generate_url(query_generator(offset)))
+            req = mole.make_request(query_generator(offset))
         except ConnectionException as ex:
             raise QueryError('Connection Error: (' + str(ex) + ')')
         result = mole._dbms_mole.parse_results(req)
@@ -430,7 +422,7 @@ class IntegerUnionDataDumper:
                                      result_parser = lambda x: x[0],
                                      start=0, limit=0x7fffffff):
         try:
-            req = mole.get_requester().request(mole.generate_url(count_query))
+            req = mole.make_request(count_query)
         except ConnectionException as ex:
             raise QueryError('Connection Error: (' + str(ex) + ')')
         result = mole._dbms_mole.parse_results(req)
@@ -467,7 +459,7 @@ class IntegerUnionDataDumper:
         if mole.stop_query:
             return None
         try:
-            req = mole.get_requester().request(mole.generate_url(query_generator(index+1, offset=offset)))
+            req = mole.make_request(query_generator(index+1, offset=offset))
         except ConnectionException as ex:
             raise QueryError('Connection Error: (' + str(ex) + ')')
         result = mole._dbms_mole.parse_results(req)

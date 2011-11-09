@@ -34,7 +34,7 @@ from output import BlindSQLIOutput
 from xmlexporter import XMLExporter
 from injectioninspector import InjectionInspector
 from datadumper import *
-from qfilter import QueryFilter
+from filters import QueryFilterManager, HTMLFilterManager
 import connection
 
 class TheMole:
@@ -90,7 +90,8 @@ class TheMole:
         self.injectable_field = 0
         self.database_dump = DatabaseDump()
         self.requester = connection.HttpRequester()
-        self.filter = QueryFilter()
+        self.query_filter = QueryFilterManager()
+        self.html_filter = HTMLFilterManager()
 
     def restart(self):
         self.initialized = False
@@ -198,17 +199,14 @@ class TheMole:
                                         prefix=self.prefix,
                                         end=self.end.format(op_par=(self.parenthesis * '('))
             )
-        url = self.filter.apply_filters(url)
+        url = self.query_filter.apply_filters(url)
         if self.verbose == True:
             print('[i] Executing query:',url)
         return url
 
     def make_request(self, query):
-        req = self.get_requester().request(self.generate_url(query))
-        return req
-
-    def get_requester(self):
-        return self.requester
+        req = self.requester.request(self.generate_url(query))
+        return self.html_filter.apply_filters(req)
 
     def set_mode(self, mode):
         self.mode = mode
@@ -337,9 +335,8 @@ class TheMole:
         for dbms_mole_class in TheMole.dbms_mole_list:
             print('[i] Trying DBMS', dbms_mole_class.dbms_name())
             query = dbms_mole_class.dbms_check_blind_query()
-            url_query = self.generate_url(query)
             try:
-                req = self.get_requester().request(url_query)
+                req = self.make_request(query)
             except ConnectionException as ex:
                 raise DbmsDetectionFailed(str(ex))
             if self.analyser.is_valid(req):

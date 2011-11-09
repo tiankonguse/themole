@@ -129,3 +129,4 @@ if __name__ == '__main__':
         import traceback, sys
         traceback.print_exc(file=sys.stdout)
         print('[-] Unexpected error encountered. Please report this bug :D')
+        manager.mole.threader.stop()
