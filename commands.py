@@ -297,7 +297,7 @@ class QueryCommand(Command):
         except themole.QueryError as ex:
             print('[-]', ex)
             return
-        output_manager.begin_sequence(params[2].split(','))
+        output_manager.begin_sequence(columns)
         for i in result:
             output_manager.put(i)
         output_manager.end_sequence()
