@@ -230,10 +230,12 @@ class TheMole:
         return data
 
     def poll_tables(self, db):
-        if self.database_dump.db_map[db]:
-            return list(self.database_dump.db_map[db].keys())
-        else:
-            return None
+        try:
+            if self.database_dump.db_map[db]:
+                return list(self.database_dump.db_map[db].keys())
+        except KeyError:
+            pass
+        return None
 
     def get_tables(self, db, force_fetch=False):
         if not force_fetch and db in self.database_dump.db_map and self.database_dump.db_map[db]:
@@ -245,10 +247,12 @@ class TheMole:
         return data
 
     def poll_columns(self, db, table):
-        if self.database_dump.db_map[db][table]:
-            return list(self.database_dump.db_map[db][table])
-        else:
-            return None
+        try:
+            if self.database_dump.db_map[db][table]:
+                return list(self.database_dump.db_map[db][table])
+        except KeyError:
+            pass
+        return None
 
     def get_columns(self, db, table, force_fetch=False):
         if not force_fetch and db in self.database_dump.db_map and table in self.database_dump.db_map[db] and len(self.database_dump.db_map[db][table]) > 0:

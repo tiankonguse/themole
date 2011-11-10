@@ -292,7 +292,8 @@ class QueryCommand(Command):
             else:
                 columns = mole.poll_columns(params[0], params[1])
                 if columns is None:
-                    raise CommandException("Columns must be dumped first in order to use '*'.")
+                    raise CommandException("Columns must be dumped first in order to use '*'.", False)
+                columns.sort()
             result = mole.get_fields(params[0], params[1], columns, condition, start=offset, limit=limit)
         except themole.QueryError as ex:
             print('[-]', ex)
@@ -778,7 +779,7 @@ class CommandManager:
                       'output'   : OutputCommand(),
                       'prefix'   : PrefixCommand(),
                       'query'    : QueryCommand(),
-                      'queryfilter' : QueryFilterCommand(),
+                      'qfilter'  : QueryFilterCommand(),
                       'readfile' : ReadFileCommand(),
                       'recursive': RecursiveCommand(),
                       'schemas'  : SchemasCommand(),

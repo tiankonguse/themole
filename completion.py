@@ -54,6 +54,7 @@ class CompletionManager:
             for i in cmd.parameters(self.mole, current_params):
                 if i[:len(text)] == text:
                     self.available.append(i)
+            self.available.sort()
             if len(self.available) == 1:
                 text = self.available[0]
                 self.available = []
@@ -76,7 +77,7 @@ class CompletionManager:
     
     def get_completion(self, text, state):
         if self.current == len(self.available):
-            return 0
+            return None
         else:
             tmp = self.available[self.current]
             self.current += 1
