@@ -22,6 +22,8 @@
 # Santiago Alessandri
 # Gastón Traberg
 
+from sys import exit
+
 import themole
 import completion
 import output
@@ -128,9 +130,9 @@ if __name__ == '__main__':
     opt_map = {}
     for i in options:
         opt_map[option_name_mapper[i[0]]] = i[1]
-    
+
     print(info_string)
-    
+
     builtins.cmd_manager = commands.CommandManager()
     builtins.manager = Manager(opt_map)
     try:

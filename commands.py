@@ -22,6 +22,8 @@
 # Santiago Alessandri
 # Gastón Traberg
 
+from sys import exit
+
 import connection, os, output
 import themole
 import traceback
@@ -488,7 +490,7 @@ class UsageCommand(Command):
 class BaseFilterCommand(Command):
     def __init__(self, functor):
         self.functor = functor
-    
+
     def execute(self, mole, params, output_manager):
         if len(params) == 0:
             for i in self.functor(mole).active_filters():
@@ -528,7 +530,7 @@ class HTMLFilterCommand(BaseFilterCommand):
 class QueryFilterCommand(BaseFilterCommand):
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda x: x.query_filter)
-    
+
     def execute(self, mole, params, output_manager):
         try:
             BaseFilterCommand.execute(self, mole, params, output_manager)
@@ -546,7 +548,7 @@ class QueryFilterCommand(BaseFilterCommand):
 
     def parameters(self, mole, current_params):
         params = BaseFilterCommand.parameters(self, mole, current_params)
-        
+
         if len(current_params) == 0:
             return params + ['config']
         if params is not None and len(params) > 0:
@@ -712,7 +714,7 @@ class HTTPHeadersCommand(Command):
 
     def usage(self, cmd_name):
         return cmd_name + ' [add|del] [NAME [VALUE]]'
-            
+
 
 class RecursiveCommand(Command):
     first_param = ['schemas', 'tables']
