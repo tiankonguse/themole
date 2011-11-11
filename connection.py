@@ -75,8 +75,6 @@ class HttpRequester:
         except UnicodeDecodeError:
             self.encoding = chardet.detect(data)['encoding']
             to_ret = data.decode(self.encoding)
-        if not '<html' in to_ret and not '<HTML' in to_ret:
-            to_ret = '<html><body></body></html>' + to_ret
         return DbmsMole.remove_errors(to_ret)
 
     # Tries to remove the query from the result html.

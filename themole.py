@@ -117,6 +117,8 @@ class TheMole:
 
         try:
             original_request = self.requester.request(self.prefix)
+            if not '<html' in original_request and not '<HTML' in original_request:
+                original_request = '<html><body>' + original_request + '</body></html>'
         except ConnectionException as ex:
             raise PageNotFound(str(ex))
         self.analyser.set_good_page(original_request, self.needle)
@@ -206,6 +208,8 @@ class TheMole:
 
     def make_request(self, query):
         req = self.requester.request(self.generate_url(query))
+        if not '<html' in req and not '<HTML' in req:
+            req = '<html><body>' + req + '</body></html>'
         return self.html_filter.apply_filters(req)
 
     def set_mode(self, mode):
