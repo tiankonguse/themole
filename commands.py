@@ -27,6 +27,7 @@ from sys import exit
 import connection, os, output
 import themole
 import traceback
+from base64 import b64encode
 from exceptions import *
 
 class Command:
@@ -715,6 +716,25 @@ class HTTPHeadersCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' [add|del] [NAME [VALUE]]'
 
+class AuthCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) < 2:
+            raise CommandException("Auth method and user credentials required.")
+        if params[0] == 'basic':
+            params = ' '.join(params[1:]).split(':')
+            if len(params) < 2:
+                raise CommandException("Missing password.")
+            username = params[0]
+            password = ':'.join(params[1:])
+            mole.requester.headers["Authorization"] = "Basic " + b64encode((username + ':' + password).encode()).decode()
+        else:
+            raise CommandException("Invalid method")
+
+    def parameters(self, mole, current_params):
+        return ['basic'] if len(current_params) == 0 else []
+
+    def usage(self, cmd_name):
+        return cmd_name + ' <BASIC|DIGEST> USERNAME:PASSWORD'
 
 class RecursiveCommand(Command):
     first_param = ['schemas', 'tables']
@@ -767,9 +787,8 @@ class RecursiveCommand(Command):
 
 class CommandManager:
     def __init__(self):
-        self.cmds = { 'find_tables' : BruteforceTablesCommand(),
-                      'find_tables_like' : FindTablesLikeCommand(),
-                      'find_users_table'  : BruteforceUserTableCommand(),
+        self.cmds = { 
+                      'auth'     : AuthCommand(),
                       'clear'    : ClearScreenCommand(),
                       'columns'  : ColumnsCommand(),
                       'cookie'   : CookieCommand(),
@@ -778,6 +797,9 @@ class CommandManager:
                       'exit'     : ExitCommand(),
                       'export'   : ExportCommand(),
                       'fetch'    : FetchDataCommand(),
+                      'find_tables' : BruteforceTablesCommand(),
+                      'find_tables_like' : FindTablesLikeCommand(),
+                      'find_users_table'  : BruteforceUserTableCommand(),
                       'headers'  : HTTPHeadersCommand(),
                       'htmlfilter'  : HTMLFilterCommand(),
                       'import'   : ImportCommand(),
