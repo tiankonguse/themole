@@ -300,7 +300,10 @@ class TheMole:
         if vulnerable_param is None and '?' in url:
             params = list(t.split('=', 1) for t in url.split('?')[1].split('&'))
             vulnerable_param = params[-1][0]
+        try:
             self.requester.set_vulnerable_param('GET', vulnerable_param)
+        except InvalidParamException as ex:
+            print('Invalid parameter({msg}).'.format(msg=str(ex)))
         self.initialized = False
 
     def get_url(self):

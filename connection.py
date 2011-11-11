@@ -199,9 +199,9 @@ class HttpRequester:
 
     def set_vulnerable_param(self, method, vulnerable_param):
         if method == 'GET' and vulnerable_param not in (x[0] for x in self.get_parameters):
-            raise InvalidParamException()
+            raise InvalidParamException(vulnerable_param + ' is not present in the given URL.')
         if method == 'POST' and vulnerable_param not in (x[0] for x in self.post_parameters):
-            raise InvalidParamException()
+            raise InvalidParamException(vulnerable_param + ' is not in the POST parameters.')
         self.vulnerable_param = vulnerable_param
         self.vulnerable_param_group = method
 
