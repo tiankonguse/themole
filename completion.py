@@ -32,7 +32,7 @@ class CompletionManager:
         readline.set_completer(self.completer)
     
     def completer(self, text, state):
-        if text == readline.get_line_buffer():
+        if readline.get_begidx() == 0:
             # means it's the first word on buffer
             return self.generate_commands(text, state)
         else:
@@ -44,7 +44,7 @@ class CompletionManager:
             self.available = []
             self.current = 0
             try:
-                line = readline.get_line_buffer().split(' ')
+                line = readline.get_line_buffer()[:readline.get_endidx()].split(' ')
                 cmd = self.manager.find(line[0])
             except:
                 return 0

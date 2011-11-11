@@ -56,10 +56,15 @@ class Manager:
             cmd_manager.find('needle').execute(self.mole, [opt_map['needle']], self.output)
 
     def start(self):
-        signal.signal(signal.SIGINT, sigint_handler)
         while True:
             try:
-                line = [i for i in input('#> ').strip().split(' ') if len(i) > 0]
+                signal.signal(signal.SIGINT, signal.default_int_handler)
+                try:
+                    line = [i for i in input('#> ').strip().split(' ') if len(i) > 0]
+                except KeyboardInterrupt:
+                    print('')
+                    continue
+                signal.signal(signal.SIGINT, sigint_handler)
                 if len(line) != 0:
                     cmd = cmd_manager.find(line[0])
                     cmd.execute(self.mole, line[1:] if len(line) > 1 else [], self.output)
@@ -81,7 +86,11 @@ def parse_options():
     if '-h' in sys.argv:
         help()
     options = 'u:n:t:p:'
-    args, extra = getopt.getopt(sys.argv[1:], options)
+    try:
+        args, extra = getopt.getopt(sys.argv[1:], options)
+    except getopt.GetoptError as ex:
+        print('Invalid parameter({err}).'.format(err=str(ex)))
+        exit(1)
     return args
 
 def help():
@@ -109,7 +118,6 @@ r"""                     _____ _           ___  ___      _
 """
 
 if __name__ == '__main__':
-    print(info_string)
     options = parse_options()
     option_name_mapper = {
         '-u' : 'url',
@@ -120,7 +128,9 @@ if __name__ == '__main__':
     opt_map = {}
     for i in options:
         opt_map[option_name_mapper[i[0]]] = i[1]
-
+    
+    print(info_string)
+    
     builtins.cmd_manager = commands.CommandManager()
     builtins.manager = Manager(opt_map)
     try:
