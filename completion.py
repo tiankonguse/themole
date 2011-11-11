@@ -1,28 +1,34 @@
 #!/usr/bin/python3
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-#       
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#       
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA 02110-1301, USA.
 #
 # Developed by: Nasel(http://www.nasel.com.ar)
-# 
+#
 # Authors:
 # Matías Fontanini
 # Santiago Alessandri
 # Gastón Traberg
 
-import readline
+try:
+    import readline
+except ImportError: #Window systems don't have GNU readline
+    import pyreadline.windows_readline as readline
+    readline.rl.mode.show_all_if_ambiguous = "on"
+
+
 
 class CompletionManager:
     def __init__(self, manager, mole):
@@ -30,7 +36,7 @@ class CompletionManager:
         self.mole    = mole
         readline.parse_and_bind("tab: complete")
         readline.set_completer(self.completer)
-    
+
     def completer(self, text, state):
         if text == readline.get_line_buffer():
             # means it's the first word on buffer
@@ -38,7 +44,7 @@ class CompletionManager:
         else:
             # not the first word on buffer, may be a parameter
             return self.generate_parameters(text, state)
-            
+
     def generate_parameters(self, text, state):
         if state == 0:
             self.available = []
@@ -61,7 +67,7 @@ class CompletionManager:
                 self.current = len(self.available)
                 return text + cmd.parameter_separator(current_params)
         return self.get_completion(text, state)
-    
+
     def generate_commands(self, text, state):
         if state == 0:
             self.available = []
@@ -69,12 +75,13 @@ class CompletionManager:
             for i in self.manager.commands():
                 if i[0:len(text)] == text:
                     self.available.append(i)
+            self.available.sort()
             if len(self.available) == 1 and self.available[0] == text:
                 self.available = []
                 self.current = len(self.available)
                 return text + ' '
         return self.get_completion(text, state)
-    
+
     def get_completion(self, text, state):
         if self.current == len(self.available):
             return None
