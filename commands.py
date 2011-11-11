@@ -549,16 +549,16 @@ class QueryFilterCommand(BaseFilterCommand):
         
         if len(current_params) == 0:
             return params + ['config']
-        if len(params) > 0:
+        if params is not None and len(params) > 0:
             return params
         if len(current_params) == 1:
             if current_params[0] == 'config':
                 return mole.query_filter.active_filters()
-            elif current_params[0] == 'config':
-                try:
-                    return mole.query_filter.parameters(current_params[1], current_params[2:])
-                except FilterNotFoundException:
-                    pass
+        elif current_params[0] == 'config':
+            try:
+                return mole.query_filter.parameters(current_params[1], current_params[2:])
+            except FilterNotFoundException:
+                pass
         return []
 
     def usage(self, cmd_name):
@@ -750,10 +750,17 @@ class RecursiveCommand(Command):
             self.__get_tables(mole, schema)
 
     def __get_tables(self, mole, schema):
-        tables = mole.get_tables(schema)
+        try:
+            tables = mole.get_tables(schema)
+        except QueryError as ex:
+            print("Failed fetching tables({err}).".format(err=str(ex)))
+            return
         for table in tables:
             print('[*] Dumping table:', table, 'from schema:', schema)
-            mole.get_columns(schema, table)
+            try:
+                mole.get_columns(schema, table)
+            except QueryError as ex:
+                print("Error fetching columns({err}).".format(err=str(ex)))
 
 
 class CommandManager:
