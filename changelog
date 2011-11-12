@@ -1,4 +1,23 @@
 
+Version 0.2.5
+=============
+
+    + Major fix to make the mole work in Windows.
+    + Added support for exploiting SQL Injections through POST.
+    + Added income data filtering mechanism.
+    + Added query filtering/mangling mechanism.
+    + Added support for SSL.
+    + Added support to add/modify/delete headers in the requests.
+    + Added support for recursive structure dumping.
+    + Added support to limit the number of rows to be retrieved.
+    + Added support to skip the first N registers using 'offset' in the
+        query.
+    + Shows percentage of query already retrieved.
+    + Added support to use the * operator for queries.
+    + Fixed XML Importation/Exporation
+    + The mole falls back to blind mode if union mode can't be exploited.
+    + Refactored code.
+
 Version 0.2
 ===========
 
