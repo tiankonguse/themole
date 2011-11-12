@@ -307,7 +307,7 @@ class QueryCommand(Command):
         output_manager.end_sequence()
 
     def usage(self, cmd_name):
-        return cmd_name + ' <SCHEMA> <TABLE> <COLUMNS> [where <CONDITION>] [limit <NUM_ROWS>]'
+        return cmd_name + ' <SCHEMA> <TABLE> <COLUMNS> [where <CONDITION>] [limit <NUM_ROWS>] [offset <OFFSET>]'
 
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
@@ -324,7 +324,7 @@ class QueryCommand(Command):
             columns = mole.poll_columns(current_params[0], current_params[1])
             return columns if columns else []
         elif len(current_params) == 3 :
-            return ['where', 'limit', 'start']
+            return ['where', 'limit', 'offset']
         else:
             columns = mole.poll_columns(current_params[0], current_params[1])
             return columns if columns else []
