@@ -138,6 +138,21 @@ when executing lots of requests in a short amount of time. Note that
 DELAY can be a floating point number, so you can set "0.5" as the
 delay.
 
+- headers <set|del> <HEADER> [VALUE]: Sets/removes the given HTTP
+header. Use this to set the User-Agent, cookie, or whatever additional
+header you want to send.
+
+- qfilter <add|config|del> <FILTER> [ARGS]: Add/configure/remove query 
+filters. Query filters are applied to each query before appending it to 
+the vulnerable parameter. So far, these can be used to either bypass an 
+IPS/IDS or to apply a filter when SQL Server requires you to change the
+collation of the retrieved fields.
+
+- htmlfilter <add|del> <FILTER> [ARGS]: Adds/removes an html filter. 
+Html filters are applied to the data retrieved from the server. In some
+cases, invalid HTML can make The Mole miss the injection, so you might
+want to use a regular expression in order to fix it.
+
 - export <TYPE> [<ARG1>, ...]: Exports the current mole configuration
 and the dumped schema's structures for later usage.
 Currently supported types and params:
