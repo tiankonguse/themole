@@ -33,7 +33,7 @@ import commands
 import getopt, sys
 import traceback
 
-VERSION = '0.3-dev'
+VERSION = '0.2.5'
 
 def sigint_handler(x, y):
     manager.mole.abort_query()

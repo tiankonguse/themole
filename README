@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------
-       The Mole v0.2
+       The Mole v0.2.5
 ------------------------------------------------------------------------
 
 
@@ -56,6 +56,9 @@ e.g: "tables mysql"
 the schema SCHEMA. The results obtained will be cached, so further calls
 to this command will return the cached entries. See "fetch" command.
 e.g: "columns mysql user"
+
+- recursive (schemas|tables <SCHEMA>): Recursively fetches the structure
+of all schemas or just of the SCHEMA if used with tables.
 
 - query <SCHEMA> <TABLE> COLUMN1[,COLUMN2[,COLUMN3[...]]] [where COND]:
 Perform a query to fetch every column given, using the table TABLE
