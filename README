@@ -41,6 +41,11 @@ as an argument to the application, using the "-u" parameter.
 - needle [NEEDLE]: Gets/sets the NEEDLE. This can also be provided as an
 argument to the application, using the "-n" parameter.
 
+- method (GET|POST <param_post> ) [injectable_field]: Sets the method of
+the request to GET or POST. In case POST is given the param_post string
+will be used as the POST parameters. If injectable_field is given then
+the mole will use this parameter to inject.
+
 - dbinfo: Fetch current user name, database name and DBMS version.
 
 - schemas: Fetchs the schemas(databases) from the server. The results
