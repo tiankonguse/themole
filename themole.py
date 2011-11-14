@@ -126,6 +126,7 @@ class TheMole:
         self.separator, self.parenthesis = injection_inspector.find_separator(self)
         print("[+] Found separator: \"" + self.separator + "\"")
 
+        blind_parenthesis = self.parenthesis
         if not self.separator == ' ':
             self.end = 'and {op_par}' + '{sep}1{sep} like {sep}1'.format(sep=self.separator, par=(self.parenthesis * ')'))
         else:
@@ -148,7 +149,7 @@ class TheMole:
                 if self._dbms_mole:
                     print('[-] Could not find comment.')
                     print('[+] Using blind mode.')
-                    self.dumper = BlindDataDumper()
+                    self._go_blind(blind_parenthesis)
                     self.initialized = True
                     return
                 raise
@@ -160,7 +161,7 @@ class TheMole:
                 if self._dbms_mole:
                     print('[-] Could not find number of columns. (' + str(ex) + ')')
                     print('[+] Using blind mode.')
-                    self.dumper = BlindDataDumper()
+                    self._go_blind(blind_parenthesis)
                     self.initialized = True
                     return
                 raise
@@ -172,7 +173,7 @@ class TheMole:
                 if self._dbms_mole:
                     print('[-] Could not find injectable field.')
                     print('[+] Using blind mode.')
-                    self.dumper = BlindDataDumper()
+                    self._go_blind(blind_parenthesis)
                     self.initialized = True
                     return
                 raise
@@ -191,6 +192,15 @@ class TheMole:
             self.dumper = BlindDataDumper()
 
         self.initialized = True
+
+    def _go_blind(self, parenthesis):
+        if not self.separator == ' ':
+            self.end = 'and {op_par}' + '{sep}1{sep} like {sep}1'.format(sep=self.separator, par=(self.parenthesis * ')'))
+        else:
+            self.end = ' '
+        self.comment = ''
+        self.parenthesis = parenthesis
+        self.dumper = BlindDataDumper()
 
     def generate_url(self, injection_string):
         url = ('{prefix}{sep}{par}' + injection_string + '{end}{com}').format(
