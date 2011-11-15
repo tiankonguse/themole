@@ -26,7 +26,7 @@ from sys import exit
 
 import connection, os, output
 import themole
-import traceback
+import traceback, codecs
 from base64 import b64encode
 from exceptions import *
 
@@ -735,6 +735,26 @@ class AuthCommand(Command):
 
     def usage(self, cmd_name):
         return cmd_name + ' <BASIC|DIGEST> USERNAME:PASSWORD'
+        
+class EncodingCommand(Command):
+    def execute(self, mole, params, output_manager):
+        if len(params) == 0:
+            if mole.requester.encoding is not None:
+                print(mole.requester.encoding)
+            else:
+                print('No encoding set yet.')
+        else:
+            try:
+                codecs.lookup(params[0])
+            except LookupError:
+                raise CommandException('Encoding ' + params[0] + ' does not exist.', False)
+            mole.requester.encoding = params[0]
+
+    def parameters(self, mole, current_params):
+        return []
+
+    def usage(self, cmd_name):
+        return cmd_name + ' [ENCODING]'
 
 class RecursiveCommand(Command):
     first_param = ['schemas', 'tables']
@@ -794,6 +814,7 @@ class CommandManager:
                       'cookie'   : CookieCommand(),
                       'dbinfo'   : DBInfoCommand(),
                       'delay'    : DelayCommand(),
+                      'encoding' : EncodingCommand(),
                       'exit'     : ExitCommand(),
                       'export'   : ExportCommand(),
                       'fetch'    : FetchDataCommand(),

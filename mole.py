@@ -32,6 +32,7 @@ import builtins
 import commands
 import getopt, sys
 import traceback
+import codecs
 
 VERSION = '0.2.5'
 
@@ -56,6 +57,15 @@ class Manager:
                 exit(1)
         if 'needle' in opt_map:
             cmd_manager.find('needle').execute(self.mole, [opt_map['needle']], self.output)
+        if 'encoding' in opt_map:
+            encoding = opt_map['encoding']
+            try:
+                codecs.lookup(encoding)
+            except LookupError:
+                print('[-] Encoding',encoding,'does not exist.')
+                self.mole.threader.stop()
+                sys.exit(1)
+            self.mole.requester.encoding = encoding
 
     def start(self):
         while True:
@@ -87,7 +97,7 @@ class Manager:
 def parse_options():
     if '-h' in sys.argv:
         help()
-    options = 'u:n:t:p:'
+    options = 'u:n:p:e:t:'
     try:
         args, extra = getopt.getopt(sys.argv[1:], options)
     except getopt.GetoptError as ex:
@@ -103,6 +113,7 @@ def help():
     print('   -u URL: The url which contains a sqli vulnerability.')
     print('   -n NEEDLE: The string which is printed on good queries.')
     print('   -t THREADS: The amount of threads to run. Defaults to 4.')
+    print('   -e ENCODING: Use ENCODING to decode data retrieved from the server.')
     print('   -p PARAM: Sets the GET vulnerable param(URL must be provided).')
     exit(0)
 
@@ -126,6 +137,7 @@ if __name__ == '__main__':
         '-n' : 'needle',
         '-t' : 'threads',
         '-p' : 'vuln_param',
+        '-e' : 'encoding'
     }
     opt_map = {}
     for i in options:
