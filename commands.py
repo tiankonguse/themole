@@ -98,7 +98,10 @@ class CookieCommand(Command):
         if len(params) == 1:
             mole.requester.headers['Cookie'] = ' '.join(params)
         else:
-            print(mole.requester.headers['Cookie'])
+            try:
+                print(mole.requester.headers['Cookie'])
+            except KeyError:
+                print('No cookie set yet.')
 
     def usage(self, cmd_name):
         return cmd_name + ' [COOKIE]'
@@ -418,12 +421,12 @@ class PrefixCommand(Command):
 class SuffixCommand(Command):
     def execute(self, mole, params, output_manager):
         if len(params) == 0:
-            print(mole.end)
+            print(mole.suffix)
         else:
             if params[0].startswith('"') or params[0].startswith('\''):
-                mole.end = ' '.join(params)
+                mole.suffix = ' '.join(params)
             else:
-                mole.end = ' ' + ' '.join(params)
+                mole.suffix = ' ' + ' '.join(params)
 
     def usage(self, cmd_name):
         return cmd_name + ' [SUFFIX]'
