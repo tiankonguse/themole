@@ -78,6 +78,7 @@ class TheMole:
         self.mode = 'union'
         self.threader = Threader(threads)
         self.prefix = ''
+        self.suffix = ''
         self.end = ''
         self.verbose = False
         self.delay = 0
@@ -107,7 +108,6 @@ class TheMole:
         self.injectable_field = 0
         self.separator = ''
         self.comment = ''
-        self.prefix = ''
         self.end = ''
         self.parenthesis = 0
         self._dbms_mole = None
@@ -116,21 +116,22 @@ class TheMole:
         injection_inspector = InjectionInspector()
 
         try:
-            original_request = self.requester.request(self.prefix)
+            original_request = self.requester.request(self.prefix + self.suffix)
             if not '<html' in original_request and not '<HTML' in original_request:
                 original_request = '<html><body>' + original_request + '</body></html>'
         except ConnectionException as ex:
             raise PageNotFound(str(ex))
         self.analyser.set_good_page(original_request, self.needle)
-
+        
+        self.end = self.suffix
         self.separator, self.parenthesis = injection_inspector.find_separator(self)
         print("[+] Found separator: \"" + self.separator + "\"")
 
         blind_parenthesis = self.parenthesis
-        if not self.separator == ' ':
+        if not self.separator == ' ' and self.suffix == '':
             self.end = 'and {op_par}' + '{sep}1{sep} like {sep}1'.format(sep=self.separator, par=(self.parenthesis * ')'))
         else:
-            self.end = ' '
+            self.end = self.suffix
 
         if self.mode == 'union':
             try:
@@ -138,7 +139,7 @@ class TheMole:
             except DbmsDetectionFailed:
                 print('[i] Early DBMS detection failed. Retrying later.')
 
-            self.end = ''
+            self.end = self.suffix
             req = self.make_request(' own3d by 1')
             self._syntax_error_content = self.analyser.node_content(req)
 
