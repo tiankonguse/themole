@@ -95,7 +95,7 @@ class CookieCommand(Command):
     def execute(self, mole, params, output_manager):
         if not mole.requester:
             raise CommandException('URL must be set first.')
-        if len(params) == 1:
+        if len(params) >= 1:
             mole.requester.headers['Cookie'] = ' '.join(params)
         else:
             try:
