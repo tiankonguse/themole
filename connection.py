@@ -82,7 +82,7 @@ class HttpRequester:
         try:
             for i in params:
                 if i[0] == self.vulnerable_param:
-                    return self.ireplace(i[1], '', data) if 'and' in i[1].lower() else data
+                    return self.ireplace(i[1], '', data) if 'and' in i[1].lower() or 'order by' in i[1].lower() else data
         except ValueError:
             pass
         return data
@@ -104,8 +104,14 @@ class HttpRequester:
                 return parameters
         return None
 
+    def _normalize_params(self, params):
+        params = list(filter(lambda x: len(x[0]) > 0, params))
+        for i in params:
+            if len(i) == 1:
+                i.append('')
+        return params
+
     def do_request(self, query):
-        #params = list(t.split('=', 1) for t in params.split('&'))
         get_params = copy.deepcopy(self.get_parameters)
         post_params = copy.deepcopy(self.post_parameters)
         if self.vulnerable_param_group == 'GET':
@@ -163,7 +169,7 @@ class HttpRequester:
         self.host = parsed.netloc
         self.path = parsed.path
         if parsed.query:
-            self.get_parameters = list(t.split('=', 1) for t in parsed.query.split('&'))
+            self.get_parameters = self._normalize_params(list(t.split('=', 1) for t in parsed.query.split('&')))
         else:
             self.get_parameters = []
         self.post_parameters = []
@@ -190,6 +196,7 @@ class HttpRequester:
             param_string_lst = []
         else:
             param_string_lst = list(t.split('=', 1) for t in param_string.split('&'))
+        param_string_lst = self._normalize_params(param_string_lst)
         self.post_parameters = param_string_lst
 
     def get_post_params(self):
