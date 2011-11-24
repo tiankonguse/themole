@@ -54,6 +54,7 @@ class QueryFilterManager(BaseFilterManager):
         'case' : CaseFilter,
         'space2comment' : Spaces2CommentsFilter,
         'mssqlcollation' : SQLServerCollationFilter,
+        'between' : BetweenComparerFilter
     }
     
     def __init__(self):

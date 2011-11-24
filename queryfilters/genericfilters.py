@@ -94,4 +94,16 @@ class SQLServerCollationFilter(BaseQueryFilter):
             return self.blacklist if current_params[0] == 'del' else []
                 
                 
-
+class BetweenComparerFilter(BaseQueryFilter):
+    def __init__(self, params):
+        self.regex = re.compile('([\d]+) ([<>]) (\(select [\w\d\(\) _\-\+,\*@\.=]+\))')
+    
+    def filter(self, query):
+        match = self.regex.findall(query)
+        if len(match) == 1:
+            num = match[0][0]
+            select = match[0][2]
+            op = match[0][1]
+            preffix = 'not ' if op == '>' else ''
+            return query.replace(num + ' {op} '.format(op=op) + select, preffix + num + ' between 0 and ' + select + '-1 ')
+        return query
