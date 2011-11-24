@@ -82,7 +82,7 @@ class HttpRequester:
         try:
             for i in params:
                 if i[0] == self.vulnerable_param:
-                    return self.ireplace(i[1], '', data) if 'and' in i[1].lower() else data
+                    return self.ireplace(i[1], '', data) if 'and' in i[1].lower() or 'order by' in i[1].lower() else data
         except ValueError:
             pass
         return data
