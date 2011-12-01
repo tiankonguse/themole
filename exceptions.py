@@ -59,6 +59,9 @@ class DbmsDetectionFailed(Exception):
 class NotInitializedException(Exception):
     pass
 
+class EncodingNotFound(Exception):
+    pass
+
 #Command Exceptions
 
 class CmdNotFoundException(Exception):
