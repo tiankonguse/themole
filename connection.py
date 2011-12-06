@@ -111,7 +111,7 @@ class HttpRequester:
                 i.append('')
         return params
 
-    def do_request(self, query):
+    def request(self, query):
         get_params = copy.deepcopy(self.get_parameters)
         post_params = copy.deepcopy(self.post_parameters)
         if self.vulnerable_param_group == 'GET':
@@ -136,6 +136,7 @@ class HttpRequester:
 
         for i in range(self.max_retries):
             try:
+                time.sleep(self.delay)
                 connection.request(self.method, self.path + '?' + get_params, post_params, self.headers)
                 resp = connection.getresponse()
                 data = self.decode(resp.read())
@@ -154,11 +155,6 @@ class HttpRequester:
             raise ConnectionException(str(exception))
 
         return self.filter(data, filter_params)
-
-    def request(self, query):
-        time.sleep(self.delay)
-        data = self.do_request(query)
-        return data
 
     def is_initialized(self):
         return self.host is not None and self.vulnerable_param is not None
