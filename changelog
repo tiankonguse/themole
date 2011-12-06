@@ -1,3 +1,11 @@
+Version 0.2.6
+=============
+
+    + Fixed bug when falling back to blind mode.
+    + Fixed bug when URL given had no parameters.
+    + Fixed bugs in prefix, suffix and cookie commands.
+    + Fixed bug when parsing empy parameters and had &.
+
 
 Version 0.2.5
 =============

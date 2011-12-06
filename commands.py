@@ -51,6 +51,8 @@ class Command:
                 raise CommandException('Could not exploit SQL Injection: Injectable field not found (' + str(ex) + ')', False)
             except DbmsDetectionFailed as ex:
                 raise CommandException('Could not exploit SQL Injection: DBMS detection failed (' + str(ex) + ')', False)
+            except EncodingNotFound as ex:
+                raise CommandException('Could not exploit SQL Injection: HTML encoding not found (' + str(ex) + ')', False)
             except StoppedQueryException:
                 raise QuietCommandException()
 

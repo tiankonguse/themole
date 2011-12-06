@@ -71,6 +71,8 @@ class HttpRequester:
         if self.encoding is None:
             self.encoding = chardet.detect(data)['encoding']
         try:
+            if self.encoding is None:
+                raise EncodingNotFound('Try using the "encoding" command.')
             to_ret = data.decode(self.encoding)
         except UnicodeDecodeError:
             self.encoding = chardet.detect(data)['encoding']
