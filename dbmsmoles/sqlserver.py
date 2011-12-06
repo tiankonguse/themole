@@ -71,6 +71,12 @@ class SQLServerMole(DbmsMole):
             'table' : ''
         }
 
+    def _user_creds_query_info(self):
+        return {
+            'field'  : ['name', 'password'],
+            'table'  : 'master..sysxlogins',
+            'filter' : '1=1'
+        }
 
     def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
         fields_joined = self._join_fields_with_table(fields,table)
