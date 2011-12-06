@@ -30,7 +30,7 @@ import urllib.parse
 from urllib.parse import urlparse, urlunparse
 import copy
 
-import chardet
+import chardet, encodings
 from dbmsmoles import DbmsMole
 from exceptions import *
 
@@ -67,16 +67,39 @@ class HttpRequester:
         if cookie:
             self.headers['Cookie'] = cookie
 
+    def guess_encoding(self, data):
+        for enc in set(encodings.aliases.aliases.values()):
+            try:
+                data.decode(enc)
+                return enc
+            except UnicodeDecodeError:
+                pass
+        return None
+
     def decode(self, data):
+        if self.encoding is not None:
+            try:            
+                to_ret = data.decode(self.encoding)
+            except UnicodeDecodeError:
+                self.encoding = None
+        
         if self.encoding is None:
             self.encoding = chardet.detect(data)['encoding']
-        try:
-            if self.encoding is None:
-                raise EncodingNotFound('Try using the "encoding" command.')
-            to_ret = data.decode(self.encoding)
-        except UnicodeDecodeError:
-            self.encoding = chardet.detect(data)['encoding']
-            to_ret = data.decode(self.encoding)
+            try:            
+                to_ret = data.decode(self.encoding)
+            except UnicodeDecodeError:
+                self.encoding = None
+                
+        if self.encoding is None:
+            self.encoding = self.guess_encoding(data)
+            try:            
+                to_ret = data.decode(self.encoding)
+            except UnicodeDecodeError:
+                self.encoding = None
+
+        if self.encoding is None:
+            raise EncodingNotFound('Try using the "encoding" command.')
+        
         return DbmsMole.remove_errors(to_ret)
 
     # Tries to remove the query from the result html.
