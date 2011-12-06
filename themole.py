@@ -282,6 +282,9 @@ class TheMole:
         limit = max(limit, 0)
         return self.dumper.get_fields(self, db, table, fields, where, self.injectable_field, start=start, limit=limit)
 
+    def get_user_creds(self):
+        return self.dumper.get_user_creds(self, self.injectable_field)
+
     def get_dbinfo(self):
         return self.dumper.get_dbinfo(self, self.injectable_field)
 

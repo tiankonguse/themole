@@ -81,6 +81,13 @@ class MysqlMole(DbmsMole):
             'table' : '',
         }
 
+    def _user_creds_query_info(self):
+        return {
+            'field'  : ['User', 'Password'],
+            'table'  : 'mysql.user',
+            'filter' : '1=1'
+        }
+
     def _concat_fields(self, fields):
         if not self.finger or self.finger.is_string_query:
             return 'CONCAT_WS(' + MysqlMole.inner_delimiter + ',' + ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)) + ')'

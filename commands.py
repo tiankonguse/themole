@@ -352,6 +352,22 @@ class DBInfoCommand(Command):
     def parameters(self, mole, current_params):
         return []
 
+class UserCredentialsCommand(Command):
+    def execute(self, mole, params, output_manager):
+        self.check_initialization(mole)
+        try:
+            result = mole.get_user_creds()
+        except QueryError:
+            print('[-] There was an error with the query.')
+            return
+        output_manager.begin_sequence(['User', 'Password'])
+        for i in result:
+            output_manager.put(i)
+        output_manager.end_sequence()
+
+    def parameters(self, mole, current_params):
+        return []
+
 class BruteforceTablesCommand(Command):
     def execute(self, mole, params, output_manager):
         self.check_initialization(mole)
@@ -844,6 +860,7 @@ class CommandManager:
                       'tables'   : TablesCommand(),
                       'url'      : URLCommand(),
                       'usage'    : UsageCommand(),
+                      'usercreds' : UserCredentialsCommand(),
                       'verbose'  : VerboseCommand(),
                     }
 
