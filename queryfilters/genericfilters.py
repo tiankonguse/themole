@@ -27,15 +27,24 @@ from queryfilters.base import BaseQueryFilter
 class CaseFilter(BaseQueryFilter):
     def filter(self, query):
         query_list = list(query)
+        so_far = ''
+        skip_next = False
         for i in range(len(query_list)):
             # Fix for mysql 0xFFFF syntax. These filters should be
             # applied before converting quoted strings to dbms specific
             # string representation.
-            if query_list[i] != 'x' and random.randrange(0, 2) == 0:
-                if query_list[i].isupper():
-                    query_list[i] = query_list[i].lower()
-                else:
-                    query_list[i] = query_list[i].upper()
+            if query_list[i] == ' ':
+                skip_next = (so_far == 'from')
+                so_far = ''
+            else:
+                so_far += query_list[i].lower()
+            if not skip_next:
+                if query_list[i] != 'x' and random.randrange(0, 2) == 0:
+                    if query_list[i].isupper():
+                        query_list[i] = query_list[i].lower()
+                    else:
+                        query_list[i] = query_list[i].upper()
+            
         return ''.join(query_list)
 
 
@@ -99,11 +108,27 @@ class BetweenComparerFilter(BaseQueryFilter):
         self.regex = re.compile('([\d]+) ([<>]) (\(select [\w\d\(\) _\-\+,\*@\.=]+\))')
     
     def filter(self, query):
-        match = self.regex.findall(query)
-        if len(match) == 1:
-            num = match[0][0]
-            select = match[0][2]
-            op = match[0][1]
+        match = self.regex.search(query)
+        if match:
+            num, op, select = match.groups()
             preffix = 'not ' if op == '>' else ''
-            return query.replace(num + ' {op} '.format(op=op) + select, preffix + num + ' between 0 and ' + select + '-1 ')
+            return query.replace(match.string[match.start():match.end()], preffix + num + ' between 0 and ' + select + '-1 ')
         return query
+
+class ParenthesisFilter(BaseQueryFilter):
+    def __init__(self, params):
+        self.regex = re.compile('(where|and)[ ]+([\'"\d]+)[ ]*(between|like|[<>=])[ ]*(:?\(.+\)|[\'"\d\w]+)', re.IGNORECASE)
+    
+    def filter(self, query):
+        match = self.regex.search(query)
+        while match:
+            keyword,op1,oper,op2 = match.groups()
+            if len(list(filter(lambda x: x == '"' or x == "'", op2))) & 1 == 0:
+                op2 = '(' + op2 + ')'
+            query = query.replace(match.string[match.start():match.end()], keyword + '(' + op1 + ')' + oper + op2)
+            match = self.regex.search(query)
+        return query
+
+class NoAsteriskFilter(BaseQueryFilter):
+    def filter(self, query):
+        return query.replace('*', '1')
