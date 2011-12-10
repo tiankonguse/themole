@@ -25,20 +25,27 @@ from exceptions import *
 from queryfilters.base import BaseQueryFilter
 
 class CaseFilter(BaseQueryFilter):
+    word_delimiters = {' ', '/', '(', ')'}
+    
     def filter(self, query):
         query_list = list(query)
         so_far = ''
         skip_next = False
         for i in range(len(query_list)):
-            # Fix for mysql 0xFFFF syntax. These filters should be
-            # applied before converting quoted strings to dbms specific
-            # string representation.
-            if query_list[i] == ' ':
+            if query_list[i] in self.word_delimiters:
+                if not skip_next:
+                    word = query_list[i-len(so_far):i]
+                    if ''.join(word).isupper() or ''.join(word).islower():
+                        word = [word[i].swapcase() if i % 2 == 1 and not word[i] == 'x' else word[i] for i in range(len(word))]
+                        query_list[i-len(so_far):i] = word
                 skip_next = (so_far == 'from')
                 so_far = ''
             else:
                 so_far += query_list[i].lower()
             if not skip_next:
+                # Fix for mysql 0xFFFF syntax. These filters should be
+                # applied before converting quoted strings to dbms specific
+                # string representation.
                 if query_list[i] != 'x' and random.randrange(0, 2) == 0:
                     if query_list[i].isupper():
                         query_list[i] = query_list[i].lower()
