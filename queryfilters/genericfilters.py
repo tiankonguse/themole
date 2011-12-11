@@ -58,6 +58,10 @@ class CaseFilter(BaseQueryFilter):
 class Spaces2CommentsFilter(BaseQueryFilter):
     def filter(self, query):
         return query.replace(' ', '/**/')
+        
+class Spaces2NewLineFilter(BaseQueryFilter):
+    def filter(self, query):
+        return query.replace(' ', '\n')
 
 class SQLServerCollationFilter(BaseQueryFilter):
     def __init__(self, params):

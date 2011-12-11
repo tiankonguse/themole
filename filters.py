@@ -53,6 +53,7 @@ class QueryFilterManager(BaseFilterManager):
     filter_map = {
         'case' : CaseFilter,
         'space2comment' : Spaces2CommentsFilter,
+        'space2newline' : Spaces2NewLineFilter,
         'mssqlcollation' : SQLServerCollationFilter,
         'between' : BetweenComparerFilter,
         'parenthesis' : ParenthesisFilter,
