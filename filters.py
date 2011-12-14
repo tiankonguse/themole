@@ -34,11 +34,14 @@ class BaseFilterManager:
 
     def active_filters(self):
         return [x[0] for x in self.filters]
+    
+    def active_filters_to_string(self):
+        return [str(x[1]) for x in self.filters]
 
     def add_filter(self, name, params):
         if not name in self.filter_map:
             raise FilterNotFoundException()
-        self.filters.append((name, self.filter_map[name](params)))
+        self.filters.append((name, self.filter_map[name](name, params)))
 
     def remove_filter(self, name):
         self.filters = list(filter(lambda x: x[0] != name, self.filters))

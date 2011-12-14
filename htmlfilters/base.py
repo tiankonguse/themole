@@ -23,8 +23,11 @@
 # Gastón Traberg
 
 class HTMLFilter:
-    def __init__(self, params):
+    def __init__(self, params, name=''):
         pass
     
     def filter(self, data):
         return data
+
+    def __str__(self):
+        return ''

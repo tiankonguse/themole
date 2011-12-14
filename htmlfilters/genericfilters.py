@@ -36,26 +36,23 @@ class BaseRegexHTMLFilter(HTMLFilter):
     
     def filter(self, data):
         return self.regex.sub(self.replacement, data)
-        
-    def parse_params(self, params):
-        params = ' '.join(params)
-        if not params.startswith("'"):
-            raise FilterCreationError('Regex must be quoted using single quotes.')
-        quotes = list(re.finditer(r"(?<!\\)\'", params))
-        if len(quotes) < 2:
-            raise FilterCreationError('Regex must be quoted using single quotes.')
-        end = quotes[1].start()
-        return list(filter(lambda x: len(x) > 0, [params[1:end], params[end+2:]]))
 
 class RemoverRegexHTMLFilter(BaseRegexHTMLFilter):
-    def __init__(self, params):
+    def __init__(self, name, params):
         if len(params) != 1:
             raise FilterCreationError('Expected regex as argument.')
         BaseRegexHTMLFilter.__init__(self, params[0], '')
+        self.name = name
+
+    def __str__(self):
+        return '{name} \'{pat}\''.format(name=self.name, pat=self.regex.pattern)
 
 class ReplacerRegexHTMLFilter(BaseRegexHTMLFilter):
-    def __init__(self, params):
+    def __init__(self, name, params):
         if len(params) != 2:
             raise FilterCreationError('Expected regex and replacement string as arguments.')
         BaseRegexHTMLFilter.__init__(self, params[0], params[1])
+        self.name = name
 
+    def __str__(self):
+        return '{name} \'{pat}\' -> \'{rep}\''.format(name=self.name, pat=self.regex.pattern, rep=self.replacement)

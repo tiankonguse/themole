@@ -518,8 +518,12 @@ class BaseFilterCommand(Command):
 
     def execute(self, mole, params, output_manager):
         if len(params) == 0:
-            for i in self.functor(mole).active_filters():
-                print(i)
+            filters = self.functor(mole).active_filters_to_string()
+            if len(filters) == 0:
+                print('No filters added yet.')
+            else:
+                for i in filters:
+                    print(i)
         elif len(params) == 1:
             raise CommandException(params[0] + ' requires at least one parameter.')
         else:
@@ -565,8 +569,9 @@ class QueryFilterCommand(BaseFilterCommand):
                     raise CommandException('Expected more arguments.')
                 try:
                     mole.query_filter.config(params[1], params[2:])
-                except Exception as ex:
-                    print(ex)
+                except FilterConfigException as ex:
+                    print('Filter config error({msg})'.format(msg=str(ex)))
+                except FilterNotFoundException as ex:
                     print('Filter ' + params[1] + ' not found.')
             else:
                 raise ex

@@ -64,7 +64,8 @@ class Spaces2NewLineFilter(BaseQueryFilter):
         return query.replace(' ', '\n')
 
 class SQLServerCollationFilter(BaseQueryFilter):
-    def __init__(self, params):
+    def __init__(self, name, params):
+        BaseQueryFilter.__init__(self, name, params)
         self.cast_match = re.compile('cast\([\w\d_\-@]+ as varchar\([\d]+\)\)')
         self.field_match = re.compile('cast\(([\w\d_\-@]+) as varchar\([\d]+\)\)')
         self.blacklist = []
@@ -84,21 +85,23 @@ class SQLServerCollationFilter(BaseQueryFilter):
 
     def config(self, params):
         if len(params) == 0:
-            raise FilterConfigException('At least one argument required.')
-        if params[0] == 'show':
-            if len(self.blacklist) == 0:
-                print('No fields in blacklist.')
+            raise FilterConfigException('At least one argument required')
+        if params[0] == 'blacklist':
+            if len(params) > 1:
+                if params[1] == 'add':
+                    if len(params) != 3:
+                        raise FilterConfigException('Expected argument after "add"')
+                    self.blacklist.append(params[2])
+                elif params[1] == 'del':
+                    if len(params) != 3:
+                        raise FilterConfigException('Expected argument after "del"')
+                    self.blacklist.remove(params[2])
             else:
-                for i in self.blacklist:
-                    print(i)
-        elif params[0] == 'add':
-            if len(params) != 2:
-                raise FilterConfigException('Expected argument after "add".')
-            self.blacklist.append(params[1])
-        elif params[0] == 'del':
-            if len(params) != 2:
-                raise FilterConfigException('Expected argument after "del".')
-            self.blacklist.remove(params[1])
+                if len(self.blacklist) == 0:
+                    print('No fields in blacklist.')
+                else:
+                    for i in self.blacklist:
+                        print(i)
         elif params[0] == 'collation':
             if len(params) != 2:
                 print(self.collation)
@@ -109,14 +112,22 @@ class SQLServerCollationFilter(BaseQueryFilter):
 
     def parameters(self, current_params):
         if len(current_params) == 0:
-            return ['add', 'del', 'show', 'collation']
+            return ['blacklist', 'collation']
+        elif current_params[0] == 'blacklist':
+            if len(current_params) == 2:
+                return self.blacklist if current_params[1] == 'del' else []
+            else:
+                return ['add', 'del'] if len(current_params) == 1 else []
         else:
-            return self.blacklist if current_params[0] == 'del' else []
+            return []
                 
-                
+    def __str__(self):
+        return self.name + ' ' + self.collation
+
 class BetweenComparerFilter(BaseQueryFilter):
-    def __init__(self, params):
-        self.regex = re.compile('([\d]+) ([<>]) (\(select [\w\d\(\) _\-\+,\*@\.=]+\))')
+    def __init__(self, name, params):
+        BaseQueryFilter.__init__(self, name, params)
+        self.regex = re.compile('([\d]+)[ ]+([<>])[ ]+(\(select [\w\d\(\) _\-\+,\*@\.=]+\))')
     
     def filter(self, query):
         match = self.regex.search(query)
@@ -127,8 +138,9 @@ class BetweenComparerFilter(BaseQueryFilter):
         return query
 
 class ParenthesisFilter(BaseQueryFilter):
-    def __init__(self, params):
-        self.regex = re.compile('(where|and)[ ]+([\'"\d]+)[ ]*(between|like|[<>=])[ ]*(:?\(.+\)|[\'"\d\w]+)', re.IGNORECASE)
+    def __init__(self, name, params):
+        BaseQueryFilter.__init__(self, name, params)
+        self.regex = re.compile('(where|and)[ ]+([\'"\d\w_]+)[ ]*(between|like|[<>=])[ ]*(\(.+\)|[\'"\d\w]+)', re.IGNORECASE)
     
     def filter(self, query):
         match = self.regex.search(query)
