@@ -49,14 +49,12 @@ class BaseRegexHTMLFilter(HTMLFilter):
 
 class RemoverRegexHTMLFilter(BaseRegexHTMLFilter):
     def __init__(self, params):
-        params = self.parse_params(params)
         if len(params) != 1:
             raise FilterCreationError('Expected regex as argument.')
         BaseRegexHTMLFilter.__init__(self, params[0], '')
 
 class ReplacerRegexHTMLFilter(BaseRegexHTMLFilter):
     def __init__(self, params):
-        params = self.parse_params(params)
         if len(params) != 2:
             raise FilterCreationError('Expected regex and replacement string as arguments.')
         BaseRegexHTMLFilter.__init__(self, params[0], params[1])

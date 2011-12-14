@@ -67,6 +67,9 @@ class Command:
 
     def parameter_separator(self, current_params):
         return ' '
+    
+    def requires_smart_parse(self):
+        return True
 
 class URLCommand(Command):
 
@@ -296,7 +299,7 @@ class QueryCommand(Command):
             except ValueError:
                 raise CommandException("Non-int value given.")
             if params[2] != '*':
-                columns = params[2].split(',')
+                columns = params[2].strip("'").strip('"').split(',')
             else:
                 columns = mole.poll_columns(params[0], params[1])
                 if columns is None:
@@ -325,9 +328,6 @@ class QueryCommand(Command):
             if not tables:
                 return []
             return tables
-        elif len(current_params) == 2:
-            columns = mole.poll_columns(current_params[0], current_params[1])
-            return columns if columns else []
         elif len(current_params) == 3 :
             return ['where', 'limit', 'offset']
         else:
@@ -336,6 +336,9 @@ class QueryCommand(Command):
 
     def parameter_separator(self, current_params):
         return ' ' if len(current_params) <= 1 else ''
+
+    def requires_smart_parse(self):
+        return False
 
 class DBInfoCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -713,8 +716,9 @@ class InjectableFieldCommand(Command):
 class HTTPHeadersCommand(Command):
     def execute(self, mole, params, output_manager):
         if len(params) == 0:
+            max_len = max(map(len, mole.requester.headers.keys()))
             for key in mole.requester.headers:
-                print(key, '->', mole.requester.headers[key])
+                print(key + (max_len - len(key)) * ' ', '->', mole.requester.headers[key])
         elif params[0] == 'set':
             if len(params) < 3:
                 raise CommandException('"set" expects header key and value as arguments.')

@@ -135,6 +135,24 @@ class DbmsMole():
         return self.forge_integer_len_query(info["field"],
                     info['table'], injectable_field,
                     where=info['filter'], offset=offset)
+    
+    def _generic_forge_blind_count_query(self, operator, value, info):
+        return self.forge_blind_count_query(
+            operator, value, info['table'],
+            where=info['filter']
+        )
+    
+    def _generic_forge_blind_len_query(self, operator, value, info, offset):
+        return self.forge_blind_len_query(
+            operator, value, info['field'],
+            info['table'], offset=offset, where=info['filter']
+        )
+
+    def _generic_forge_blind_query(self, index, value, info, offset):
+        return self.forge_blind_query(
+            index, value, info['field'], info['table'],
+            offset=offset, where=info['filter']
+        )
 
     def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
         if len(table) > 0:
@@ -328,111 +346,64 @@ class DbmsMole():
         )
 
     def table_blind_count_query(self, operator, value, db):
-        info = self._tables_query_info(db)
-        return self.forge_blind_count_query(
-            operator, value, info['table'],
-            where=info['filter']
-        )
+        return self._generic_forge_blind_count_query(operator, value, self._tables_query_info(db))
 
     def table_blind_len_query(self, operator, value, db, offset):
-        info = self._tables_query_info(db)
-        return self.forge_blind_len_query(
-            operator, value, info['field'],
-            info['table'], offset=offset, where=info['filter']
-        )
+        return self._generic_forge_blind_len_query(operator, value, self._tables_query_info(db), offset=offset)
 
     def table_blind_data_query(self, index, value, db, offset):
-        info = self._tables_query_info(db)
-        return self.forge_blind_query(
-            index, value, info['field'], info['table'],
-            offset=offset, where=info['filter']
-        )
+        return self._generic_forge_blind_query(index, value, self._tables_query_info(db), offset=offset)
 
     def tables_like_blind_count_query(self, operator, value, db, table_filter):
         info = self._tables_query_info(db)
-        return self.forge_blind_count_query(
-            operator, value, info['table'],
-            where=info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter
-        )
+        info.update({'filter' : info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter})
+        return self._generic_forge_blind_count_query(operator, value, info)
 
     def tables_like_blind_len_query(self, operator, value, db, table_filter, offset):
         info = self._tables_query_info(db)
-        return self.forge_blind_len_query(
-            operator, value, info['field'],
-            info['table'], offset=offset, where=info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter
-        )
+        info.update({'filter' : info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter})
+        return self._generic_forge_blind_len_query(operator, value, info, offset=offset)
 
     def tables_like_blind_data_query(self, index, value, db, table_filter, offset):
         info = self._tables_query_info(db)
-        return self.forge_blind_query(
-            index, value, info['field'], info['table'],
-            offset=offset, where=info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter
-        )
+        info.update({'filter' : info['filter'] + ' and ' + info["field"][0] + ' like ' + table_filter})
+        return self._generic_forge_blind_query(index, value, info, offset=offset)
 
     def columns_blind_count_query(self, operator, value, db, table):
         info = self._columns_query_info(db, table)
-        return self.forge_blind_count_query(
-            operator, value, info['table'],
-            where=info['filter']
-        )
+        return self._generic_forge_blind_count_query(operator, value, info)
 
     def columns_blind_len_query(self, operator, value, db, table, offset):
         info = self._columns_query_info(db, table)
-        return self.forge_blind_len_query(
-            operator, value, info['field'],
-            info['table'], offset=offset,
-            where=info['filter']
-        )
+        return self._generic_forge_blind_len_query(operator, value, info, offset=offset)
 
     def columns_blind_data_query(self, index, value, db, table, offset):
         info = self._columns_query_info(db, table)
-        return self.forge_blind_query(
-            index, value, info['field'], info['table'],
-            offset=offset, where=info['filter']
-        )
+        return self._generic_forge_blind_query(index, value, info, offset=offset)
 
     def fields_blind_count_query(self, operator, value, db, table, where="1=1"):
         info = self._fields_query_info([], db, table, where)
-        return self.forge_blind_count_query(
-            operator, value, info['table'],
-            where=where
-        )
+        return self._generic_forge_blind_count_query(operator, value, info)
 
     def fields_blind_len_query(self, operator, value, fields, db, table, offset, where="1=1"):
         info = self._fields_query_info(fields, db, table, where)
-        return self.forge_blind_len_query(
-            operator, value, fields,
-            info['table'], offset=offset, where=info['filter']
-        )
+        return self._generic_forge_blind_len_query(operator, value, info, offset=offset)
 
     def fields_blind_data_query(self, index, value, fields, db, table, offset, where="1=1"):
         info = self._fields_query_info(fields, db, table, where)
-        return self.forge_blind_query(
-            index, value, fields,
-            info['table'], offset=offset, where=info['filter']
-        )
+        return self._generic_forge_blind_query(index, value, info, offset=offset)
 
     def user_creds_blind_count_query(self, operator, value):
         info = self._user_creds_query_info()
-        return self.forge_blind_count_query(
-            operator, value, info['table'],
-            where=info["filter"]
-        )
+        return self._generic_forge_blind_count_query(operator, value, info)
 
     def user_creds_blind_len_query(self, operator, value, offset):
         info = self._user_creds_query_info()
-        return self.forge_blind_len_query(
-            operator, value, info['field'],
-            info['table'], offset=offset, where=info['filter']
-        )
+        return self._generic_forge_blind_len_query(operator, value, info, offset=offset)
 
     def user_creds_blind_data_query(self, index, value, offset):
         info = self._user_creds_query_info()
-        return self.forge_blind_query(
-            index, value, info['field'],
-            info['table'], offset=offset, where=info['filter']
-        )
-
+        return self._generic_forge_blind_query(index, value, info, offset=offset)
 
     def dbinfo_blind_len_query(self, operator, value):
         info = self._dbinfo_query_info()
