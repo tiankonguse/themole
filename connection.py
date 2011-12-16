@@ -80,21 +80,21 @@ class HttpRequester:
         if self.encoding is not None:
             try:            
                 to_ret = data.decode(self.encoding)
-            except UnicodeDecodeError:
+            except (UnicodeDecodeError, TypeError):
                 self.encoding = None
         
         if self.encoding is None:
             self.encoding = chardet.detect(data)['encoding']
             try:            
                 to_ret = data.decode(self.encoding)
-            except UnicodeDecodeError:
+            except (UnicodeDecodeError, TypeError):
                 self.encoding = None
                 
         if self.encoding is None:
             self.encoding = self.guess_encoding(data)
             try:            
                 to_ret = data.decode(self.encoding)
-            except UnicodeDecodeError:
+            except (UnicodeDecodeError, TypeError):
                 self.encoding = None
 
         if self.encoding is None:
@@ -158,7 +158,7 @@ class HttpRequester:
                 http.client.UnknownProtocol,
                 http.client.BadStatusLine) as e:
             raise ConnectionException(str(e))
-
+        get_params = get_params.replace('%2A', '*').replace('%28', '(').replace('%29', ')')
         for i in range(self.max_retries):
             try:
                 time.sleep(self.delay)
