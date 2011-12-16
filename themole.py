@@ -199,6 +199,7 @@ class TheMole:
             self.end = 'and {op_par}' + '{sep}1{sep} like {sep}1'.format(sep=self.separator, par=(self.parenthesis * ')'))
         else:
             self.end = ' '
+        self.end += self.suffix
         self.comment = ''
         self.parenthesis = parenthesis
         self.dumper = BlindDataDumper()

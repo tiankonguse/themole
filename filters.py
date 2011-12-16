@@ -61,6 +61,7 @@ class QueryFilterManager(BaseFilterManager):
         'between' : BetweenComparerFilter,
         'parenthesis' : ParenthesisFilter,
         'noasterisk' : NoAsteriskFilter,
+        'regex' : NoAsteriskFilter,
     }
     
     def __init__(self):

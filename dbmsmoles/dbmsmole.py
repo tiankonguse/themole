@@ -33,8 +33,8 @@ class DbmsMole():
                     ]
 
     error_filters = [
-                        re.compile("<br />\n<b>Warning</b>:  mysql_fetch_array\(\): supplied argument is not a valid MySQL result resource in <b>([\w\./]+)</b> on line <b>(\d+)</b><br />"),
-                        re.compile("<br />\n<b>Warning</b>:  mysql_num_rows\(\): supplied argument is not a valid MySQL result resource in <b>([\w\./]+)</b> on line <b>(\d+)</b><br />"),
+                        # PHP verbose errors.
+                        re.compile("<br />\n<b>Warning</b>:  [\w_\d]+\(\)(:\s|\s\[.*\]:)[\w :<>\\\\_\'\.\(\)/-]+ on line <b>(\d+)</b><br />"),
                     ]
 
     def injectable_field_fingers(cls, base):

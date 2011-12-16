@@ -155,3 +155,14 @@ class ParenthesisFilter(BaseQueryFilter):
 class NoAsteriskFilter(BaseQueryFilter):
     def filter(self, query):
         return query.replace('*', '1')
+
+class RegexFilter(BaseQueryFilter):
+    def __init__(self, name, params):
+        BaseQueryFilter.__init__(self, name, params)
+        if len(params) != 2:
+            raise FilterCretionError('Expected 2 arguments')
+        self.regex = re.compile(params[0], re.IGNORECASE)
+        self.replacement = params[1]
+    
+    def filter(self, query):
+        return self.regex.sub(self.replacement, query)
