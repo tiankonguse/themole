@@ -117,6 +117,7 @@ class TheMole:
 
         try:
             original_request = self.requester.request(self.prefix + self.suffix)
+            original_request = self.html_filter.apply_filters(original_request)
             if not '<html' in original_request and not '<HTML' in original_request:
                 original_request = '<html><body>' + original_request + '</body></html>'
         except ConnectionException as ex:

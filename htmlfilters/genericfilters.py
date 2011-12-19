@@ -30,7 +30,7 @@ class BaseRegexHTMLFilter(HTMLFilter):
     def __init__(self, filter_str, replacement):
         self.replacement = replacement
         try:
-            self.regex = re.compile(filter_str)
+            self.regex = re.compile(filter_str, flags=re.DOTALL|re.MULTILINE)
         except sre_constants.error as ex:
             raise FilterCreationError(str(ex))
     
