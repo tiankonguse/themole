@@ -44,7 +44,7 @@ class CaseFilter(BaseQueryFilter):
                         query_list[i] = query_list[i].lower()
                     else:
                         query_list[i] = query_list[i].upper()
-            
+
         return ''.join(query_list)
 
 
@@ -68,7 +68,7 @@ class SQLServerCollationFilter(BaseQueryFilter):
                     replaced = i.replace(field, '(' + field + ' COLLATE ' + self.collation + ')')
                     query = query.replace(i, replaced)
         except Exception as ex:
-            print(ex)
+            output_manager.error('{0}'.format(ex)).line_break()
         return query
 
     def config(self, params):
@@ -76,10 +76,10 @@ class SQLServerCollationFilter(BaseQueryFilter):
             raise FilterConfigException('At least one argument required.')
         if params[0] == 'show':
             if len(self.blacklist) == 0:
-                print('No fields in blacklist.')
+                output_manager.info('No fields in blacklist.').line_break()
             else:
                 for i in self.blacklist:
-                    print(i)
+                    output_manager.normal(i).line_break()
         elif params[0] == 'add':
             if len(params) != 2:
                 raise FilterConfigException('Expected argument after "add".')
@@ -90,7 +90,7 @@ class SQLServerCollationFilter(BaseQueryFilter):
             self.blacklist.remove(params[1])
         elif params[0] == 'collation':
             if len(params) != 2:
-                print(self.collation)
+                output_manager.normal(self.collation).line_break
             else:
                 self.collation = params[1]
         else:
@@ -101,12 +101,12 @@ class SQLServerCollationFilter(BaseQueryFilter):
             return ['add', 'del', 'show', 'collation']
         else:
             return self.blacklist if current_params[0] == 'del' else []
-                
-                
+
+
 class BetweenComparerFilter(BaseQueryFilter):
     def __init__(self, params):
         self.regex = re.compile('([\d]+) ([<>]) (\(select [\w\d\(\) _\-\+,\*@\.=]+\))')
-    
+
     def filter(self, query):
         match = self.regex.search(query)
         if match:
@@ -118,7 +118,7 @@ class BetweenComparerFilter(BaseQueryFilter):
 class ParenthesisFilter(BaseQueryFilter):
     def __init__(self, params):
         self.regex = re.compile('(where|and)[ ]+([\'"\d]+)[ ]*(between|like|[<>=])[ ]*(:?\(.+\)|[\'"\d\w]+)', re.IGNORECASE)
-    
+
     def filter(self, query):
         match = self.regex.search(query)
         while match:

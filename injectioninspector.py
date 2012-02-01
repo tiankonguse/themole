@@ -33,12 +33,12 @@ class InjectionInspector:
         separator = None
         mole.stop_query = False
         for parenthesis in range(0, 3):
-            print('[i] Trying injection using',parenthesis,'parenthesis.')
+            output_manager.info('Trying injection using {0} parenthesis.'.format(parenthesis))
             mole.parenthesis = parenthesis
             for sep in separator_list:
                 if mole.stop_query:
                     raise StoppedQueryException()
-                print('[i] Trying separator: "' + sep + '"')
+                output_manager.info('Trying separator: ( {0} )'.format(sep))
                 mole.separator = sep
                 try:
                     req = mole.make_request(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}1'.format(sep=sep))
@@ -64,12 +64,12 @@ class InjectionInspector:
             comment_list  = mole._dbms_mole.comment_list
         mole.stop_query = False
         for parenthesis in range(0, 3):
-            print('[i] Trying injection using',parenthesis,'parenthesis.')
+            output_manager.info('Trying injection using {0} parenthesis.'.format(parenthesis))
             mole.parenthesis = parenthesis
             for com in comment_list:
                 if mole.stop_query:
                     raise StoppedQueryException()
-                print('[i] Trying injection using comment:',com)
+                output_manager.info('Trying injection using comment: {0}'.format(com))
                 mole.comment = com
                 try:
                     req = mole.make_request(' order by 1')
@@ -100,18 +100,17 @@ class InjectionInspector:
             if mole.stop_query:
                 raise StoppedQueryException()
             last *= 2
-            print('\r[i] Trying ' + str(last) + ' columns     ', end='')
+            output_manager.info('Trying {0} columns'.format(last))
             try:
                 new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (last,)))
             except ConnectionException as ex:
                 raise ColumnNumberNotFound(str(ex))
         pri = last // 2
-        print('\r[i] Maximum length: ' + str(last) + '     ', end='')
         while pri < last:
             if mole.stop_query:
                 raise StoppedQueryException()
             medio = ((pri + last) // 2) + ((pri + last) & 1)
-            print('\r[i] Trying ' + str(medio) + ' columns     ', end='')
+            output_manager.info('Trying {0} columns'.format(medio))
             try:
                 new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (medio,)))
             except ConnectionException as ex:
@@ -120,7 +119,6 @@ class InjectionInspector:
                 pri = medio
             else:
                 last = medio - 1
-        print('\r', end='')
         return pri
 
     def _find_injectable_field_using(self, mole, dbms_mole):
@@ -130,7 +128,7 @@ class InjectionInspector:
         for finger in fingers:
             if mole.stop_query:
                 raise StoppedQueryException()
-            print('\r[+] Trying finger ' + str(index+1) + '/' + str(len(fingers)))
+            output_manager.info('Trying finger {0}/{1}'.format(index + 1, len(fingers)))
             index +=1
             hashes = finger.build_query()
             to_search_hashes = finger.fingers_to_search()
@@ -144,14 +142,14 @@ class InjectionInspector:
 
             injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
             if len(injectable_fields) > 0:
-                print("[+] Injectable fields found: [" + ', '.join(map(lambda x: str(x + 1), injectable_fields)) + "]")
+                output_manager.advance("Injectable fields found: [{0}]".format(', '.join(map(lambda x: str(x + 1), injectable_fields)))).line_break()
                 field = self._filter_injectable_fields(mole, dbms_mole, injectable_fields, finger)
                 if field is not None:
                     mole._dbms_mole = dbms_mole()
                     mole._dbms_mole.set_good_finger(finger)
                     return field
                 else:
-                    print('[i] Failed to inject using these fields.')
+                    output_manager.error('Failed to inject using these fields.').line_break()
         return None
 
     def find_injectable_field(self, mole):
@@ -160,10 +158,10 @@ class InjectionInspector:
             for dbms_mole in mole.dbms_mole_list:
                 if mole.stop_query:
                     raise StoppedQueryException()
-                print('[i] Trying DBMS', dbms_mole.dbms_name())
+                output_manager.info('Trying DBMS: {0}'.format(dbms_mole.dbms_name()))
                 field = self._find_injectable_field_using(mole, dbms_mole)
                 if field is not None:
-                    print('[+] Found DBMS:', dbms_mole.dbms_name())
+                    output_manager.advance('Found DBMS: {0}'.format(dbms_mole.dbms_name())).line_break()
                     return field
         else:
             field = self._find_injectable_field_using(mole, mole._dbms_mole.__class__)
@@ -173,7 +171,7 @@ class InjectionInspector:
 
     def _filter_injectable_fields(self, mole, dbms_mole_class, injectable_fields, finger):
         for field in injectable_fields:
-            print('[i] Trying to inject in field', field + 1)
+            output_manager.info('Trying to inject in field {0}'.format(field + 1))
             query = dbms_mole_class.field_finger_query(mole.query_columns, finger, field)
             try:
                 req = mole.make_request(query)

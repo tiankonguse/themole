@@ -91,11 +91,11 @@ class BlindDataDumper:
             count = self._generic_blind_len(
                 mole,
                 count_fun,
-                lambda x: '\rTrying count: ' + str(x),
-                lambda x: '\rAt most count: ' + str(x)
+                lambda x: 'Trying count: {0}'.format(x),
+                lambda x: 'At most count: {0}'.format(x)
             )
             count = min(count, limit+start)
-            print('\r[+] Found row count:', count)
+            output_manager.advance('Found row count: {0}'.format(count)).line_break()
         results = []
         row = start
         while row < count:
@@ -104,22 +104,19 @@ class BlindDataDumper:
             len_funct = lambda i: self._generic_blind_len(mole, length_fun(row + i), None, None, print_stats = False)
             to_fetch = min(count - row, len(mole.threader.threads))
             if to_fetch > 1:
-                print('[+] Guessing length for the next', to_fetch, 'records.')
+                output_manager.info('Guessing length for the next {0} records.'.format(to_fetch))
             else:
-                print('[+] Guessing length for the next record.')
+                output_manager.info('Guessing length for the next record.')
             lengths = mole.threader.execute(to_fetch, len_funct)
             for length in lengths:
-                print('\r[+] Guessed length:', length)
+                output_manager.advance('Guessed length: {0}'.format(length)).line_break()
                 output=''
                 if mole.stop_query:
                     return results
-                sqli_output = BlindSQLIOutput(length)
+                sqli_output = output_manager.blind_output(length)
                 gen_query_item = lambda i: self._blind_query_character(mole, query_fun, i, row, sqli_output)
                 output = ''.join(mole.threader.execute(length, gen_query_item))
-                if not mole.stop_query:
-                    sqli_output.finish()
-                else:
-                    print('')
+                sqli_output.finish()
                 results.append(output.split(mole._dbms_mole.blind_field_delimiter()))
                 row += 1
         return results
@@ -133,12 +130,12 @@ class BlindDataDumper:
             except ConnectionException as ex:
                 raise QueryError('Connection Error: (' + str(ex) + ')')
             if print_stats:
-                print(trying_msg(last), end='')
+                output_manager.info(trying_msg(last))
             if mole.needle in req:
                 break;
             last *= 2
         if print_stats:
-            print(max_msg(str(last)), end='')
+            output_manager.info(max_msg(last))
         pri = last // 2
         while pri < last:
             if mole.stop_query:
@@ -255,13 +252,12 @@ class StringUnionDataDumper:
             count = min(count, limit+start)
             if start >= count:
                 return []
-            print('\r[+] Rows: ' + str(count))
-            rows_done = RowDoneCounter(count)
+            output_manager.advance('Rows: {0}'.format(count)).line_break()
+            rows_done = output_manager.row_done_counter(count)
             dump_result = []
             mole.stop_query = False
             gen_query_item = lambda i: self._generic_query_item(mole, query_generator, i, rows_done, result_parser)
             dump_result = mole.threader.execute(count-start, gen_query_item)
-            print('') #Print a new line to show the results in the next line
             dump_result.sort()
             return dump_result
 
@@ -270,6 +266,7 @@ class StringUnionDataDumper:
                                   offset,
                                   rows_done_counter,
                                   result_parser = lambda x: x[0]):
+
         if mole.stop_query:
             return None
         try:
@@ -355,7 +352,7 @@ class IntegerUnionDataDumper:
         length = mole._dbms_mole.parse_results(req)
         length = int(length[0])
 
-        sqli_output = BlindSQLIOutput(length)
+        sqli_output = output_manager.blind_output(length)
         query_gen = lambda index,offset: mole._dbms_mole.dbinfo_integer_query(index,
                                                                               injectable_field)
         query_item_gen = lambda x: self._generic_integer_query_item(mole,
@@ -439,7 +436,7 @@ class IntegerUnionDataDumper:
             if count == 0:
                 return []
             count = min(count, limit+start)
-            print('\r[+] Rows:', count)
+            output_manager.advance('Rows: {0}'.format(count)).line_break()
             dump_result = []
             mole.stop_query = False
             for i in range(start,count):

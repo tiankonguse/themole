@@ -122,10 +122,10 @@ class TheMole:
         except ConnectionException as ex:
             raise PageNotFound(str(ex))
         self.analyser.set_good_page(original_request, self.needle)
-        
+
         self.end = self.suffix
         self.separator, self.parenthesis = injection_inspector.find_separator(self)
-        print("[+] Found separator: \"" + self.separator + "\"")
+        output_manager.advance('Found separator: "{0}"'.format(self.separator)).line_break()
 
         blind_parenthesis = self.parenthesis
         if not self.separator == ' ' and self.suffix == '':
@@ -137,7 +137,7 @@ class TheMole:
             try:
                 self._detect_dbms_blind()
             except DbmsDetectionFailed:
-                print('[i] Early DBMS detection failed. Retrying later.')
+                output_manager.info('Early DBMS detection failed. Retrying later.').line_break()
 
             self.end = self.suffix
             req = self.make_request(' own3d by 1')
@@ -145,11 +145,11 @@ class TheMole:
 
             try:
                 self.comment, self.parenthesis = injection_inspector.find_comment_delimiter(self)
-                print('[+] Found comment delimiter: "' + self.comment + '"')
+                output_manager.advance('Found comment delimiter: "{0}"'.format(self.comment)).line_break()
             except CommentNotFound:
                 if self._dbms_mole:
-                    print('[-] Could not find comment.')
-                    print('[+] Using blind mode.')
+                    output_manager.error('Could not find comment.').line_break()
+                    output_manager.info('Using blind mode.').line_break()
                     self._go_blind(blind_parenthesis)
                     self.initialized = True
                     return
@@ -157,11 +157,11 @@ class TheMole:
 
             try:
                 self.query_columns = injection_inspector.find_column_number(self)
-                print('[+] Query columns count:', self.query_columns)
+                output_manager.advance('Query columns count: {0}'.format(self.query_columns)).line_break()
             except ColumnNumberNotFound as ex:
                 if self._dbms_mole:
-                    print('[-] Could not find number of columns. (' + str(ex) + ')')
-                    print('[+] Using blind mode.')
+                    output_manager.error('Could not find number of columns. ({0})'.format(str(ex))).line_break()
+                    output_manager.advance('Using blind mode.').line_break()
                     self._go_blind(blind_parenthesis)
                     self.initialized = True
                     return
@@ -169,11 +169,12 @@ class TheMole:
 
             try:
                 self.injectable_field = injection_inspector.find_injectable_field(self)
-                print('[+] Found injectable field:', self.injectable_field + 1)
+                output_manager.advance('Found injectable field: {0}'.format(self.injectable_field + 1)).line_break()
+
             except InjectableFieldNotFound as ex:
                 if self._dbms_mole:
-                    print('[-] Could not find injectable field.')
-                    print('[+] Using blind mode.')
+                    output_manager.error('Could not find injectable field.').line_break()
+                    output_manager.info('Using blind mode.').line_break()
                     self._go_blind(blind_parenthesis)
                     self.initialized = True
                     return
@@ -183,10 +184,10 @@ class TheMole:
                 raise DbmsDetectionFailed()
 
             if self._dbms_mole.is_string_query():
-                print('[+] Using string union technique.')
+                output_manager.advance('Using string union technique.').line_break()
                 self.dumper = StringUnionDataDumper()
             else:
-                print('[+] Using integer union technique.')
+                output_manager.advance('Using integer union technique.').line_break()
                 self.dumper = IntegerUnionDataDumper()
         else:
             self._detect_dbms_blind()
@@ -214,7 +215,7 @@ class TheMole:
             )
         url = self.query_filter.apply_filters(url)
         if self.verbose == True:
-            print('[i] Executing query:',url)
+            output_manager.line_break().info('Executing query:',url)
         return url
 
     def make_request(self, query):
@@ -296,11 +297,11 @@ class TheMole:
 
     def brute_force_tables(self, db, table_list):
         for table in table_list:
-            print('[i] Trying table', table)
+            output_manager.info('Trying table: {0}'.format(table))
             try:
                 if self.dumper.table_exists(self, db, table, self.injectable_field):
                     self.database_dump.add_table(db, table)
-                    print('[+] Table',table,'exists.')
+                    output_manager.advance('Table {0} exists.'.format(table)).line_break()
             except:
                 pass
 
@@ -318,7 +319,7 @@ class TheMole:
         try:
             self.requester.set_vulnerable_param('GET', vulnerable_param)
         except InvalidParamException as ex:
-            print('Invalid parameter({msg}).'.format(msg=str(ex)))
+            output_manager.error('Invalid parameter({msg}).'.format(msg=str(ex))).line_break()
         self.initialized = False
 
     def get_url(self):
@@ -355,7 +356,7 @@ class TheMole:
 
     def _detect_dbms_blind(self):
         for dbms_mole_class in TheMole.dbms_mole_list:
-            print('[i] Trying DBMS', dbms_mole_class.dbms_name())
+            output_manager.info('Trying DBMS {0}'.format(dbms_mole_class.dbms_name()))
             query = dbms_mole_class.dbms_check_blind_query()
             try:
                 req = self.make_request(query)
@@ -363,7 +364,7 @@ class TheMole:
                 raise DbmsDetectionFailed(str(ex))
             if self.analyser.is_valid(req):
                 self._dbms_mole = dbms_mole_class()
-                print('[+] Found DBMS:', dbms_mole_class.dbms_name())
+                output_manager.advance('Found DBMS: {0}'.format(dbms_mole_class.dbms_name())).line_break()
                 return
         raise DbmsDetectionFailed()
 

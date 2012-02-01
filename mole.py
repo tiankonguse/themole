@@ -26,13 +26,14 @@ from sys import exit
 
 import themole
 import completion
-import output
 import signal
 import builtins
 import commands
 import getopt, sys
 import traceback
 import codecs
+
+from outputmanager import OutputManager
 
 VERSION = '0.2.6'
 
@@ -46,23 +47,22 @@ class Manager:
             threads = int(opt_map['threads'])
         self.mole = themole.TheMole(threads=threads)
         self.completer   = completion.CompletionManager(cmd_manager, self.mole)
-        self.output      = output.PrettyOutputManager()
         if 'url' in opt_map:
             try:
                 vuln_param = opt_map['vuln_param'] if 'vuln_param' in opt_map else None
-                cmd_manager.find('url').execute(self.mole, [opt_map['url'], vuln_param], self.output)
+                cmd_manager.find('url').execute(self.mole, [opt_map['url'], vuln_param], None) #Todo: remove none and the parameter in functions
             except commands.CommandException as ex:
-                print('[-] Error while setting URL:', ex)
+                output_manager.error('Error while setting URL: {0}'.format(ex)).line_break()
                 self.mole.abort_query()
                 exit(1)
         if 'needle' in opt_map:
-            cmd_manager.find('needle').execute(self.mole, [opt_map['needle']], self.output)
+            cmd_manager.find('needle').execute(self.mole, [opt_map['needle']], None)
         if 'encoding' in opt_map:
             encoding = opt_map['encoding']
             try:
                 codecs.lookup(encoding)
             except LookupError:
-                print('[-] Encoding',encoding,'does not exist.')
+                output_manager.error('Encoding {0} does not exist.'.format(encoding)).line_break()
                 self.mole.threader.stop()
                 sys.exit(1)
             self.mole.requester.encoding = encoding
@@ -74,22 +74,22 @@ class Manager:
                 try:
                     line = [i for i in input('#> ').strip().split(' ') if len(i) > 0]
                 except KeyboardInterrupt:
-                    print('')
+                    output_manager.line_break()
                     continue
                 signal.signal(signal.SIGINT, sigint_handler)
                 if len(line) != 0:
                     cmd = cmd_manager.find(line[0])
-                    cmd.execute(self.mole, line[1:] if len(line) > 1 else [], self.output)
+                    cmd.execute(self.mole, line[1:] if len(line) > 1 else [], None)
             except commands.CommandException as ex:
-                print('[-]', ex)
+                output_manager.error(str(ex)).line_break()
                 if ex.print_usage:
-                    print(' Usage:', cmd.usage(line[0]))
+                    output_manager.normal(' Usage: {0}'.format(cmd.usage(line[0]))).line_break()
             except commands.CmdNotFoundException as ex:
-                print(' Error:', ex)
+                output_manager.error('Error: {0}'.format(ex)).line_break()
             except commands.QuietCommandException:
                 pass
             except EOFError:
-                print('')
+                output_manager.line_break()
                 self.mole.abort_query()
                 self.mole.threader.stop()
                 exit(0)
@@ -147,10 +147,11 @@ if __name__ == '__main__':
 
     builtins.cmd_manager = commands.CommandManager()
     builtins.manager = Manager(opt_map)
+    builtins.output_manager = OutputManager()
     try:
         manager.start()
     except Exception as ex:
         import traceback, sys
         traceback.print_exc(file=sys.stdout)
-        print('[-] Unexpected error encountered. Please report this bug :D')
+        output_manager.error('Unexpected error encountered. Please report this bug :D').line_break()
         manager.mole.threader.stop()
