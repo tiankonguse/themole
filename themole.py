@@ -336,11 +336,12 @@ class TheMole:
         self.requester.set_method(method)
         self.initialized = False
 
-    def get_post_params(self):
-        return self.requester.get_post_params()
-
     def set_post_params(self, params):
         self.requester.set_post_params(params)
+        self.initialized = False
+
+    def set_cookie_params(self, params):
+        self.requester.set_cookie_params(params)
         self.initialized = False
 
     def set_vulnerable_param(self, method, param):

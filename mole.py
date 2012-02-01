@@ -78,7 +78,7 @@ class Manager:
                     print('')
                     continue
                 cmd_name = line.strip().split(' ')
-                if len(cmd_name) > 0:
+                if len(cmd_name) > 0 and len(cmd_name[0]) > 0:
                     cmd = cmd_manager.find(cmd_name[0])
                     if cmd.requires_smart_parse():
                         line = self.completer.smart_parse(line)

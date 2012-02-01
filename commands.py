@@ -72,7 +72,6 @@ class Command:
         return True
 
 class URLCommand(Command):
-
     def execute(self, mole, params, output_manager):
         if len(params) < 1:
             if not mole.get_url():
@@ -100,8 +99,10 @@ class CookieCommand(Command):
     def execute(self, mole, params, output_manager):
         if not mole.requester:
             raise CommandException('URL must be set first.')
-        if len(params) >= 1:
-            mole.requester.headers['Cookie'] = ' '.join(params)
+        if len(params) == 1:
+            mole.requester.set_cookie_params(' '.join(params))
+        elif len(params) > 1:
+            raise CommandException('Too many arguments(remember to use quotes when setting the cookie).')
         else:
             try:
                 print(mole.requester.headers['Cookie'])
@@ -656,16 +657,20 @@ class ReadFileCommand(Command):
         return cmd_name + ' <filename>'
 
 class MethodCommand(Command):
-
-    accepted_methods = ['GET', 'POST']
+    accepted_methods = ['GET', 'POST', 'Cookie']
 
     def execute(self, mole, params, output_manager):
         if len(params) == 0:
             method = mole.requester.method
             if method == 'POST':
-                print(method, ':', mole.get_post_params())
+                params = mole.requester.get_post_params()
+            elif method == 'Cookie':
+                params = mole.requester.get_cookie_params()
             else:
-                print(method)
+                params = mole.requester.get_get_params()
+            if len(params) == 0:
+                params = 'No parameters have been set.'
+            print(params)
         elif len(params) >= 1:
             try:
                 mole.set_method(params[0])
@@ -673,7 +678,12 @@ class MethodCommand(Command):
                 raise CommandException('The method ' + params[0] + ' is not supported!')
 
             if len(params) >= 2:
-                mole.set_post_params(params[1])
+                if params[0] == 'POST':
+                    mole.set_post_params(params[1])
+                elif params[0] == 'Cookie':
+                    mole.set_cookie_params(params[1])
+                elif params[0] == 'GET':
+                    mole.set_get_params(params[1])
 
             if len(params) == 3:
                 mole.set_vulnerable_param(params[0], params[2])
@@ -688,10 +698,10 @@ class MethodCommand(Command):
 
 
     def usage(self, cmd_name):
-        return cmd_name + ' (GET | POST) [<POST PARAMS>] [VULNERABLE_PARAM]'
+        return cmd_name + ' (GET | POST | Cookie) [PARAMS] [VULNERABLE_PARAM]'
 
-class InjectableFieldCommand(Command):
-    accepted_methods = ['GET', 'POST']
+class VulnerableParamCommand(Command):
+    accepted_methods = ['GET', 'POST', 'Cookie']
 
     def execute(self, mole, params, output_manager):
         if len(params) == 0:
@@ -704,6 +714,8 @@ class InjectableFieldCommand(Command):
                 mole.set_vulnerable_param(params[0], params[1])
             except InvalidParamException:
                 raise CommandException('Parameter given is not valid')
+        else:
+            raise CommandException('Expected vulnerable parameter')
 
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
@@ -713,10 +725,12 @@ class InjectableFieldCommand(Command):
                 return [x[0] for x in mole.requester.get_parameters]
             elif current_params[0] == 'POST':
                 return [x[0] for x in mole.requester.post_parameters]
+            elif current_params[0] == 'Cookie':
+                return [x[0] for x in mole.requester.cookie_parameters]
         return []
 
     def usage(self, cmd_name):
-        return cmd_name + ' (GET | POST) <INJECTABLE_FIELD>'
+        return cmd_name + ' (GET | POST | Cookie) <VULNERABLE_PARAM>'
 
 class HTTPHeadersCommand(Command):
     def execute(self, mole, params, output_manager):
@@ -727,7 +741,10 @@ class HTTPHeadersCommand(Command):
         elif params[0] == 'set':
             if len(params) < 3:
                 raise CommandException('"set" expects header key and value as arguments.')
-            mole.requester.headers[params[1]] = ' '.join(params[2:])
+            if params[1] == 'Cookie':
+                CookieCommand().execute(mole, params[2:], output_manager)
+            else:
+                mole.requester.headers[params[1]] = ' '.join(params[2:])
         elif params[0] == 'del':
             if len(params) != 2:
                 raise CommandException('"del" expects header key as argument.')
@@ -854,7 +871,6 @@ class CommandManager:
                       'headers'  : HTTPHeadersCommand(),
                       'htmlfilter'  : HTMLFilterCommand(),
                       'import'   : ImportCommand(),
-                      'injectable_field' : InjectableFieldCommand(),
                       'method'   : MethodCommand(),
                       'mode'     : QueryModeCommand(),
                       'needle'   : NeedleCommand(),
@@ -871,6 +887,7 @@ class CommandManager:
                       'usage'    : UsageCommand(),
                       'usercreds' : UserCredentialsCommand(),
                       'verbose'  : VerboseCommand(),
+                      'vulnerable_param' : VulnerableParamCommand(),
                     }
 
     def find(self, cmd):
