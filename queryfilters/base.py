@@ -23,7 +23,8 @@
 # Gastón Traberg
 
 class BaseQueryFilter:
-    def __init__(self, params):
+    def __init__(self, name, params):
+        self.name = name
         pass
 
     def filter(self, query):
@@ -34,3 +35,6 @@ class BaseQueryFilter:
     
     def parameters(self, current_params):
         return []
+
+    def __str__(self):
+        return self.name

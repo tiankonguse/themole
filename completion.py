@@ -28,6 +28,7 @@ except ImportError: #Window systems don't have GNU readline
     import pyreadline.windows_readline as readline
     readline.rl.mode.show_all_if_ambiguous = "on"
 
+import re
 
 
 class CompletionManager:
@@ -36,6 +37,8 @@ class CompletionManager:
         self.mole    = mole
         readline.parse_and_bind("tab: complete")
         readline.set_completer(self.completer)
+        readline.set_completer_delims(' \t\n`~!@#$%^&*()=+[{]}\\|;:\'",<>/?')
+        self.parse_regex = re.compile('("[^"]*"|\'[^\']+\')')
 
     def completer(self, text, state):
         if readline.get_begidx() == 0:
@@ -89,3 +92,19 @@ class CompletionManager:
             tmp = self.available[self.current]
             self.current += 1
             return tmp + ' '
+    
+    def smart_parse(self, line):
+        output = []
+        match = self.parse_regex.search(line)
+        start_index = 0
+        while match:
+            output += self.nice_split(line[start_index:match.start()])
+            start_index += match.end()
+            output.append(match.groups()[0][1:-1].strip())
+            match = self.parse_regex.search(line[start_index:])
+        if start_index < len(line):
+            output += self.nice_split(line[start_index:])
+        return output
+    
+    def nice_split(self, line):
+        return [i for i in line.strip().split(' ') if len(i) > 0]

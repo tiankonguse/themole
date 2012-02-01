@@ -117,6 +117,7 @@ class TheMole:
 
         try:
             original_request = self.requester.request(self.prefix + self.suffix)
+            original_request = self.html_filter.apply_filters(original_request)
             if not '<html' in original_request and not '<HTML' in original_request:
                 original_request = '<html><body>' + original_request + '</body></html>'
         except ConnectionException as ex:
@@ -200,6 +201,7 @@ class TheMole:
             self.end = 'and {op_par}' + '{sep}1{sep} like {sep}1'.format(sep=self.separator, par=(self.parenthesis * ')'))
         else:
             self.end = ' '
+        self.end += self.suffix
         self.comment = ''
         self.parenthesis = parenthesis
         self.dumper = BlindDataDumper()
@@ -283,6 +285,9 @@ class TheMole:
         limit = max(limit, 0)
         return self.dumper.get_fields(self, db, table, fields, where, self.injectable_field, start=start, limit=limit)
 
+    def get_user_creds(self):
+        return self.dumper.get_user_creds(self, self.injectable_field)
+
     def get_dbinfo(self):
         return self.dumper.get_dbinfo(self, self.injectable_field)
 
@@ -332,11 +337,12 @@ class TheMole:
         self.requester.set_method(method)
         self.initialized = False
 
-    def get_post_params(self):
-        return self.requester.get_post_params()
-
     def set_post_params(self, params):
         self.requester.set_post_params(params)
+        self.initialized = False
+
+    def set_cookie_params(self, params):
+        self.requester.set_cookie_params(params)
         self.initialized = False
 
     def set_vulnerable_param(self, method, param):

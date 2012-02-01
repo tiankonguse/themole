@@ -68,8 +68,10 @@ class Command:
     def parameter_separator(self, current_params):
         return ' '
 
-class URLCommand(Command):
+    def requires_smart_parse(self):
+        return True
 
+class URLCommand(Command):
     def execute(self, mole, params, output_manager):
         if len(params) < 1:
             if not mole.get_url():
@@ -97,8 +99,10 @@ class CookieCommand(Command):
     def execute(self, mole, params, output_manager):
         if not mole.requester:
             raise CommandException('URL must be set first.')
-        if len(params) >= 1:
-            mole.requester.headers['Cookie'] = ' '.join(params)
+        if len(params) == 1:
+            mole.requester.set_cookie_params(' '.join(params))
+        elif len(params) > 1:
+            raise CommandException('Too many arguments(remember to use quotes when setting the cookie).')
         else:
             try:
                 output_manager.normal(mole.requester.headers['Cookie']).line_break()
@@ -296,7 +300,7 @@ class QueryCommand(Command):
             except ValueError:
                 raise CommandException("Non-int value given.")
             if params[2] != '*':
-                columns = params[2].split(',')
+                columns = params[2].strip("'").strip('"').split(',')
             else:
                 columns = mole.poll_columns(params[0], params[1])
                 if columns is None:
@@ -325,9 +329,6 @@ class QueryCommand(Command):
             if not tables:
                 return []
             return tables
-        elif len(current_params) == 2:
-            columns = mole.poll_columns(current_params[0], current_params[1])
-            return columns if columns else []
         elif len(current_params) == 3 :
             return ['where', 'limit', 'offset']
         else:
@@ -336,6 +337,9 @@ class QueryCommand(Command):
 
     def parameter_separator(self, current_params):
         return ' ' if len(current_params) <= 1 else ''
+
+    def requires_smart_parse(self):
+        return False
 
 class DBInfoCommand(Command):
     def execute(self, mole, params, defunct_output_manager):
@@ -348,6 +352,22 @@ class DBInfoCommand(Command):
         output_manger.advance("User:\t{0}".format(info[0])).line_break()
         output_manger.advance("Version:\t{0}".format(info[1])).line_break()
         output_manger.advance("Database:\t{0}".format(info[2])).line_break()
+
+    def parameters(self, mole, current_params):
+        return []
+
+class UserCredentialsCommand(Command):
+    def execute(self, mole, params, output_manager):
+        self.check_initialization(mole)
+        try:
+            result = mole.get_user_creds()
+        except QueryError:
+            print('[-] There was an error with the query.')
+            return
+        output_manager.begin_sequence(['User', 'Password'])
+        for i in result:
+            output_manager.put(i)
+        output_manager.end_sequence()
 
     def parameters(self, mole, current_params):
         return []
@@ -490,8 +510,12 @@ class BaseFilterCommand(Command):
 
     def execute(self, mole, params, defunct_output_manager):
         if len(params) == 0:
-            for i in self.functor(mole).active_filters():
-                output_manager.normal(i).line_break()
+            filters = self.functor(mole).active_filters_to_string()
+            if len(filters) == 0:
+                output_manager.normal('No filters added yet.').line_break()
+            else:
+                for i in filters:
+                    output_manager.normal(i).line_break()
         elif len(params) == 1:
             raise CommandException(params[0] + ' requires at least one parameter.')
         else:
@@ -537,7 +561,9 @@ class QueryFilterCommand(BaseFilterCommand):
                     raise CommandException('Expected more arguments.')
                 try:
                     mole.query_filter.config(params[1], params[2:])
-                except Exception as ex:
+                except FilterConfigException as ex:
+                    output_manager.error('Filter config error({msg})'.format(msg=str(ex))).line_break()
+                except FilterNotFoundException as ex:
                     output_manager.error('Filter {0} not found.'.format(params[1])).line_break()
             else:
                 raise ex
@@ -622,16 +648,20 @@ class ReadFileCommand(Command):
         return cmd_name + ' <filename>'
 
 class MethodCommand(Command):
-
-    accepted_methods = ['GET', 'POST']
+    accepted_methods = ['GET', 'POST', 'Cookie']
 
     def execute(self, mole, params, defunct_output_manager):
         if len(params) == 0:
             method = mole.requester.method
             if method == 'POST':
-                output_manager.normal('{0}:{1}'.format(method, mole.get_post_params())).line_break()
+                params = mole.requester.get_post_params()
+            elif method == 'Cookie':
+                params = mole.requester.get_cookie_params()
             else:
-                output_manager.normal(method).line_break()
+                params = mole.requester.get_get_params()
+            if len(params) == 0:
+                params = 'No parameters have been set.'
+            output_manager.normal('{0}: {1}'.format(method, params)).line_break()
         elif len(params) >= 1:
             try:
                 mole.set_method(params[0])
@@ -639,7 +669,12 @@ class MethodCommand(Command):
                 raise CommandException('The method ' + params[0] + ' is not supported!')
 
             if len(params) >= 2:
-                mole.set_post_params(params[1])
+                if params[0] == 'POST':
+                    mole.set_post_params(params[1])
+                elif params[0] == 'Cookie':
+                    mole.set_cookie_params(params[1])
+                elif params[0] == 'GET':
+                    mole.set_get_params(params[1])
 
             if len(params) == 3:
                 mole.set_vulnerable_param(params[0], params[2])
@@ -654,10 +689,10 @@ class MethodCommand(Command):
 
 
     def usage(self, cmd_name):
-        return cmd_name + ' (GET | POST) [<POST PARAMS>] [VULNERABLE_PARAM]'
+        return cmd_name + ' (GET | POST | Cookie) [PARAMS] [VULNERABLE_PARAM]'
 
-class InjectableFieldCommand(Command):
-    accepted_methods = ['GET', 'POST']
+class VulnerableParamCommand(Command):
+    accepted_methods = ['GET', 'POST', 'Cookie']
 
     def execute(self, mole, params, defunct_output_manager):
         if len(params) == 0:
@@ -670,6 +705,8 @@ class InjectableFieldCommand(Command):
                 mole.set_vulnerable_param(params[0], params[1])
             except InvalidParamException:
                 raise CommandException('Parameter given is not valid')
+        else:
+            raise CommandException('Expected vulnerable parameter')
 
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
@@ -679,20 +716,26 @@ class InjectableFieldCommand(Command):
                 return [x[0] for x in mole.requester.get_parameters]
             elif current_params[0] == 'POST':
                 return [x[0] for x in mole.requester.post_parameters]
+            elif current_params[0] == 'Cookie':
+                return [x[0] for x in mole.requester.cookie_parameters]
         return []
 
     def usage(self, cmd_name):
-        return cmd_name + ' (GET | POST) <INJECTABLE_FIELD>'
+        return cmd_name + ' (GET | POST | Cookie) <VULNERABLE_PARAM>'
 
 class HTTPHeadersCommand(Command):
     def execute(self, mole, params, defunct_output_manager):
         if len(params) == 0:
+            max_len = max(map(len, mole.requester.headers.keys()))
             for key in mole.requester.headers:
-                output_manager.normal('{0} -> {1}'.format(key, mole.requester.headers[key])).line_break()
+                output_manager.normal('{0}{1}-> {2}'.format(key, ' ' * (max_len - len(key)), mole.requester.headers[key])).line_break()
         elif params[0] == 'set':
             if len(params) < 3:
                 raise CommandException('"set" expects header key and value as arguments.')
-            mole.requester.headers[params[1]] = ' '.join(params[2:])
+            if params[1] == 'Cookie':
+                CookieCommand().execute(mole, params[2:], output_manager)
+            else:
+                mole.requester.headers[params[1]] = ' '.join(params[2:])
         elif params[0] == 'del':
             if len(params) != 2:
                 raise CommandException('"del" expects header key as argument.')
@@ -794,7 +837,7 @@ class RecursiveCommand(Command):
             output_manager.error("Failed fetching tables({0}).".format(ex)).line_break()
             return
         for table in tables:
-            output_manager.info('Dumping table: {0} from schema: {1}'.format(table, schema))
+            output_manager.info('Dumping table: {0} from schema: {1}'.format(table, schema)).line_break()
             try:
                 mole.get_columns(schema, table)
             except QueryError as ex:
@@ -820,7 +863,6 @@ class CommandManager:
                       'headers'  : HTTPHeadersCommand(),
                       'htmlfilter'  : HTMLFilterCommand(),
                       'import'   : ImportCommand(),
-                      'injectable_field' : InjectableFieldCommand(),
                       'method'   : MethodCommand(),
                       'mode'     : QueryModeCommand(),
                       'needle'   : NeedleCommand(),
@@ -835,7 +877,9 @@ class CommandManager:
                       'tables'   : TablesCommand(),
                       'url'      : URLCommand(),
                       'usage'    : UsageCommand(),
+                      'usercreds' : UserCredentialsCommand(),
                       'verbose'  : VerboseCommand(),
+                      'vulnerable_param' : VulnerableParamCommand(),
                     }
 
     def find(self, cmd):

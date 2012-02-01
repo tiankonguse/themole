@@ -25,20 +25,27 @@ from exceptions import *
 from queryfilters.base import BaseQueryFilter
 
 class CaseFilter(BaseQueryFilter):
+    word_delimiters = {' ', '/', '(', ')'}
+
     def filter(self, query):
         query_list = list(query)
         so_far = ''
         skip_next = False
         for i in range(len(query_list)):
-            # Fix for mysql 0xFFFF syntax. These filters should be
-            # applied before converting quoted strings to dbms specific
-            # string representation.
-            if query_list[i] == ' ':
+            if query_list[i] in self.word_delimiters:
+                if not skip_next:
+                    word = query_list[i-len(so_far):i]
+                    if ''.join(word).isupper() or ''.join(word).islower():
+                        word = [word[i].swapcase() if i % 2 == 1 and not word[i] == 'x' else word[i] for i in range(len(word))]
+                        query_list[i-len(so_far):i] = word
                 skip_next = (so_far == 'from')
                 so_far = ''
             else:
                 so_far += query_list[i].lower()
             if not skip_next:
+                # Fix for mysql 0xFFFF syntax. These filters should be
+                # applied before converting quoted strings to dbms specific
+                # string representation.
                 if query_list[i] != 'x' and random.randrange(0, 2) == 0:
                     if query_list[i].isupper():
                         query_list[i] = query_list[i].lower()
@@ -52,8 +59,13 @@ class Spaces2CommentsFilter(BaseQueryFilter):
     def filter(self, query):
         return query.replace(' ', '/**/')
 
+class Spaces2NewLineFilter(BaseQueryFilter):
+    def filter(self, query):
+        return query.replace(' ', '\n')
+
 class SQLServerCollationFilter(BaseQueryFilter):
-    def __init__(self, params):
+    def __init__(self, name, params):
+        BaseQueryFilter.__init__(self, name, params)
         self.cast_match = re.compile('cast\([\w\d_\-@]+ as varchar\([\d]+\)\)')
         self.field_match = re.compile('cast\(([\w\d_\-@]+) as varchar\([\d]+\)\)')
         self.blacklist = []
@@ -73,21 +85,23 @@ class SQLServerCollationFilter(BaseQueryFilter):
 
     def config(self, params):
         if len(params) == 0:
-            raise FilterConfigException('At least one argument required.')
-        if params[0] == 'show':
-            if len(self.blacklist) == 0:
-                output_manager.info('No fields in blacklist.').line_break()
+            raise FilterConfigException('At least one argument required')
+        if params[0] == 'blacklist':
+            if len(params) > 1:
+                if params[1] == 'add':
+                    if len(params) != 3:
+                        raise FilterConfigException('Expected argument after "add"')
+                    self.blacklist.append(params[2])
+                elif params[1] == 'del':
+                    if len(params) != 3:
+                        raise FilterConfigException('Expected argument after "del"')
+                    self.blacklist.remove(params[2])
             else:
-                for i in self.blacklist:
-                    output_manager.normal(i).line_break()
-        elif params[0] == 'add':
-            if len(params) != 2:
-                raise FilterConfigException('Expected argument after "add".')
-            self.blacklist.append(params[1])
-        elif params[0] == 'del':
-            if len(params) != 2:
-                raise FilterConfigException('Expected argument after "del".')
-            self.blacklist.remove(params[1])
+                if len(self.blacklist) == 0:
+                    output_manager.info('No fields in blacklist.').line_break()
+                else:
+                    for i in self.blacklist:
+                        output_manager.normal(i).line_break()
         elif params[0] == 'collation':
             if len(params) != 2:
                 output_manager.normal(self.collation).line_break
@@ -98,14 +112,22 @@ class SQLServerCollationFilter(BaseQueryFilter):
 
     def parameters(self, current_params):
         if len(current_params) == 0:
-            return ['add', 'del', 'show', 'collation']
+            return ['blacklist', 'collation']
+        elif current_params[0] == 'blacklist':
+            if len(current_params) == 2:
+                return self.blacklist if current_params[1] == 'del' else []
+            else:
+                return ['add', 'del'] if len(current_params) == 1 else []
         else:
-            return self.blacklist if current_params[0] == 'del' else []
+            return []
 
+    def __str__(self):
+        return self.name + ' ' + self.collation
 
 class BetweenComparerFilter(BaseQueryFilter):
-    def __init__(self, params):
-        self.regex = re.compile('([\d]+) ([<>]) (\(select [\w\d\(\) _\-\+,\*@\.=]+\))')
+    def __init__(self, name, params):
+        BaseQueryFilter.__init__(self, name, params)
+        self.regex = re.compile('([\d]+)[ ]+([<>])[ ]+(\(select [\w\d\(\) _\-\+,\*@\.=]+\))')
 
     def filter(self, query):
         match = self.regex.search(query)
@@ -116,8 +138,10 @@ class BetweenComparerFilter(BaseQueryFilter):
         return query
 
 class ParenthesisFilter(BaseQueryFilter):
-    def __init__(self, params):
-        self.regex = re.compile('(where|and)[ ]+([\'"\d]+)[ ]*(between|like|[<>=])[ ]*(:?\(.+\)|[\'"\d\w]+)', re.IGNORECASE)
+
+    def __init__(self, name, params):
+        BaseQueryFilter.__init__(self, name, params)
+        self.regex = re.compile('(where|and)[ ]+([\'"\d\w_]+)[ ]*(between|like|[<>=])[ ]*(\(.+\)|[\'"\d\w]+)', re.IGNORECASE)
 
     def filter(self, query):
         match = self.regex.search(query)
@@ -132,3 +156,14 @@ class ParenthesisFilter(BaseQueryFilter):
 class NoAsteriskFilter(BaseQueryFilter):
     def filter(self, query):
         return query.replace('*', '1')
+
+class RegexFilter(BaseQueryFilter):
+    def __init__(self, name, params):
+        BaseQueryFilter.__init__(self, name, params)
+        if len(params) != 2:
+            raise FilterCretionError('Expected 2 arguments')
+        self.regex = re.compile(params[0], re.IGNORECASE)
+        self.replacement = params[1]
+
+    def filter(self, query):
+        return self.regex.sub(self.replacement, query)

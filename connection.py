@@ -30,7 +30,7 @@ import urllib.parse
 from urllib.parse import urlparse, urlunparse
 import copy
 
-import chardet
+import chardet, encodings
 from dbmsmoles import DbmsMole
 from exceptions import *
 
@@ -44,7 +44,7 @@ class HttpRequester:
         'Cache-Control': 'max-age=0',
     }
 
-    accepted_methods = ['GET', 'POST']
+    accepted_methods = ['GET', 'POST', 'Cookie']
 
     def __init__(self, url = None, vulnerable_param = None, delay = 0, method = 'GET', cookie = None, max_retries=3):
         self.encoding = None
@@ -57,6 +57,7 @@ class HttpRequester:
         self.path = None
         self.get_parameters = []
         self.post_parameters = []
+        self.cookie_parameters = []
         self.vulnerable_param = None
         self.vulnerable_param_group = None
         self.set_method(method)
@@ -67,16 +68,39 @@ class HttpRequester:
         if cookie:
             self.headers['Cookie'] = cookie
 
+    def guess_encoding(self, data):
+        for enc in set(encodings.aliases.aliases.values()):
+            try:
+                data.decode(enc)
+                return enc
+            except UnicodeDecodeError:
+                pass
+        return None
+
     def decode(self, data):
+        if self.encoding is not None:
+            try:            
+                to_ret = data.decode(self.encoding)
+            except (UnicodeDecodeError, TypeError):
+                self.encoding = None
+        
         if self.encoding is None:
             self.encoding = chardet.detect(data)['encoding']
-        try:
-            if self.encoding is None:
-                raise EncodingNotFound('Try using the "encoding" command.')
-            to_ret = data.decode(self.encoding)
-        except UnicodeDecodeError:
-            self.encoding = chardet.detect(data)['encoding']
-            to_ret = data.decode(self.encoding)
+            try:            
+                to_ret = data.decode(self.encoding)
+            except (UnicodeDecodeError, TypeError):
+                self.encoding = None
+                
+        if self.encoding is None:
+            self.encoding = self.guess_encoding(data)
+            try:            
+                to_ret = data.decode(self.encoding)
+            except (UnicodeDecodeError, TypeError):
+                self.encoding = None
+
+        if self.encoding is None:
+            raise EncodingNotFound('Try using the "encoding" command.')
+        
         return DbmsMole.remove_errors(to_ret)
 
     # Tries to remove the query from the result html.
@@ -116,14 +140,19 @@ class HttpRequester:
     def request(self, query):
         get_params = copy.deepcopy(self.get_parameters)
         post_params = copy.deepcopy(self.post_parameters)
+        cookie_params = copy.deepcopy(self.cookie_parameters)
         if self.vulnerable_param_group == 'GET':
             get_params = self._add_query_to_param(get_params, query)
             filter_params = get_params
-        else:
+        elif self.vulnerable_param_group == 'POST':
             post_params = self._add_query_to_param(post_params, query)
             filter_params = post_params
+        else:
+            cookie_params = self._add_query_to_param(cookie_params, query)
+            filter_params = cookie_params
         get_params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in get_params)
         post_params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in post_params)
+        cookie_params = '&'.join(a + '=' + urllib.parse.quote(b) for a, b in cookie_params)
 
         try:
             if self.proto == 'https':
@@ -135,11 +164,13 @@ class HttpRequester:
                 http.client.UnknownProtocol,
                 http.client.BadStatusLine) as e:
             raise ConnectionException(str(e))
-
+        get_params = get_params.replace('%2A', '*').replace('%28', '(').replace('%29', ')')
+        headers = copy.deepcopy(self.headers)
+        headers['Cookie'] = cookie_params
         for i in range(self.max_retries):
             try:
                 time.sleep(self.delay)
-                connection.request(self.method, self.path + '?' + get_params, post_params, self.headers)
+                connection.request(self.method, self.path + '?' + get_params, post_params, headers)
                 resp = connection.getresponse()
                 data = self.decode(resp.read())
                 break
@@ -179,7 +210,7 @@ class HttpRequester:
 
     def set_method(self, method):
         if method not in self.accepted_methods:
-            raise InvalidMethodException('[-] Error: ' + method + ' is invalid! Only GET supported.')
+            raise InvalidMethodException('[-] Error: ' + method + ' is invalid!')
         self.method = method
         if method == 'POST':
             self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
@@ -189,16 +220,32 @@ class HttpRequester:
         self.vulnerable_param = None
         self.vulnerable_param_group = None
 
-    def set_post_params(self, param_string):
+    def _parse_param_string(self, param_string, splitter = '&'):
         if '=' not in param_string:
             param_string_lst = []
         else:
-            param_string_lst = list(t.split('=', 1) for t in param_string.split('&'))
+            param_string_lst = list(t.split('=', 1) for t in param_string.split(splitter))
         param_string_lst = self._normalize_params(param_string_lst)
-        self.post_parameters = param_string_lst
+        return param_string_lst
+
+    def set_post_params(self, param_string):
+        self.post_parameters = self._parse_param_string(param_string)
+    
+    def set_cookie_params(self, param_string):
+        self.cookie_parameters = self._parse_param_string(param_string, '; ')
+        self.headers['Cookie'] = param_string
+
+    def _join_params(self, parameters, joiner = '&'):
+        return joiner.join(a + '=' + b for a,b in parameters)
 
     def get_post_params(self):
-        return '&'.join(a + '=' + b for a,b in self.post_parameters)
+        return self._join_params(self.post_parameters)
+    
+    def get_get_params(self):
+        return self._join_params(self.get_parameters)
+        
+    def get_cookie_params(self):
+        return self._join_params(self.cookie_parameters, '; ')
 
     def set_vulnerable_param(self, method, vulnerable_param):
         if vulnerable_param is not None:
@@ -206,6 +253,8 @@ class HttpRequester:
                 raise InvalidParamException(vulnerable_param + ' is not present in the given URL.')
             if method == 'POST' and vulnerable_param not in (x[0] for x in self.post_parameters):
                 raise InvalidParamException(vulnerable_param + ' is not in the POST parameters.')
+            if method == 'Cookie' and vulnerable_param not in (x[0] for x in self.cookie_parameters):
+                raise InvalidParamException(vulnerable_param + ' is not in the Cookie parameters.')
             self.vulnerable_param = vulnerable_param
         self.vulnerable_param_group = method
 

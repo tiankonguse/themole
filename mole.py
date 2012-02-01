@@ -72,13 +72,20 @@ class Manager:
             try:
                 signal.signal(signal.SIGINT, signal.default_int_handler)
                 try:
-                    line = [i for i in input('#> ').strip().split(' ') if len(i) > 0]
+                    #line = [i for i in input('#> ').strip().split(' ') if len(i) > 0]
+                    line = input('#> ')
                 except KeyboardInterrupt:
                     output_manager.line_break()
                     continue
-                signal.signal(signal.SIGINT, sigint_handler)
-                if len(line) != 0:
-                    cmd = cmd_manager.find(line[0])
+
+                cmd_name = line.strip().split(' ')
+                if len(cmd_name) > 0 and len(cmd_name[0]) > 0:
+                    cmd = cmd_manager.find(cmd_name[0])
+                    if cmd.requires_smart_parse():
+                        line = self.completer.smart_parse(line)
+                    else:
+                        line = self.completer.nice_split(line)
+                    signal.signal(signal.SIGINT, sigint_handler)
                     cmd.execute(self.mole, line[1:] if len(line) > 1 else [], None)
             except commands.CommandException as ex:
                 output_manager.error(str(ex)).line_break()

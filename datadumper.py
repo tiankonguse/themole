@@ -65,6 +65,12 @@ class BlindDataDumper:
         if len(data) != 1 or len(data[0]) != 3:
             raise QueryError('Query did not generate any output.')
         return [data[0][0], data[0][1], data[0][2]]
+    
+    def get_user_creds(self, mole, injectable_field):
+        count_fun = lambda x,y: mole._dbms_mole.user_creds_blind_count_query(x, y)
+        length_fun = lambda x: lambda y,z: mole._dbms_mole.user_creds_blind_len_query(y, z, offset=x)
+        query_fun = lambda x,y,z: mole._dbms_mole.user_creds_blind_data_query(x, y, offset=z)
+        return self._blind_query(mole, count_fun, length_fun, query_fun)
 
     def find_tables_like(self, mole, db, table_filter, injectable_field):
         count_fun = lambda x,y: mole._dbms_mole.tables_like_blind_count_query(x, y, db=db, table_filter=table_filter)
@@ -203,6 +209,11 @@ class StringUnionDataDumper:
         query_gen = lambda x: mole._dbms_mole.fields_query(db, table, fields, injectable_field, offset=x+start, where=where)
         return self._generic_query(mole, count_query, query_gen, lambda x: x, start=start, limit=limit)
 
+    def get_user_creds(self, mole, injectable_field):
+        count_query = mole._dbms_mole.user_creds_count_query(injectable_field)
+        query_gen = lambda x: mole._dbms_mole.user_creds_query(injectable_field, offset=x)
+        return self._generic_query(mole, count_query, query_gen, lambda x: x)
+
     def get_dbinfo(self, mole, injectable_field):
         query = mole._dbms_mole.dbinfo_query(injectable_field)
         req = mole.make_request(query)
@@ -340,6 +351,16 @@ class IntegerUnionDataDumper:
                                                                                where=where)
         data = self._generic_integer_query(mole, count_query, length_query, query_gen, start=start, limit=limit)
 
+        return map(lambda x: x.split(mole._dbms_mole.blind_field_delimiter()), data)
+
+    def get_user_creds(self, mole, injectable_field):
+        count_query = mole._dbms_mole.user_creds_integer_count_query(injectable_field)
+        length_query = lambda x: mole._dbms_mole.user_creds_integer_len_query(injectable_field,
+                                                                         offset=x)
+        query_gen = lambda index, offset: mole._dbms_mole.user_creds_integer_query(index,
+                                                                              injectable_field,
+                                                                              offset=offset)
+        data = self._generic_integer_query(mole, count_query, length_query, query_gen)
         return map(lambda x: x.split(mole._dbms_mole.blind_field_delimiter()), data)
 
     def get_dbinfo(self, mole, injectable_field):

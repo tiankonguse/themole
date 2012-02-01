@@ -67,7 +67,13 @@ class OracleMole(DbmsMole):
             'field' : ['user','banner','ora_database_name'],
             'table' : 'v$version'
         }
-
+    
+    def _user_creds_query_info(self):
+        return {
+            'field'  : ['name', 'password'],
+            'table'  : 'sys.user$',
+            'filter' : '1=1'
+        }
     @classmethod
     def dbms_name(cls):
         return 'Oracle'
