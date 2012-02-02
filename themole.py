@@ -216,7 +216,7 @@ class TheMole:
             )
         url = self.query_filter.apply_filters(url)
         if self.verbose == True:
-            output_manager.line_break().info('Executing query:',url)
+            output_manager.line_break().info('Executing query: {0}'.format(url)).line_break()
         return url
 
     def make_request(self, query):

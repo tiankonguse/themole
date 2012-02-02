@@ -28,8 +28,7 @@ import re
 class SQLServerMole(DbmsMole):
     out_delimiter_result = "::-::"
     out_delimiter = DbmsMole.char_concat(out_delimiter_result)
-    inner_delimiter_result = "><"
-    inner_delimiter = DbmsMole.char_concat(inner_delimiter_result)
+    inner_delimiter = DbmsMole.char_concat(DbmsMole.inner_delimiter_result)
     integer_field_finger = 'ascii(char(58)) + (len(' + DbmsMole.char_concat("1111111") + ') * 190) + (ascii(char(73)) * 31337)'
     integer_field_finger_result = '2288989'
     integer_out_delimiter = '3133707'

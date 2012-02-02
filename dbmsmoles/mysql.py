@@ -27,8 +27,7 @@ from . import DbmsMole, FingerBase
 class MysqlMole(DbmsMole):
     out_delimiter_result = "::-::"
     out_delimiter = DbmsMole.to_hex(out_delimiter_result)
-    inner_delimiter_result = "><"
-    inner_delimiter = DbmsMole.to_hex(inner_delimiter_result)
+    inner_delimiter = DbmsMole.to_hex(DbmsMole.inner_delimiter_result)
     integer_field_finger = 'ascii(0x3a) + (length(0x49494949494949) * 190) + (ascii(0x49) * 31337)'
     integer_field_finger_result = '2288989'
     integer_out_delimiter = '3133707'
