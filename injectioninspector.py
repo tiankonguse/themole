@@ -158,7 +158,7 @@ class InjectionInspector:
             for dbms_mole in mole.dbms_mole_list:
                 if mole.stop_query:
                     raise StoppedQueryException()
-                output_manager.info('Trying DBMS: {0}'.format(dbms_mole.dbms_name()))
+                output_manager.info('Trying DBMS: {0}'.format(dbms_mole.dbms_name())).line_break()
                 field = self._find_injectable_field_using(mole, dbms_mole)
                 if field is not None:
                     output_manager.advance('Found DBMS: {0}'.format(dbms_mole.dbms_name())).line_break()

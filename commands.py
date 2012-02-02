@@ -349,9 +349,9 @@ class DBInfoCommand(Command):
         except QueryError:
             output_manager.error('There was an error with the query.').line_break()
             return
-        output_manger.advance("User:\t{0}".format(info[0])).line_break()
-        output_manger.advance("Version:\t{0}".format(info[1])).line_break()
-        output_manger.advance("Database:\t{0}".format(info[2])).line_break()
+        output_manager.advance("User:\t{0}".format(info[0])).line_break()
+        output_manager.advance("Version:\t{0}".format(info[1])).line_break()
+        output_manager.advance("Database:\t{0}".format(info[2])).line_break()
 
     def parameters(self, mole, current_params):
         return []
