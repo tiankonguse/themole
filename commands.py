@@ -482,13 +482,18 @@ class VerboseCommand(Command):
 
 class OutputCommand(Command):
     def execute(self, mole, params, defunct_output_manager):
-        pass
+        if len(params) == 0:
+            output_manager.normal(output_manager.result_output).line_break()
+        else:
+            if not params[0] in ['pretty', 'plain']:
+                raise CommandException('Invalid parameter.')
+            output_manager.result_output = params[0]
 
     def parameters(self, mole, current_params):
-        return []
+        return ['pretty', 'plain'] if len(current_params) == 0 else []
 
     def usage(self, cmd_name):
-        return cmd_name + ': deprecated command now'
+        return cmd_name + ' <pretty|plain>'
 
 class UsageCommand(Command):
     def execute(self, mole, params, defunct_output_manager):

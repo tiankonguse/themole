@@ -30,6 +30,7 @@ class OutputManager:
     def __init__(self):
         self.lock = threading.Lock()
         self.last_line_length = 0
+        self.result_output = 'pretty'
 
     def normal(self, string):
         with self.lock:
@@ -82,7 +83,10 @@ class OutputManager:
         return self
 
     def results_output(self, headers):
-        return ResultsOutput(self, headers)
+        if self.result_output == 'plain':
+            return PlainResultsOutput(self, headers)
+        else:
+            return PrettyResultsOutput(self, headers)
 
     def blind_output(self, length):
         return BlindSQLIOutput(self, length)
@@ -113,10 +117,17 @@ class ResultsOutput:
         self.om = output_manager
         self.results = []
         self.headers = header
-        self.lengths = list(map(len, header))
 
     def put(self, string):
         self.results.append(string)
+
+    def end_sequence(self):
+        pass
+
+class PrettyResultsOutput(ResultsOutput):
+    def __init__(self, output_manager, header):
+        ResultsOutput.__init__(self, output_manager, header)
+        self.lengths = list(map(len, header))
 
     def end_sequence(self):
         for i in self.results:
@@ -135,6 +146,14 @@ class ResultsOutput:
                 line += '| ' + i[j] + ' ' * (self.lengths[j] - len(i[j]) + 1)
             self.om.normal(line + '|').line_break()
         self.om.normal('+' + '-' * (total_len + 2 * len(self.lengths) + len(self.lengths) - 1) + '+').line_break()
+
+class PlainResultsOutput(ResultsOutput):
+
+    def end_sequence(self):
+        self.om.normal(','.join(self.headers)).line_break()
+        self.om.normal('=' * len(','.join(self.headers))).line_break()
+        for result in self.results:
+            self.om.normal(','.join(result)).line_break()
 
 import time
 
