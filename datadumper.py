@@ -22,7 +22,6 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-from output import BlindSQLIOutput, RowDoneCounter
 from exceptions import *
 
 class BlindDataDumper:
@@ -65,7 +64,7 @@ class BlindDataDumper:
         if len(data) != 1 or len(data[0]) != 3:
             raise QueryError('Query did not generate any output.')
         return [data[0][0], data[0][1], data[0][2]]
-    
+
     def get_user_creds(self, mole, injectable_field):
         count_fun = lambda x,y: mole._dbms_mole.user_creds_blind_count_query(x, y)
         length_fun = lambda x: lambda y,z: mole._dbms_mole.user_creds_blind_len_query(y, z, offset=x)
@@ -422,7 +421,7 @@ class IntegerUnionDataDumper:
             return ''
         length = int(length[0])
 
-        sqli_output = BlindSQLIOutput(length)
+        sqli_output = output_manager.blind_output(length)
         query_gen = lambda index,offset: mole._dbms_mole.read_file_integer_query(index,
                                                                               filename,
                                                                               injectable_field)
@@ -471,7 +470,7 @@ class IntegerUnionDataDumper:
                 if length is None:
                     break
                 length = int(length[0])
-                sqli_output = BlindSQLIOutput(length)
+                sqli_output = output_manager.blind_output(length)
                 gen_query_item = lambda x: self._generic_integer_query_item(mole, query_generator, x, i, sqli_output)
                 dump_result.append(''.join(mole.threader.execute(length, gen_query_item)))
                 if not mole.stop_query:

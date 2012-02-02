@@ -30,7 +30,6 @@ from domanalyser import DomAnalyser
 from dbmsmoles import DbmsMole, MysqlMole, PostgresMole, SQLServerMole, OracleMole
 from dbdump import DatabaseDump
 from threader import Threader
-from output import BlindSQLIOutput
 from xmlexporter import XMLExporter
 from injectioninspector import InjectionInspector
 from datadumper import *

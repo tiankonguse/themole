@@ -24,7 +24,7 @@
 
 from sys import exit
 
-import connection, os, output
+import connection, os
 import themole
 import traceback, codecs
 from base64 import b64encode
