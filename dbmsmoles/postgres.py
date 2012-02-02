@@ -27,8 +27,7 @@ from . import DbmsMole, FingerBase
 class PostgresMole(DbmsMole):
     out_delimiter_result = "::-::"
     out_delimiter = DbmsMole.chr_join(out_delimiter_result)
-    inner_delimiter_result = "><"
-    inner_delimiter = DbmsMole.chr_join(inner_delimiter_result)
+    inner_delimiter = DbmsMole.chr_join(DbmsMole.inner_delimiter_result)
     integer_field_finger = 'ascii(chr(58)) + (length(' + DbmsMole.chr_join("1111111") + ') * 190) + (ascii(chr(73)) * 31337)'
     integer_field_finger_result = '2288989'
     integer_out_delimiter = '3133707'

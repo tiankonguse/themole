@@ -36,6 +36,8 @@ class DbmsMole():
                         # PHP verbose errors.
                         re.compile("<br />\n<b>Warning</b>:  [\w_\d]+\(\)(:\s|\s\[.*\]:)[\w :<>\\\\_\'\.\(\)/-]+ on line <b>(\d+)</b><br />"),
                     ]
+    
+    inner_delimiter_result = '~&'
 
     def injectable_field_fingers(cls, base):
         pass
