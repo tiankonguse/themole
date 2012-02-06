@@ -205,6 +205,21 @@ class TheMole:
         self.parenthesis = parenthesis
         self.dumper = BlindDataDumper()
 
+    def set_injectable_field(self, field):
+        if field < 0 or field >= self.query_columns:
+            return False
+        output_manager.info('Trying injection on field {0}'.format(field + 1)).line_break()
+        output_manager.echo_output = False
+        try:
+            if len(self.dumper.get_databases(self, field, 1)) > 0:
+                return True
+        except QueryError:
+            return False
+        finally:
+            output_manager.echo_output = True
+        output_manager.line_break()   
+        return False
+
     def generate_url(self, injection_string):
         url = ('{prefix}{sep}{par}' + injection_string + '{end}{com}').format(
                                         sep=self.separator,

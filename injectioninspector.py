@@ -143,7 +143,7 @@ class InjectionInspector:
             injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
             if len(injectable_fields) > 0:
                 output_manager.advance("Injectable fields found: [{0}]".format(', '.join(map(lambda x: str(x + 1), injectable_fields)))).line_break()
-                field = self._filter_injectable_fields(mole, dbms_mole, injectable_fields, finger)
+                field = self.filter_injectable_fields(mole, dbms_mole, injectable_fields, finger)
                 if field is not None:
                     mole._dbms_mole = dbms_mole()
                     mole._dbms_mole.set_good_finger(finger)
@@ -169,7 +169,7 @@ class InjectionInspector:
                 return field
         raise InjectableFieldNotFound()
 
-    def _filter_injectable_fields(self, mole, dbms_mole_class, injectable_fields, finger):
+    def filter_injectable_fields(self, mole, dbms_mole_class, injectable_fields, finger):
         for field in injectable_fields:
             output_manager.info('Trying to inject in field {0}'.format(field + 1))
             query = dbms_mole_class.field_finger_query(mole.query_columns, finger, field)

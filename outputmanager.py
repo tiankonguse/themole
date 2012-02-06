@@ -31,55 +31,62 @@ class OutputManager:
         self.lock = threading.Lock()
         self.last_line_length = 0
         self.result_output = 'pretty'
+        self.echo_output = True
 
     def normal(self, string):
-        with self.lock:
-            self._erase_line()
-            self.last_line_length = len(string)
-            sys.stdout.write(string)
-            sys.stdout.flush()
+        if self.echo_output:
+            with self.lock:
+                self._erase_line()
+                self.last_line_length = len(string)
+                sys.stdout.write(string)
+                sys.stdout.flush()
         return self
 
     def advance(self, string):
-        with self.lock:
-            self._erase_line()
-            string = '[+] ' + string
-            self.last_line_length = len(string)
-            sys.stdout.write(string)
-            sys.stdout.flush()
+        if self.echo_output:
+            with self.lock:
+                self._erase_line()
+                string = '[+] ' + string
+                self.last_line_length = len(string)
+                sys.stdout.write(string)
+                sys.stdout.flush()
         return self
 
 
     def info(self, string):
-        with self.lock:
-            self._erase_line()
-            string = '[i] ' + string
-            self.last_line_length = len(string)
-            sys.stdout.write(string)
-            sys.stdout.flush()
+        if self.echo_output:
+            with self.lock:
+                self._erase_line()
+                string = '[i] ' + string
+                self.last_line_length = len(string)
+                sys.stdout.write(string)
+                sys.stdout.flush()
         return self
 
     def debug(self, string):
-        with self.lock:
-            self._erase_line()
-            string = '[d] ' + string
-            self.last_line_length = len(string)
-            sys.stdout.write(string)
-            sys.stdout.flush()
+        if self.echo_output:
+            with self.lock:
+                self._erase_line()
+                string = '[d] ' + string
+                self.last_line_length = len(string)
+                sys.stdout.write(string)
+                sys.stdout.flush()
         return self
 
     def error(self, string):
-        with self.lock:
-            self._erase_line()
-            string = '[-] ' + string
-            self.last_line_length = len(string)
-            sys.stdout.write(string)
-            sys.stdout.flush()
+        if self.echo_output:
+            with self.lock:
+                self._erase_line()
+                string = '[-] ' + string
+                self.last_line_length = len(string)
+                sys.stdout.write(string)
+                sys.stdout.flush()
         return self
 
     def line_break(self):
-        sys.stdout.write('\n')
-        sys.stdout.flush()
+        if self.echo_output:
+            sys.stdout.write('\n')
+            sys.stdout.flush()
         return self
 
     def results_output(self, headers):

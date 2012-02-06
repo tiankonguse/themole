@@ -188,10 +188,10 @@ class StringUnionDataDumper:
 
     name = 'StringUnionDataDumper'
 
-    def get_databases(self, mole, injectable_field):
+    def get_databases(self, mole, injectable_field, limit=0x7fffffff):
         count_query = mole._dbms_mole.schema_count_query(injectable_field)
         query_gen =  lambda x: mole._dbms_mole.schema_query(injectable_field, x)
-        return self._generic_query(mole, count_query, query_gen)
+        return self._generic_query(mole, count_query, query_gen, limit=limit)
 
     def get_tables(self, mole, db, injectable_field):
         count_query = mole._dbms_mole.table_count_query(db, injectable_field)
@@ -294,14 +294,14 @@ class IntegerUnionDataDumper:
 
     name = 'IntegerUnionDataDumper'
 
-    def get_databases(self, mole, injectable_field):
+    def get_databases(self, mole, injectable_field, limit=0x7fffffff):
         count_query = mole._dbms_mole.schema_integer_count_query(injectable_field)
         length_query = lambda x: mole._dbms_mole.schema_integer_len_query(injectable_field,
                                                                           offset=x)
         query_gen = lambda index, offset: mole._dbms_mole.schema_integer_query(index,
                                                                                injectable_field,
                                                                                offset=offset)
-        return self._generic_integer_query(mole, count_query, length_query, query_gen)
+        return self._generic_integer_query(mole, count_query, length_query, query_gen, limit=limit)
 
     def get_tables(self, mole, db, injectable_field):
         count_query = mole._dbms_mole.table_integer_count_query(db,

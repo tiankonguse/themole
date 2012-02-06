@@ -116,7 +116,7 @@ class MysqlMole(DbmsMole):
     def field_finger_query(cls, columns, finger, injectable_field):
         query_list = list(map(str, range(columns)))
         if finger.is_string_query:
-            query_list[injectable_field] = 'CONCAT(@@version,' + DbmsMole.to_hex(DbmsMole.field_finger_str) + ')'
+            query_list[injectable_field] = 'CONCAT(version(),' + DbmsMole.to_hex(DbmsMole.field_finger_str) + ')'
         else:
             query_list[injectable_field] = MysqlMole.integer_field_finger
         query = " and 1 = 0 UNION ALL SELECT {fields}".format(fields=",".join(query_list))
@@ -131,7 +131,7 @@ class MysqlMole(DbmsMole):
 
     @classmethod
     def dbms_check_blind_query(cls):
-        return ' and 0 < (select length(@@version)) '
+        return ' and 0 < (select length(version())) '
 
     def forge_count_query(self, fields, table_name, injectable_field, where = "1=1"):
         query_list = list(self.finger._query)

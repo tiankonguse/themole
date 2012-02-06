@@ -634,6 +634,30 @@ class ImportCommand(Command):
 
     def usage(self, cmd_name):
         return cmd_name + ' <format> <input_filename>'
+        
+class InjectableFieldCommand(Command):
+    def execute(self, mole, params, defunct_output_manager):
+        if len(params) == 0:
+            inj_field = mole.injectable_field
+            if inj_field is None:
+                output_manager.normal('No injectable field has been set yet').line_break()    
+            else:
+                output_manager.normal(str(inj_field)).line_break()
+        else:
+            try:
+                inj = int(params[0]) - 1
+            except:
+                raise CommandException('Expected integer as argument')
+            if mole.set_injectable_field(inj):
+                output_manager.advance('Injectable field changed successfully').line_break()    
+            else:
+                output_manager.normal('Could not set the injectable field').line_break()
+    
+    def parameters(self, mole, current_params):
+        return range(query_columns)
+
+    def usage(self, cmd_name):
+        return cmd_name + ' [INJECTABLE_FIELD]'
 
 class ReadFileCommand(Command):
     def execute(self, mole, params, defunct_output_manager):
@@ -868,6 +892,7 @@ class CommandManager:
                       'headers'  : HTTPHeadersCommand(),
                       'htmlfilter'  : HTMLFilterCommand(),
                       'import'   : ImportCommand(),
+                      'injectable_field' : InjectableFieldCommand(),
                       'method'   : MethodCommand(),
                       'mode'     : QueryModeCommand(),
                       'needle'   : NeedleCommand(),
