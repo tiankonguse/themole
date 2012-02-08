@@ -167,3 +167,6 @@ class RegexFilter(BaseQueryFilter):
 
     def filter(self, query):
         return self.regex.sub(self.replacement, query)
+
+    def __str__(self):
+        return 'regex ' + self.regex.pattern + ' ' + self.replacement

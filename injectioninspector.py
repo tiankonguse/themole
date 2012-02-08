@@ -33,7 +33,7 @@ class InjectionInspector:
         separator = None
         mole.stop_query = False
         for parenthesis in range(0, 3):
-            output_manager.info('Trying injection using {0} parenthesis.'.format(parenthesis))
+            output_manager.info('Trying injection using {0} parenthesis.'.format(parenthesis)).line_break()
             mole.parenthesis = parenthesis
             for sep in separator_list:
                 if mole.stop_query:

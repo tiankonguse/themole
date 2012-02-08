@@ -370,6 +370,8 @@ class IntegerUnionDataDumper:
         except ConnectionException as ex:
             raise QueryError('Connection Error: (' + str(ex) + ')')
         length = mole._dbms_mole.parse_results(req)
+        if length is None:
+            raise QueryError('Query did not generate any output.')
         length = int(length[0])
 
         sqli_output = output_manager.blind_output(length)
