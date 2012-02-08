@@ -529,6 +529,8 @@ class BaseFilterCommand(Command):
                     self.functor(mole).add_filter(params[1], params[2:])
                 except FilterNotFoundException:
                     raise CommandException('Filter ' + params[1] + ' not found.')
+                except FilterCreationError as ex:
+                    raise CommandException('Filter {0} failed to initialize({1})'.format(params[1], str(ex)))
             elif params[0] == 'del':
                 self.functor(mole).remove_filter(params[1])
             else:

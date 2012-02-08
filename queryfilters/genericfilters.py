@@ -161,9 +161,12 @@ class RegexFilter(BaseQueryFilter):
     def __init__(self, name, params):
         BaseQueryFilter.__init__(self, name, params)
         if len(params) != 2:
-            raise FilterCretionError('Expected 2 arguments')
-        self.regex = re.compile(params[0], re.IGNORECASE)
-        self.replacement = params[1]
+            raise FilterCreationError('Expected 2 arguments')
+        try:
+            self.regex = re.compile(params[0], re.IGNORECASE)
+            self.replacement = params[1]
+        except Exception as ex:
+            raise FilterCreationError(str(ex))
 
     def filter(self, query):
         return self.regex.sub(self.replacement, query)
