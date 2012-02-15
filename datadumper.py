@@ -465,7 +465,7 @@ class IntegerUnionDataDumper:
                 if mole.stop_query:
                     break
                 try:
-                    req = mole.requester.request(mole.generate_url(length_query(i)))
+                    req = mole.make_request(length_query(i))
                 except ConnectionException as ex:
                     raise QueryError('Connection Error: (' + str(ex) + ')')
                 length = mole._dbms_mole.parse_results(req)
