@@ -56,3 +56,8 @@ class ReplacerRegexHTMLFilter(BaseRegexHTMLFilter):
 
     def __str__(self):
         return '{name} \'{pat}\' -> \'{rep}\''.format(name=self.name, pat=self.regex.pattern, rep=self.replacement)
+
+class HTMLPretifierFilter(BaseRegexHTMLFilter):
+    def __init__(self, name, params):
+        BaseRegexHTMLFilter(self, '\(<html>|<body>|</html>|</body>\)', '')
+

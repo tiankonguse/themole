@@ -50,13 +50,13 @@ class Manager:
         if 'url' in opt_map:
             try:
                 vuln_param = opt_map['vuln_param'] if 'vuln_param' in opt_map else None
-                cmd_manager.find('url').execute(self.mole, [opt_map['url'], vuln_param], None) #Todo: remove none and the parameter in functions
+                cmd_manager.find('url').execute(self.mole, [opt_map['url'], vuln_param]) 
             except commands.CommandException as ex:
                 output_manager.error('Error while setting URL: {0}'.format(ex)).line_break()
                 self.mole.abort_query()
                 exit(1)
         if 'needle' in opt_map:
-            cmd_manager.find('needle').execute(self.mole, [opt_map['needle']], None)
+            cmd_manager.find('needle').execute(self.mole, [opt_map['needle']])
         if 'encoding' in opt_map:
             encoding = opt_map['encoding']
             try:
@@ -86,7 +86,7 @@ class Manager:
                     else:
                         line = self.completer.nice_split(line)
                     signal.signal(signal.SIGINT, sigint_handler)
-                    cmd.execute(self.mole, line[1:] if len(line) > 1 else [], None)
+                    cmd.execute(self.mole, line[1:] if len(line) > 1 else [])
             except commands.CommandException as ex:
                 output_manager.error(str(ex)).line_break()
                 if ex.print_usage:
