@@ -36,9 +36,10 @@ class DbmsMole():
                         # PHP verbose errors.
                         re.compile("<br />\n<b>Warning</b>:  [\w_\d]+\(\)(:\s|\s\[.*\]:)[\w :<>\\\\_\'\.\(\)/-]+ on line <b>(\d+)</b><br />"),
                     ]
-    
+
     inner_delimiter_result = '~&'
 
+    @classmethod
     def injectable_field_fingers(cls, base):
         pass
 
@@ -116,34 +117,34 @@ class DbmsMole():
         pass
 
     def _generic_forge_query(self, info, injectable_field, offset):
-        return self.forge_query(info['field'], info['table'], 
+        return self.forge_query(info['field'], info['table'],
                injectable_field, where=info['filter'], offset=offset)
-    
+
     def _generic_forge_count_query(self, info, injectable_field):
-        return self.forge_count_query(info['field'], info['table'], 
+        return self.forge_count_query(info['field'], info['table'],
                injectable_field, where=info['filter'])
-    
+
     def _generic_forge_integer_query(self, info, index, injectable_field, offset):
         return self.forge_integer_query(index, info["field"],
                     info['table'], injectable_field,
                     where=info['filter'], offset=offset)
-    
+
     def _generic_forge_integer_count_query(self, info, injectable_field):
         return self.forge_integer_count_query(info["field"],
                     info['table'], injectable_field,
                     info['filter'])
-    
+
     def _generic_forge_integer_len_query(self, info, injectable_field, offset):
         return self.forge_integer_len_query(info["field"],
                     info['table'], injectable_field,
                     where=info['filter'], offset=offset)
-    
+
     def _generic_forge_blind_count_query(self, operator, value, info):
         return self.forge_blind_count_query(
             operator, value, info['table'],
             where=info['filter']
         )
-    
+
     def _generic_forge_blind_len_query(self, operator, value, info, offset):
         return self.forge_blind_len_query(
             operator, value, info['field'],
@@ -162,7 +163,7 @@ class DbmsMole():
             where = ' where ' + where
         else:
             where = ' '
-        return ' and {op_par}' + str(value) + ' < (select ascii(substring('+self._concat_fields(fields)+', '+str(index)+', 1)) ' + table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset) + ')'
+        return ' and {op_par}' + str(value) + ' < (select ascii(substring(' + self._concat_fields(fields) + ', ' + str(index) + ', 1)) ' + table + ' ' + self.parse_condition(where) + ' limit 1 offset ' + str(offset) + ')'
 
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
         if len(table) > 0:
@@ -170,7 +171,7 @@ class DbmsMole():
             where = ' where ' + where
         else:
             where = ' '
-        return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(*)  '+table+' '+self.parse_condition(where)+')'
+        return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(*)  ' + table + ' ' + self.parse_condition(where) + ')'
 
     def forge_blind_len_query(self, operator, value, fields, table, where="1=1", offset=0):
         if len(table) > 0:
@@ -178,7 +179,7 @@ class DbmsMole():
             where = ' where ' + where
         else:
             where = ' '
-        return ' and {op_par}' + str(value) + ' ' + operator + ' (select length('+self._concat_fields(fields)+') '+table+' ' + self.parse_condition(where) + ' limit 1 offset '+str(offset)+')'
+        return ' and {op_par}' + str(value) + ' ' + operator + ' (select length(' + self._concat_fields(fields) + ') ' + table + ' ' + self.parse_condition(where) + ' limit 1 offset ' + str(offset) + ')'
 
     def schema_count_query(self, injectable_field):
         info = self._schemas_query_info()
@@ -219,7 +220,7 @@ class DbmsMole():
 
     def fields_query(self, db, table, fields, injectable_field, offset, where="1=1"):
         return self._generic_forge_query(self._fields_query_info(fields, db, table, where), injectable_field, offset)
-    
+
     def user_creds_count_query(self, injectable_field):
         info = self._user_creds_query_info()
         info.update({'field' : '*'})
@@ -325,7 +326,7 @@ class DbmsMole():
         info = self._read_file_query_info(filename)
         return self.forge_integer_query(index, info['field'],
                info['table'], injectable_field)
-   
+
     # Blind queries
 
 
@@ -420,7 +421,7 @@ class DbmsMole():
         )
 
 class FingerBase:
-    def __init__(self, query, to_search, is_string_query = True):
+    def __init__(self, query, to_search, is_string_query=True):
         self._query = query
         self._to_search = to_search
         self.is_string_query = is_string_query

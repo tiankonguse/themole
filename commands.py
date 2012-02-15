@@ -124,10 +124,10 @@ class RedirectCommand(Command):
             else:
                 raise CommandException('Expected "on" or "off" as argument')
             mole.requester.follow_redirects = value
-    
+
     def usage(self, cmd_name):
         return cmd_name + ' [on|off]'
-        
+
     def parameters(self, mole, current_params):
         return ['on', 'off'] if len(current_params) == 0 else []
 
@@ -237,7 +237,7 @@ class FindTablesLikeCommand(Command):
             raise CommandException('Database and table filter required.')
         try:
             self.check_initialization(mole)
-            tables = mole.find_tables_like(params[0], "'"  + ' '.join(params[1:]) + "'")
+            tables = mole.find_tables_like(params[0], "'" + ' '.join(params[1:]) + "'")
         except QueryError as ex:
             output_manager.error('Query error: {0}'.format(ex)).line_break()
             return
@@ -305,16 +305,16 @@ class QueryCommand(Command):
             min_end = min(index_limit if index_limit != -1 else 0x7fffff, index_offset if index_offset != -1 else 0x7fffff)
             if min_end == 0x7fffff:
                 min_end = -1
-            where_end = min_end if min_end != -1 and min_end > index_where else len(params)+1
-            condition = ' '.join(params[index_where+1:where_end]) if index_where != -1 else '1=1'
+            where_end = min_end if min_end != -1 and min_end > index_where else len(params) + 1
+            condition = ' '.join(params[index_where + 1:where_end]) if index_where != -1 else '1=1'
             if index_limit == len(params) - 1:
                 raise CommandException('Limit argument requires row numbers.')
             if index_offset == len(params) - 1:
                 raise CommandException('Offset argument requires row index.')
             try:
-                limit = int(params[index_limit+1]) if index_limit != -1 else 0x7fffffff
+                limit = int(params[index_limit + 1]) if index_limit != -1 else 0x7fffffff
                 limit = max(limit, 0)
-                offset = int(params[index_offset+1]) if index_offset != -1 else 0
+                offset = int(params[index_offset + 1]) if index_offset != -1 else 0
                 offset = max(offset, 0)
             except ValueError:
                 raise CommandException("Non-int value given.")
@@ -462,7 +462,7 @@ class PrefixCommand(Command):
 class SuffixCommand(Command):
     def execute(self, mole, params):
         if len(params) == 0:
-            output_manger.normal(mole.suffix).line_break()
+            output_manager.normal(mole.suffix).line_break()
         else:
             if params[0].startswith('"') or params[0].startswith('\''):
                 mole.suffix = ' '.join(params)
@@ -564,13 +564,15 @@ class BaseFilterCommand(Command):
             elif current_params[0] == 'del':
                 return self.functor(mole).active_filters()
 
+
 class HTMLFilterCommand(BaseFilterCommand):
+
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda x: x.html_filter)
 
     def execute(self, mole, params):
         try:
-            BaseFilterCommand.execute(self, mole, params, defunct_output_manager)
+            BaseFilterCommand.execute(self, mole, params)
         except FilterCreationError as ex:
             raise CommandException('Filter creation error({msg})'.format(msg=str(ex)), False)
 
@@ -580,7 +582,7 @@ class QueryFilterCommand(BaseFilterCommand):
 
     def execute(self, mole, params):
         try:
-            BaseFilterCommand.execute(self, mole, params, defunct_output_manager)
+            BaseFilterCommand.execute(self, mole, params)
         except CommandException as ex:
             if len(params) > 1 and params[0] == 'config':
                 if len(params) < 3:
@@ -655,13 +657,13 @@ class ImportCommand(Command):
 
     def usage(self, cmd_name):
         return cmd_name + ' <format> <input_filename>'
-        
+
 class InjectableFieldCommand(Command):
     def execute(self, mole, params):
         if len(params) == 0:
             inj_field = mole.injectable_field
             if inj_field is None:
-                output_manager.normal('No injectable field has been set yet').line_break()    
+                output_manager.normal('No injectable field has been set yet').line_break()
             else:
                 output_manager.normal(str(inj_field)).line_break()
         else:
@@ -670,12 +672,12 @@ class InjectableFieldCommand(Command):
             except:
                 raise CommandException('Expected integer as argument')
             if mole.set_injectable_field(inj):
-                output_manager.advance('Injectable field changed successfully').line_break()    
+                output_manager.advance('Injectable field changed successfully').line_break()
             else:
                 output_manager.normal('Could not set the injectable field').line_break()
-    
+
     def parameters(self, mole, current_params):
-        return range(query_columns)
+        return range(mole.query_columns)
 
     def usage(self, cmd_name):
         return cmd_name + ' [INJECTABLE_FIELD]'

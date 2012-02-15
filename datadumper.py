@@ -29,36 +29,36 @@ class BlindDataDumper:
     name = 'BlindDataDumper'
 
     def get_databases(self, mole, injectable_field):
-        count_fun = lambda x,y: mole._dbms_mole.schema_blind_count_query(x, y)
-        length_fun = lambda x: lambda y,z: mole._dbms_mole.schema_blind_len_query(y, z, offset=x)
-        query_fun = lambda x,y,z: mole._dbms_mole.schema_blind_data_query(x, y, offset=z)
+        count_fun = lambda x, y: mole._dbms_mole.schema_blind_count_query(x, y)
+        length_fun = lambda x: lambda y, z: mole._dbms_mole.schema_blind_len_query(y, z, offset=x)
+        query_fun = lambda x, y, z: mole._dbms_mole.schema_blind_data_query(x, y, offset=z)
         data = self._blind_query(mole, count_fun, length_fun, query_fun)
         return list(map(lambda x: x[0], data))
 
     def get_tables(self, mole, db, injectable_field):
-        count_fun = lambda x,y: mole._dbms_mole.table_blind_count_query(x, y, db=db)
-        length_fun = lambda x: lambda y,z: mole._dbms_mole.table_blind_len_query(y, z, db=db, offset=x)
-        query_fun = lambda x,y,z: mole._dbms_mole.table_blind_data_query(x, y, db=db, offset=z)
+        count_fun = lambda x, y: mole._dbms_mole.table_blind_count_query(x, y, db=db)
+        length_fun = lambda x: lambda y, z: mole._dbms_mole.table_blind_len_query(y, z, db=db, offset=x)
+        query_fun = lambda x, y, z: mole._dbms_mole.table_blind_data_query(x, y, db=db, offset=z)
         data = self._blind_query(mole, count_fun, length_fun, query_fun)
         return list(map(lambda x: x[0], data))
 
     def get_columns(self, mole, db, table, injectable_field):
-        count_fun = lambda x,y: mole._dbms_mole.columns_blind_count_query(x, y, db=db, table=table)
-        length_fun = lambda x: lambda y,z: mole._dbms_mole.columns_blind_len_query(y, z, db=db, table=table, offset=x)
-        query_fun = lambda x,y,z: mole._dbms_mole.columns_blind_data_query(x, y, db=db, table=table, offset=z)
+        count_fun = lambda x, y: mole._dbms_mole.columns_blind_count_query(x, y, db=db, table=table)
+        length_fun = lambda x: lambda y, z: mole._dbms_mole.columns_blind_len_query(y, z, db=db, table=table, offset=x)
+        query_fun = lambda x, y, z: mole._dbms_mole.columns_blind_data_query(x, y, db=db, table=table, offset=z)
         data = self._blind_query(mole, count_fun, length_fun, query_fun)
         return list(map(lambda x: x[0], data))
 
     def get_fields(self, mole, db, table, fields, where, injectable_field, start=0, limit=0x7fffffff):
-        count_fun = lambda x,y: mole._dbms_mole.fields_blind_count_query(x, y, db=db, table=table, where=where)
-        length_fun = lambda x: lambda y,z: mole._dbms_mole.fields_blind_len_query(y, z, fields=fields, db=db, table=table, offset=x, where=where)
-        query_fun = lambda x,y,z: mole._dbms_mole.fields_blind_data_query(x, y, fields=fields, db=db, table=table, offset=z, where=where)
+        count_fun = lambda x, y: mole._dbms_mole.fields_blind_count_query(x, y, db=db, table=table, where=where)
+        length_fun = lambda x: lambda y, z: mole._dbms_mole.fields_blind_len_query(y, z, fields=fields, db=db, table=table, offset=x, where=where)
+        query_fun = lambda x, y, z: mole._dbms_mole.fields_blind_data_query(x, y, fields=fields, db=db, table=table, offset=z, where=where)
         return self._blind_query(mole, count_fun, length_fun, query_fun, start=start, limit=limit)
 
     def get_dbinfo(self, mole, injectable_field):
         count_fun = None
-        length_fun = lambda x: lambda y,z: mole._dbms_mole.dbinfo_blind_len_query(y, z)
-        query_fun = lambda x,y,z: mole._dbms_mole.dbinfo_blind_data_query(x, y)
+        length_fun = lambda x: lambda y, z: mole._dbms_mole.dbinfo_blind_len_query(y, z)
+        query_fun = lambda x, y, z: mole._dbms_mole.dbinfo_blind_data_query(x, y)
 
         data = self._blind_query(mole, count_fun, length_fun, query_fun, row_count=1)
         if len(data) != 1 or len(data[0]) != 3:
@@ -66,15 +66,15 @@ class BlindDataDumper:
         return [data[0][0], data[0][1], data[0][2]]
 
     def get_user_creds(self, mole, injectable_field):
-        count_fun = lambda x,y: mole._dbms_mole.user_creds_blind_count_query(x, y)
-        length_fun = lambda x: lambda y,z: mole._dbms_mole.user_creds_blind_len_query(y, z, offset=x)
-        query_fun = lambda x,y,z: mole._dbms_mole.user_creds_blind_data_query(x, y, offset=z)
+        count_fun = lambda x, y: mole._dbms_mole.user_creds_blind_count_query(x, y)
+        length_fun = lambda x: lambda y, z: mole._dbms_mole.user_creds_blind_len_query(y, z, offset=x)
+        query_fun = lambda x, y, z: mole._dbms_mole.user_creds_blind_data_query(x, y, offset=z)
         return self._blind_query(mole, count_fun, length_fun, query_fun)
 
     def find_tables_like(self, mole, db, table_filter, injectable_field):
-        count_fun = lambda x,y: mole._dbms_mole.tables_like_blind_count_query(x, y, db=db, table_filter=table_filter)
-        length_fun = lambda x: lambda y,z: mole._dbms_mole.tables_like_blind_len_query(y, z, db=db, table_filter=table_filter, offset=x)
-        query_fun = lambda x,y,z: mole._dbms_mole.tables_like_blind_data_query(x, y, db=db, table_filter=table_filter, offset=z)
+        count_fun = lambda x, y: mole._dbms_mole.tables_like_blind_count_query(x, y, db=db, table_filter=table_filter)
+        length_fun = lambda x: lambda y, z: mole._dbms_mole.tables_like_blind_len_query(y, z, db=db, table_filter=table_filter, offset=x)
+        query_fun = lambda x, y, z: mole._dbms_mole.tables_like_blind_data_query(x, y, db=db, table_filter=table_filter, offset=z)
         data = self._blind_query(mole, count_fun, length_fun, query_fun)
         return list(map(lambda x: x[0], data))
 
@@ -99,14 +99,14 @@ class BlindDataDumper:
                 lambda x: 'Trying count: {0}'.format(x),
                 lambda x: 'At most count: {0}'.format(x)
             )
-            count = min(count, limit+start)
+            count = min(count, limit + start)
             output_manager.advance('Found row count: {0}'.format(count)).line_break()
         results = []
         row = start
         while row < count:
             if mole.stop_query:
                 return results
-            len_funct = lambda i: self._generic_blind_len(mole, length_fun(row + i), None, None, print_stats = False)
+            len_funct = lambda i: self._generic_blind_len(mole, length_fun(row + i), None, None, print_stats=False)
             to_fetch = min(count - row, len(mole.threader.threads))
             if to_fetch > 1:
                 output_manager.info('Guessing length for the next {0} records.'.format(to_fetch))
@@ -115,7 +115,7 @@ class BlindDataDumper:
             lengths = mole.threader.execute(to_fetch, len_funct)
             for length in lengths:
                 output_manager.advance('Guessed length: {0}'.format(length)).line_break()
-                output=''
+                output = ''
                 if mole.stop_query:
                     return results
                 sqli_output = output_manager.blind_output(length)
@@ -126,7 +126,7 @@ class BlindDataDumper:
                 row += 1
         return results
 
-    def _generic_blind_len(self, mole, count_fun, trying_msg, max_msg, print_stats = True):
+    def _generic_blind_len(self, mole, count_fun, trying_msg, max_msg, print_stats=True):
         length = 0
         last = 1
         while True and not mole.stop_query:
@@ -157,13 +157,13 @@ class BlindDataDumper:
         return pri
 
     def _blind_query_character(self, mole, query_fun, index, offset, output=None):
-        pri   = ord(' ')
-        last  = 126
+        pri = ord(' ')
+        last = 126
         index = index + 1
         while True:
             if mole.stop_query:
                 return None
-            medio = (pri + last)//2
+            medio = (pri + last) // 2
             try:
                 response = mole.requester.request(
                             mole.generate_url(query_fun(index, medio, offset))
@@ -171,12 +171,12 @@ class BlindDataDumper:
             except ConnectionException as ex:
                 raise QueryError('Connection Error: (' + str(ex) + ')')
             if mole.needle in response:
-                pri = medio+1
+                pri = medio + 1
             else:
                 last = medio
             if medio == last - 1:
-                output.set(chr(medio+1), index - 1)
-                return chr(medio+1)
+                output.set(chr(medio + 1), index - 1)
+                return chr(medio + 1)
             else:
                 if pri == last:
                     output.set(chr(medio), index - 1)
@@ -190,7 +190,7 @@ class StringUnionDataDumper:
 
     def get_databases(self, mole, injectable_field, limit=0x7fffffff):
         count_query = mole._dbms_mole.schema_count_query(injectable_field)
-        query_gen =  lambda x: mole._dbms_mole.schema_query(injectable_field, x)
+        query_gen = lambda x: mole._dbms_mole.schema_query(injectable_field, x)
         return self._generic_query(mole, count_query, query_gen, limit=limit)
 
     def get_tables(self, mole, db, injectable_field):
@@ -205,7 +205,7 @@ class StringUnionDataDumper:
 
     def get_fields(self, mole, db, table, fields, where, injectable_field, start=0, limit=0x7fffffff):
         count_query = mole._dbms_mole.fields_count_query(db, table, injectable_field, where=where)
-        query_gen = lambda x: mole._dbms_mole.fields_query(db, table, fields, injectable_field, offset=x+start, where=where)
+        query_gen = lambda x: mole._dbms_mole.fields_query(db, table, fields, injectable_field, offset=x + start, where=where)
         return self._generic_query(mole, count_query, query_gen, lambda x: x, start=start, limit=limit)
 
     def get_user_creds(self, mole, injectable_field):
@@ -246,7 +246,7 @@ class StringUnionDataDumper:
     def _generic_query(self, mole,
                              count_query,
                              query_generator,
-                             result_parser = lambda x: x[0],
+                             result_parser=lambda x: x[0],
                              start=0, limit=0x7fffffff):
         try:
             req = mole.make_request(count_query)
@@ -259,7 +259,7 @@ class StringUnionDataDumper:
             count = int(result[0])
             if count == 0:
                 return []
-            count = min(count, limit+start)
+            count = min(count, limit + start)
             if start >= count:
                 return []
             output_manager.advance('Rows: {0}'.format(count)).line_break()
@@ -267,7 +267,7 @@ class StringUnionDataDumper:
             dump_result = []
             mole.stop_query = False
             gen_query_item = lambda i: self._generic_query_item(mole, query_generator, i, rows_done, result_parser)
-            dump_result = mole.threader.execute(count-start, gen_query_item)
+            dump_result = mole.threader.execute(count - start, gen_query_item)
             dump_result.sort()
             return dump_result
 
@@ -275,7 +275,7 @@ class StringUnionDataDumper:
                                   query_generator,
                                   offset,
                                   rows_done_counter,
-                                  result_parser = lambda x: x[0]):
+                                  result_parser=lambda x: x[0]):
 
         if mole.stop_query:
             return None
@@ -375,7 +375,7 @@ class IntegerUnionDataDumper:
         length = int(length[0])
 
         sqli_output = output_manager.blind_output(length)
-        query_gen = lambda index,offset: mole._dbms_mole.dbinfo_integer_query(index,
+        query_gen = lambda index, offset: mole._dbms_mole.dbinfo_integer_query(index,
                                                                               injectable_field)
         query_item_gen = lambda x: self._generic_integer_query_item(mole,
                                                                     query_gen,
@@ -392,7 +392,7 @@ class IntegerUnionDataDumper:
 
     def find_tables_like(self, mole, db, table_filter, injectable_field):
         count_query = mole._dbms_mole.tables_like_integer_count_query(db, injectable_field, table_filter)
-        query_gen = lambda index,offset: mole._dbms_mole.tables_like_integer_query(index,
+        query_gen = lambda index, offset: mole._dbms_mole.tables_like_integer_query(index,
                                                                                    db,
                                                                                    injectable_field,
                                                                                    table_filter=table_filter,
@@ -416,7 +416,7 @@ class IntegerUnionDataDumper:
         query = mole._dbms_mole.read_file_integer_len_query(filename, injectable_field)
         try:
             req = mole.make_request(query)
-        except ConnectionException as es:
+        except ConnectionException as ex:
             raise QueryError('Connection Error: (' + str(ex) + ')')
         length = mole._dbms_mole.parse_results(req)
         if length is None or len(length) == 0:
@@ -424,7 +424,7 @@ class IntegerUnionDataDumper:
         length = int(length[0])
 
         sqli_output = output_manager.blind_output(length)
-        query_gen = lambda index,offset: mole._dbms_mole.read_file_integer_query(index,
+        query_gen = lambda index, offset: mole._dbms_mole.read_file_integer_query(index,
                                                                               filename,
                                                                               injectable_field)
         query_item_gen = lambda x: self._generic_integer_query_item(mole,
@@ -444,7 +444,7 @@ class IntegerUnionDataDumper:
                                      count_query,
                                      length_query,
                                      query_generator,
-                                     result_parser = lambda x: x[0],
+                                     result_parser=lambda x: x[0],
                                      start=0, limit=0x7fffffff):
         try:
             req = mole.make_request(count_query)
@@ -457,11 +457,11 @@ class IntegerUnionDataDumper:
             count = int(result[0])
             if count == 0:
                 return []
-            count = min(count, limit+start)
+            count = min(count, limit + start)
             output_manager.advance('Rows: {0}'.format(count)).line_break()
             dump_result = []
             mole.stop_query = False
-            for i in range(start,count):
+            for i in range(start, count):
                 if mole.stop_query:
                     break
                 try:
@@ -484,7 +484,7 @@ class IntegerUnionDataDumper:
         if mole.stop_query:
             return None
         try:
-            req = mole.make_request(query_generator(index+1, offset=offset))
+            req = mole.make_request(query_generator(index + 1, offset=offset))
         except ConnectionException as ex:
             raise QueryError('Connection Error: (' + str(ex) + ')')
         result = mole._dbms_mole.parse_results(req)
