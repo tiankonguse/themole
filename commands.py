@@ -56,7 +56,7 @@ class Command:
             except StoppedQueryException:
                 raise QuietCommandException()
 
-    def execute(self, mole, params, output_manager):
+    def execute(self, mole, params):
         pass
 
     def usage(self, cmd_name):
@@ -72,7 +72,7 @@ class Command:
         return True
 
 class URLCommand(Command):
-    def execute(self, mole, params, output_manager):
+    def execute(self, mole, params):
         if len(params) < 1:
             if not mole.get_url():
                 output_manager.normal('No url defined').line_break()
@@ -96,7 +96,7 @@ class URLCommand(Command):
             return []
 
 class CookieCommand(Command):
-    def execute(self, mole, params, output_manager):
+    def execute(self, mole, params):
         if not mole.requester:
             raise CommandException('URL must be set first.')
         if len(params) == 1:
@@ -112,8 +112,27 @@ class CookieCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' [COOKIE]'
 
+class RedirectCommand(Command):
+    def execute(self, mole, params):
+        if len(params) == 0:
+            output_manager.normal('on' if mole.requester.follow_redirects else 'off').line_break()
+        else:
+            if params[0] == 'on':
+                value = True
+            elif params[0] == 'off':
+                value = False
+            else:
+                raise CommandException('Expected "on" or "off" as argument')
+            mole.requester.follow_redirects = value
+    
+    def usage(self, cmd_name):
+        return cmd_name + ' [on|off]'
+        
+    def parameters(self, mole, current_params):
+        return ['on', 'off'] if len(current_params) == 0 else []
+
 class NeedleCommand(Command):
-    def execute(self, mole, params, output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             if not mole.needle:
                 output_manager.normal('No needle defined').line_break()
@@ -129,7 +148,7 @@ class NeedleCommand(Command):
         return []
 
 class ClearScreenCommand(Command):
-    def execute(self, mole, params, output_manager):
+    def execute(self, mole, params):
         if os.name == 'nt':
             os.system('cls')
         else:
@@ -143,7 +162,7 @@ class FetchDataCommand(Command):
                         'columns' : ColumnsCommand(True),
                     }
 
-    def execute(self, mole, params, output_manager):
+    def execute(self, mole, params):
         self.check_initialization(mole)
         if len(params) == 0:
             raise CommandException('At least one parameter is required!')
@@ -166,7 +185,7 @@ class SchemasCommand(Command):
     def __init__(self, force_fetch=False):
         self.force_fetch = force_fetch
 
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         self.check_initialization(mole)
         try:
             schemas = mole.get_databases(self.force_fetch)
@@ -187,7 +206,7 @@ class TablesCommand(Command):
     def __init__(self, force_fetch=False):
         self.force_fetch = force_fetch
 
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) != 1:
             raise CommandException('Database name required')
         try:
@@ -213,7 +232,7 @@ class TablesCommand(Command):
             return []
 
 class FindTablesLikeCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) != 2:
             raise CommandException('Database and table filter required.')
         try:
@@ -242,7 +261,7 @@ class ColumnsCommand(Command):
     def __init__(self, force_fetch=False):
         self.force_fetch = force_fetch
 
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) != 2:
             raise CommandException('Database name required')
         try:
@@ -273,7 +292,7 @@ class ColumnsCommand(Command):
             return []
 
 class QueryCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) < 3:
             raise CommandException('Database name required')
         try:
@@ -342,7 +361,7 @@ class QueryCommand(Command):
         return False
 
 class DBInfoCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         self.check_initialization(mole)
         try:
             info = mole.get_dbinfo()
@@ -357,7 +376,7 @@ class DBInfoCommand(Command):
         return []
 
 class UserCredentialsCommand(Command):
-    def execute(self, mole, params, output_manager):
+    def execute(self, mole, params):
         self.check_initialization(mole)
         try:
             result = mole.get_user_creds()
@@ -373,7 +392,7 @@ class UserCredentialsCommand(Command):
         return []
 
 class BruteforceTablesCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         self.check_initialization(mole)
         if len(params) < 2:
             raise CommandException("DB name and table names to bruteforce required.")
@@ -390,7 +409,7 @@ class BruteforceTablesCommand(Command):
         return []
 
 class BruteforceUserTableCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         self.check_initialization(mole)
         if len(params) == 0:
             raise CommandException("DB name expected as argument.")
@@ -407,13 +426,13 @@ class BruteforceUserTableCommand(Command):
         return []
 
 class ExitCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         mole.abort_query()
         mole.threader.stop()
         exit(0)
 
 class QueryModeCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             output_manager.normal(mole.mode).line_break()
         else:
@@ -428,7 +447,7 @@ class QueryModeCommand(Command):
         return cmd_name + ' <union|blind>'
 
 class PrefixCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             output_manager.normal(mole.prefix).line_break()
         else:
@@ -441,7 +460,7 @@ class PrefixCommand(Command):
         return cmd_name + ' [PREFIX]'
 
 class SuffixCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             output_manger.normal(mole.suffix).line_break()
         else:
@@ -454,7 +473,7 @@ class SuffixCommand(Command):
         return cmd_name + ' [SUFFIX]'
 
 class DelayCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             output_manager.normal(mole.delay).line_break()
         else:
@@ -466,7 +485,7 @@ class DelayCommand(Command):
         return cmd_name + ' [DELAY]'
 
 class VerboseCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             output_manager.normal('on' if mole.verbose else 'off').line_break()
         else:
@@ -481,7 +500,7 @@ class VerboseCommand(Command):
         return cmd_name + ' <on|off>'
 
 class OutputCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             output_manager.normal(output_manager.result_output).line_break()
         else:
@@ -496,7 +515,7 @@ class OutputCommand(Command):
         return cmd_name + ' <pretty|plain>'
 
 class UsageCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             raise CommandException('Command required as argument')
         else:
@@ -513,7 +532,7 @@ class BaseFilterCommand(Command):
     def __init__(self, functor):
         self.functor = functor
 
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             filters = self.functor(mole).active_filters_to_string()
             if len(filters) == 0:
@@ -549,7 +568,7 @@ class HTMLFilterCommand(BaseFilterCommand):
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda x: x.html_filter)
 
-    def execute(self, mole, params, output_manager):
+    def execute(self, mole, params):
         try:
             BaseFilterCommand.execute(self, mole, params, defunct_output_manager)
         except FilterCreationError as ex:
@@ -559,7 +578,7 @@ class QueryFilterCommand(BaseFilterCommand):
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda x: x.query_filter)
 
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         try:
             BaseFilterCommand.execute(self, mole, params, defunct_output_manager)
         except CommandException as ex:
@@ -596,7 +615,7 @@ class QueryFilterCommand(BaseFilterCommand):
         return cmd_name + ' (add|del|config) [FILTER_NAME [ARGS]]'
 
 class ExportCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) != 2:
             raise CommandException('Expected type and filename as parameter')
         if params[0] not in ['xml']:
@@ -616,7 +635,7 @@ class ExportCommand(Command):
         return cmd_name + ' <format> <output_filename>'
 
 class ImportCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) != 2:
             raise CommandException('Expected type and filename as parameter')
         if params[0] not in ['xml']:
@@ -638,7 +657,7 @@ class ImportCommand(Command):
         return cmd_name + ' <format> <input_filename>'
         
 class InjectableFieldCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             inj_field = mole.injectable_field
             if inj_field is None:
@@ -662,7 +681,7 @@ class InjectableFieldCommand(Command):
         return cmd_name + ' [INJECTABLE_FIELD]'
 
 class ReadFileCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         self.check_initialization(mole)
         if len(params) != 1:
             raise CommandException('Expected filename as parameter')
@@ -681,7 +700,7 @@ class ReadFileCommand(Command):
 class MethodCommand(Command):
     accepted_methods = ['GET', 'POST', 'Cookie']
 
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             method = mole.requester.method
             if method == 'POST':
@@ -725,7 +744,7 @@ class MethodCommand(Command):
 class VulnerableParamCommand(Command):
     accepted_methods = ['GET', 'POST', 'Cookie']
 
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             method, param = mole.requester.get_vulnerable_param()
             output_manager.normal('{0} {1}'.format(method, param)).line_break()
@@ -755,7 +774,7 @@ class VulnerableParamCommand(Command):
         return cmd_name + ' (GET | POST | Cookie) <VULNERABLE_PARAM>'
 
 class HTTPHeadersCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             max_len = max(map(len, mole.requester.headers.keys()))
             for key in mole.requester.headers:
@@ -786,7 +805,7 @@ class HTTPHeadersCommand(Command):
         return cmd_name + ' [add|del] [NAME [VALUE]]'
 
 class AuthCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) < 2:
             raise CommandException("Auth method and user credentials required.")
         if params[0] == 'basic':
@@ -806,7 +825,7 @@ class AuthCommand(Command):
         return cmd_name + ' <BASIC|DIGEST> USERNAME:PASSWORD'
 
 class EncodingCommand(Command):
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             if mole.requester.encoding is not None:
                 output_manager.normal(mole.requester.encoding).line_break()
@@ -828,7 +847,7 @@ class EncodingCommand(Command):
 class RecursiveCommand(Command):
     first_param = ['schemas', 'tables']
 
-    def execute(self, mole, params, defunct_output_manager):
+    def execute(self, mole, params):
         if len(params) == 0:
             raise CommandException('Recursive command needs at least an argument')
         if len(params) == 1 and params[0] not in self.first_param:
@@ -891,6 +910,7 @@ class CommandManager:
                       'find_tables' : BruteforceTablesCommand(),
                       'find_tables_like' : FindTablesLikeCommand(),
                       'find_users_table'  : BruteforceUserTableCommand(),
+                      'follow_redirects' : RedirectCommand(),
                       'headers'  : HTTPHeadersCommand(),
                       'htmlfilter'  : HTMLFilterCommand(),
                       'import'   : ImportCommand(),

@@ -61,6 +61,7 @@ class HttpRequester:
         self.vulnerable_param = None
         self.vulnerable_param_group = None
         self.set_method(method)
+        self.follow_redirects = False
         if url is not None:
             self.set_url(url)
         if vulnerable_param is not None:
@@ -172,6 +173,14 @@ class HttpRequester:
                 time.sleep(self.delay)
                 connection.request(self.method, self.path + '?' + get_params, post_params, headers)
                 resp = connection.getresponse()
+                resp_headers = dict(resp.getheaders())
+                while self.follow_redirects and resp.getcode() == 302 and 'Location' in resp_headers:
+                    resp.read() # Need to read whole request before sending a new one
+                    parsed = urlparse(resp_headers["Location"])
+                    headers["Host"] = parsed.netloc
+                    connection.request('GET', parsed.path, None, headers)
+                    resp = connection.getresponse()
+                    resp_headers = dict(resp.getheaders())
                 data = self.decode(resp.read())
                 break
             except (socket.error,
