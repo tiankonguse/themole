@@ -1,0 +1,217 @@
+#!/usr/bin/python3
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+# MA 02110-1301, USA.
+#
+# Developed by: Nasel(http://www.nasel.com.ar)
+#
+# Authors:
+# Matías Fontanini
+# Santiago Alessandri
+# Gastón Traberg
+
+import urllib.parse
+import time
+
+from exceptions import InvalidMethodException, InvalidParamException
+
+from request import Request
+
+class Requester(object):
+
+    headers = {
+        'User-Agent': 'Mozilla/The Mole (themole.nasel.com.ar)',
+        'Accept-Language': 'en-us',
+        'Accept-Encoding': 'identity',
+        'Keep-Alive': '300',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'max-age=0',
+    }
+
+    accepted_methods = ['GET', 'POST', 'Cookie']
+
+    def __init__(self, sender, url=None, vulnerable_param=None, delay=0, method='GET', cookie=''):
+        self.__sender = sender
+        self.__delay = delay
+        self.__method = None
+        self.__headers = Requester.headers.copy()
+        self.__url = None
+        self.__get_parameters = {}
+        self.__post_parameters = {}
+        self.__cookie_parameters = {}
+        self.__vulnerable_param = None
+        self.__vulnerable_param_group = None
+        self.__query_filters = []
+        self.__request_filters = []
+        self.__response_filters = []
+        self.__sender = None
+        self.method(method)
+        if url is not None:
+            self.url = url
+        if vulnerable_param is not None:
+            self.set_vulnerable_param(method, vulnerable_param)
+        if cookie:
+            self.cookie_parameters = cookie
+
+    def request(self, query):
+
+        for plugin in self.__query_filters:
+            query = plugin.filter_(query)
+
+        get_params = self.__get_parameters.copy()
+        post_params = self.__post_parameters.copy()
+        cookie_params = self.__cookie_parameters.copy()
+        headers = Requester.headers.copy()
+        if self.__vulnerable_param_group == 'GET':
+            get_params[self.__vulnerable_param] += query
+        elif self.__vulnerable_param_group == 'POST':
+            post_params[self.__vulnerable_param] += query
+        else:
+            cookie_params[self.__vulnerable_param] += query
+
+        request = Request(self.__method,
+                          self.__url,
+                          get_params,
+                          post_params,
+                          cookie_params,
+                          headers)
+
+        for plugin in self.__request_filters:
+            plugin.filter_(request)
+
+        time.sleep(self.__delay)
+        response = self.__sender.send(request)
+
+        for plugin in self.__response_filters:
+            plugin.filter_(response)
+
+        return response.content
+
+    @property
+    def sender(self):
+        return self.__sender
+
+    @sender.setter
+    def sender(self, sender):
+        self.__sender = sender
+
+    @property
+    def delay(self):
+        return self.__delay
+
+    @delay.setter
+    def delay(self, delay):
+        self.__delay = delay
+
+    @property
+    def method(self):
+        return self.__method
+
+    @method.setter
+    def method(self, method):
+        if method not in Requester.accepted_methods:
+            raise InvalidMethodException('Error: {0} is invalid!'.format(self.__method))
+        self.__method = method
+        if method == 'POST':
+            self.__headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        else:
+            if 'Content-Type' in self.__headers:
+                del self.__headers['Content-Type']
+        self.__vulnerable_param = None
+        self.__vulnerable_param_group = None
+
+    @property
+    def url(self):
+        return self.__url + '?' + urllib.parse.urlencode(self.__get_parameters, True)
+
+    @url.setter
+    def url(self, url):
+        parsed = urllib.parse.urlparse(url)
+        self.__url = urllib.parse.urlunsplit((parsed.scheme,
+                                              parsed.netloc,
+                                              parsed.path,
+                                              '',
+                                              ''))
+        self.get_parameters = parsed.query
+        self.__post_parameters = {}
+
+    @property
+    def get_parameters(self):
+        return urllib.parse.urlencode(self.__get_parameters, True)
+
+    @get_parameters.setter
+    def get_parameters(self, get_params):
+        self.__get_parameters = urllib.parse.parse_qs(get_params, True)
+        for param in self.__get_parameters:
+            self.__get_parameters[param] = self.__get_parameters[param][-1]
+
+    @property
+    def post_parameters(self):
+        return urllib.parse.urlencode(self.__post_parameters, True)
+
+    @post_parameters.setter
+    def post_parameters(self, post_params):
+        self.__post_parameters = urllib.parse.parse_qs(post_params, True)
+        for param in self.__post_parameters:
+            self.__post_parameters[param] = self.__post_parameters[param][-1]
+
+    @property
+    def cookie_parameters(self):
+        return urllib.parse.urlencode(self.__cookie_parameters, True)
+
+    @cookie_parameters.setter
+    def cookie_parameters(self, cookie_params):
+        self.__cookie_parameters = urllib.parse.parse_qs(cookie_params, True)
+        for param in self.__cookie_parameters:
+            self.__cookie_parameters[param] = self.__cookie_parameters[param][-1]
+
+    def get_vulnerable_param(self):
+        return (self.__vulnerable_param_group, self.__vulnerable_param)
+
+    def set_vulnerable_param(self, method, vulnerable_param):
+        if vulnerable_param is not None:
+            if method == 'GET' and vulnerable_param not in self.__get_parameters:
+                raise InvalidParamException('{0} is not present in the given URL.'.format(vulnerable_param))
+            if method == 'POST' and vulnerable_param not in self.__post_parameters:
+                raise InvalidParamException('{0} is not in the POST parameters.'.format(vulnerable_param))
+            if method == 'Cookie' and vulnerable_param not in self.__cookie_parameters:
+                raise InvalidParamException('{0} is not in the Cookie parameters.'.format(vulnerable_param))
+            self.__vulnerable_param = vulnerable_param
+        self.__vulnerable_param_group = method
+
+
+    @property
+    def query_filters(self):
+        return self.__query_filters
+
+    @query_filters.setter
+    def query_filters(self, query_filters):
+        self.__query_filters = query_filters
+
+    @property
+    def request_filters(self):
+        return self.__request_filters
+
+    @request_filters.setter
+    def request_filters(self, request_filters):
+        self.__request_filters = request_filters
+
+    @property
+    def response_filters(self):
+        return self.__response_filters
+
+    @response_filters.setter
+    def response_filters(self, response_filters):
+        self.__response_filters = response_filters

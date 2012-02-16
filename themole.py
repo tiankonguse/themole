@@ -22,9 +22,6 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-import time
-import sys
-
 from exceptions import *
 from domanalyser import DomAnalyser
 from dbmsmoles import DbmsMole, MysqlMole, PostgresMole, SQLServerMole, OracleMole
@@ -34,7 +31,7 @@ from xmlexporter import XMLExporter
 from injectioninspector import InjectionInspector
 from datadumper import *
 from filters import QueryFilterManager, HTMLFilterManager
-import connection
+from connection.Requester import Requester
 
 class TheMole:
 
@@ -69,7 +66,7 @@ class TheMole:
 
     dbms_mole_list = [MysqlMole, SQLServerMole, PostgresMole, OracleMole]
 
-    def __init__(self, threads = 4):
+    def __init__(self, threads=4):
         self.initialized = False
         self.needle = None
         self.url = None
@@ -89,7 +86,7 @@ class TheMole:
         self.query_columns = 0
         self.injectable_field = 0
         self.database_dump = DatabaseDump()
-        self.requester = connection.HttpRequester()
+        self.requester = Requester()
         self.query_filter = QueryFilterManager()
         self.html_filter = HTMLFilterManager()
 
@@ -217,7 +214,7 @@ class TheMole:
             return False
         finally:
             output_manager.echo_output = True
-        output_manager.line_break()   
+        output_manager.line_break()
         return False
 
     def generate_url(self, injection_string):
@@ -327,7 +324,7 @@ class TheMole:
     def brute_force_users_tables(self, db):
         return self.brute_force_tables(db, TheMole.users_tables)
 
-    def set_url(self, url, vulnerable_param = None):
+    def set_url(self, url, vulnerable_param=None):
         if not url.startswith('http://') and not url.startswith('https://'):
             url = 'http://' + url
 
