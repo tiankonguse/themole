@@ -22,7 +22,7 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 
 class Request():
     def __init__(self, method, url, get_parameters={}, post_parameters={}, cookie={}, headers={}):
@@ -35,10 +35,10 @@ class Request():
         self.post_parameters = post_parameters
         self.cookie = cookie
         self.headers = headers
-        self.headers["Cookie"] = cookie
+        self.headers["Cookie"] = urlencode(cookie)
 
     def str_url(self):
-        return self.proto + self.host + self.path + '?' + urllib.parse.urlencode(self.get_parameters)
+        return self.proto + self.host + self.path + '?' + urlencode(self.get_parameters)
 
     def str_uri(self):
-        return self.path + '?' + urllib.parse.urlencode(self.get_parameters)
+        return self.path + '?' + urlencode(self.get_parameters)

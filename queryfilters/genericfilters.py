@@ -28,7 +28,7 @@ from queryfilters import register_query_filter
 class CaseFilter(BaseQueryFilter):
     word_delimiters = {' ', '/', '(', ')'}
 
-    def filter(self, query):
+    def filter_(self, query):
         query_list = list(query)
         so_far = ''
         skip_next = False
@@ -57,11 +57,11 @@ class CaseFilter(BaseQueryFilter):
 
 
 class Spaces2CommentsFilter(BaseQueryFilter):
-    def filter(self, query):
+    def filter_(self, query):
         return query.replace(' ', '/**/')
 
 class Spaces2NewLineFilter(BaseQueryFilter):
-    def filter(self, query):
+    def filter_(self, query):
         return query.replace(' ', '\n')
 
 class SQLServerCollationFilter(BaseQueryFilter):
@@ -72,7 +72,7 @@ class SQLServerCollationFilter(BaseQueryFilter):
         self.blacklist = []
         self.collation = params[0] if len(params) == 1 else 'DATABASE_DEFAULT'
 
-    def filter(self, query):
+    def filter_(self, query):
         try:
             matches = self.cast_match.findall(query)
             for i in matches:
@@ -130,7 +130,7 @@ class BetweenComparerFilter(BaseQueryFilter):
         BaseQueryFilter.__init__(self, name, params)
         self.regex = re.compile('([\d]+)[ ]+([<>])[ ]+(\(select [\w\d\(\) _\-\+,\*@\.=]+\))')
 
-    def filter(self, query):
+    def filter_(self, query):
         match = self.regex.search(query)
         if match:
             num, op, select = match.groups()
@@ -144,7 +144,7 @@ class ParenthesisFilter(BaseQueryFilter):
         BaseQueryFilter.__init__(self, name, params)
         self.regex = re.compile('(where|and)[ ]+([\'"\d\w_]+)[ ]*(between|like|[<>=])[ ]*(\(.+\)|[\'"\d\w]+)', re.IGNORECASE)
 
-    def filter(self, query):
+    def filter_(self, query):
         match = self.regex.search(query)
         while match:
             keyword,op1,oper,op2 = match.groups()
@@ -155,7 +155,7 @@ class ParenthesisFilter(BaseQueryFilter):
         return query
 
 class NoAsteriskFilter(BaseQueryFilter):
-    def filter(self, query):
+    def filter_(self, query):
         return query.replace('*', '1')
 
 class RegexFilter(BaseQueryFilter):
@@ -169,7 +169,7 @@ class RegexFilter(BaseQueryFilter):
         except Exception as ex:
             raise FilterCreationError(str(ex))
 
-    def filter(self, query):
+    def filter_(self, query):
         return self.regex.sub(self.replacement, query)
 
     def __str__(self):

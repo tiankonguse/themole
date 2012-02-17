@@ -27,7 +27,7 @@ class BaseQueryFilter:
         self.name = name
         pass
 
-    def filter(self, query):
+    def filter_(self, query):
         pass
     
     def config(self, params):
