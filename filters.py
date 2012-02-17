@@ -79,6 +79,10 @@ class HTMLFilterManager(BaseFilterManager):
         htmlfilters.register_response_filter = self.register_filter
         BaseFilterManager.__init__(self, 'htmlfilters')
 
+    def apply_filters(self, response):
+        for x in self.filters:
+            return x[1].filter_(response)
+
 class RequestFilterManager(BaseFilterManager):
     def __init__(self):
         requestfilters.register_request_filter = self.register_filter
