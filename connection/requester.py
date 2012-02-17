@@ -28,7 +28,7 @@ import chardet
 
 from moleexceptions import InvalidMethodException, InvalidParamException, EncodingNotFound
 from connection.request import Request
-from filters import QueryFilterManager, RequestFilterManager, HTMLFilterManager
+from filters import QueryFilterManager, RequestFilterManager, ResponseFilterManager
 
 
 class Requester(object):
@@ -57,7 +57,7 @@ class Requester(object):
         self.__vulnerable_param_group = None
         self.__query_filters = QueryFilterManager()
         self.__request_filters = RequestFilterManager()
-        self.__response_filters = HTMLFilterManager()
+        self.__response_filters = ResponseFilterManager()
         self.__encoding = None
         self.method = method
         if url is not None:

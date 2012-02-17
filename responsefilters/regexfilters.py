@@ -24,11 +24,12 @@
 
 import re, sre_constants
 from moleexceptions import FilterCreationError
-from htmlfilters.base import *
-from htmlfilters import register_response_filter
+from responsefilters.base import ResponseFilter
+from responsefilters import register_response_filter
 
-class BaseRegexHTMLFilter(HTMLFilter):
+class BaseRegexHTMLFilter(ResponseFilter):
     def __init__(self, name, filter_str, replacement):
+        ResponseFilter.__init__(self, name, [])
         self.replacement = replacement
         try:
             self.regex = re.compile(filter_str, flags=re.DOTALL | re.MULTILINE)
@@ -61,9 +62,9 @@ class HTMLPretifierFilter(BaseRegexHTMLFilter):
     def __init__(self, name, params):
         BaseRegexHTMLFilter.__init__(self, name, '\(<html>|<body>|</html>|</body>\)', '')
 
-class ScriptErrorFilter(HTMLFilter):
+class ScriptErrorFilter(ResponseFilter):
     def __init__(self, name, params):
-        HTMLFilter.__init__(self, name, params)
+        ResponseFilter.__init__(self, name, params)
         self.error_filters = [
                     # PHP verbose errors.
                     re.compile("<br />\n<b>Warning</b>:  [\w_\d]+\(\)(:\s|\s\[.*\]:)[\w :<>\\\\_\'\.\(\)/-]+ on line <b>(\d+)</b><br />"),
@@ -73,7 +74,7 @@ class ScriptErrorFilter(HTMLFilter):
         for i in self.error_filters:
             response.content = i.sub('', response.content)
         return response
-    
+
 
 register_response_filter('regex_rem', RemoverRegexHTMLFilter)
 register_response_filter('regex_rep', ReplacerRegexHTMLFilter)

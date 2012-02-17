@@ -24,7 +24,7 @@
 
 from functools import reduce
 from moleexceptions import FilterNotFoundException
-import queryfilters, htmlfilters, requestfilters, os
+import queryfilters, responsefilters, requestfilters, os
 
 class BaseFilterManager:
     def __init__(self, import_dir):
@@ -74,10 +74,10 @@ class QueryFilterManager(BaseFilterManager):
         else:
             self.filters[self.active_filters().index(name)][1].config(params)
 
-class HTMLFilterManager(BaseFilterManager):
+class ResponseFilterManager(BaseFilterManager):
     def __init__(self):
-        htmlfilters.register_response_filter = self.register_filter
-        BaseFilterManager.__init__(self, 'htmlfilters')
+        responsefilters.register_response_filter = self.register_filter
+        BaseFilterManager.__init__(self, 'responsefilters')
 
     def apply_filters(self, response):
         for x in self.filters:

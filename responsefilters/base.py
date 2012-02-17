@@ -22,7 +22,7 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-class HTMLFilter:
+class ResponseFilter:
     def __init__(self, name, params):
         self.name = name
 
