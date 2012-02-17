@@ -22,4 +22,5 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-from queryfilters.genericfilters import *
+def register_query_filter():
+    pass

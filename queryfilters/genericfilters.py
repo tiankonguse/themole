@@ -23,6 +23,7 @@
 import random, re
 from exceptions import *
 from queryfilters.base import BaseQueryFilter
+from queryfilters import register_query_filter
 
 class CaseFilter(BaseQueryFilter):
     word_delimiters = {' ', '/', '(', ')'}
@@ -173,3 +174,13 @@ class RegexFilter(BaseQueryFilter):
 
     def __str__(self):
         return 'regex ' + self.regex.pattern + ' ' + self.replacement
+
+
+register_query_filter('case', CaseFilter)
+register_query_filter('space2comment', Spaces2CommentsFilter)
+register_query_filter('space2newline', Spaces2NewLineFilter)
+register_query_filter('mssqlcollation', SQLServerCollationFilter)
+register_query_filter('between', BetweenComparerFilter)
+register_query_filter('parenthesis', ParenthesisFilter)
+register_query_filter('noasterisk', NoAsteriskFilter)
+register_query_filter('regex', RegexFilter)

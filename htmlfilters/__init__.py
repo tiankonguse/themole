@@ -22,4 +22,5 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-from htmlfilters.genericfilters import *
+def register_response_filter():
+    pass
