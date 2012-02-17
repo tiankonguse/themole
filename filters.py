@@ -26,11 +26,15 @@ from queryfilters import *
 from htmlfilters import *
 from functools import reduce
 from exceptions import FilterNotFoundException
+import queryfilters, htmlfilters, os
 
 class BaseFilterManager:
-    def __init__(self, filter_map):
+    def __init__(self, import_dir):
         self.filters = []
-        self.filter_map = filter_map
+        self.filter_map = {}
+        classes = [x[:-3] for x in os.listdir(import_dir) if not x.startswith('__') and x.endswith('.py')]
+        for c in classes:
+            __import__(import_dir + '.' + c, globals(), locals())
 
     def active_filters(self):
         return [x[0] for x in self.filters]
@@ -47,25 +51,18 @@ class BaseFilterManager:
         self.filters = list(filter(lambda x: x[0] != name, self.filters))
 
     def apply_filters(self, query):
-        return reduce(lambda x,y: y[1].filter(x), self.filters, query)
+        return reduce(lambda x,y: y[1].filter_(x), self.filters, query)
 
     def available_filters(self):
         return self.filter_map.keys()
+    
+    def register_filter(self, name, filter_class):
+        self.filter_map[name] = filter_class
 
 class QueryFilterManager(BaseFilterManager):
-    filter_map = {
-        'case' : CaseFilter,
-        'space2comment' : Spaces2CommentsFilter,
-        'space2newline' : Spaces2NewLineFilter,
-        'mssqlcollation' : SQLServerCollationFilter,
-        'between' : BetweenComparerFilter,
-        'parenthesis' : ParenthesisFilter,
-        'noasterisk' : NoAsteriskFilter,
-        'regex' : RegexFilter,
-    }
-    
     def __init__(self):
-        BaseFilterManager.__init__(self, self.filter_map)
+        queryfilters.register_query_filter = self.register_filter
+        BaseFilterManager.__init__(self, 'queryfilters')
     
     def parameters(self, name, args):
         if not name in self.active_filters():
@@ -80,10 +77,6 @@ class QueryFilterManager(BaseFilterManager):
             self.filters[self.active_filters().index(name)][1].config(params)
 
 class HTMLFilterManager(BaseFilterManager):
-    filter_map = {
-        'regexrem' : RemoverRegexHTMLFilter,
-        'regexrep' : ReplacerRegexHTMLFilter,
-    }
-    
     def __init__(self):
-        BaseFilterManager.__init__(self, self.filter_map)
+        htmlfilters.register_response_filter = self.register_filter
+        BaseFilterManager.__init__(self, 'htmlfilters')

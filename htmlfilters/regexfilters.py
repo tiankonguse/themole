@@ -25,6 +25,7 @@
 import re, sre_constants
 from exceptions import *
 from htmlfilters.base import *
+from htmlfilters import register_response_filter
 
 class BaseRegexHTMLFilter(HTMLFilter):
     def __init__(self, filter_str, replacement):
@@ -61,3 +62,6 @@ class HTMLPretifierFilter(BaseRegexHTMLFilter):
     def __init__(self, name, params):
         BaseRegexHTMLFilter(self, '\(<html>|<body>|</html>|</body>\)', '')
 
+register_response_filter('regexrem', RemoverRegexHTMLFilter)
+register_response_filter('regexrep', ReplacerRegexHTMLFilter)
+register_response_filter('htmlpretifier', HTMLPretifierFilter)

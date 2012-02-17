@@ -568,7 +568,7 @@ class BaseFilterCommand(Command):
 class HTMLFilterCommand(BaseFilterCommand):
 
     def __init__(self):
-        BaseFilterCommand.__init__(self, lambda x: x.html_filter)
+        BaseFilterCommand.__init__(self, lambda mole: mole.response_filters)
 
     def execute(self, mole, params):
         try:
@@ -578,7 +578,7 @@ class HTMLFilterCommand(BaseFilterCommand):
 
 class QueryFilterCommand(BaseFilterCommand):
     def __init__(self):
-        BaseFilterCommand.__init__(self, lambda x: x.query_filter)
+        BaseFilterCommand.__init__(self, lambda mole: mole.response.query_filters)
 
     def execute(self, mole, params):
         try:
@@ -588,7 +588,7 @@ class QueryFilterCommand(BaseFilterCommand):
                 if len(params) < 3:
                     raise CommandException('Expected more arguments.')
                 try:
-                    mole.query_filter.config(params[1], params[2:])
+                    mole.requester.query_filters.config(params[1], params[2:])
                 except FilterConfigException as ex:
                     output_manager.error('Filter config error({msg})'.format(msg=str(ex))).line_break()
                 except FilterNotFoundException as ex:
@@ -605,10 +605,10 @@ class QueryFilterCommand(BaseFilterCommand):
             return params
         if len(current_params) == 1:
             if current_params[0] == 'config':
-                return mole.query_filter.active_filters()
+                return mole.requester.query_filters.active_filters()
         elif current_params[0] == 'config':
             try:
-                return mole.query_filter.parameters(current_params[1], current_params[2:])
+                return mole.requester.query_filters.parameters(current_params[1], current_params[2:])
             except FilterNotFoundException:
                 pass
         return []
