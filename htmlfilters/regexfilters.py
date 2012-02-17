@@ -36,7 +36,7 @@ class BaseRegexHTMLFilter(HTMLFilter):
             raise FilterCreationError(str(ex))
     
     def filter_(self, response):
-        return self.regex.sub(self.replacement, response.content)
+        response.content = self.regex.sub(self.replacement, response.content)
 
 class RemoverRegexHTMLFilter(BaseRegexHTMLFilter):
     def __init__(self, name, params):
