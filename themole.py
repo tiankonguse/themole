@@ -73,7 +73,6 @@ class TheMole:
         self.initialized = False
         self.needle = None
         self.url = None
-        self.requester = None
         self.mode = 'union'
         self.threader = Threader(threads)
         self.prefix = ''
@@ -114,9 +113,8 @@ class TheMole:
 
         try:
             original_request = self.requester.request(self.prefix + self.suffix)
-            original_request = self.html_filter.apply_filters(original_request)
-            if not '<html' in original_request and not '<HTML' in original_request:
-                original_request = '<html><body>' + original_request + '</body></html>'
+            #if not '<html' in original_request and not '<HTML' in original_request:
+            #    original_request = '<html><body>' + original_request + '</body></html>'
         except ConnectionException as ex:
             raise PageNotFound(str(ex))
         self.analyser.set_good_page(original_request, self.needle)
@@ -227,7 +225,6 @@ class TheMole:
                                         prefix=self.prefix,
                                         end=self.end.format(op_par=(self.parenthesis * '('))
             )
-        url = self.query_filter.apply_filters(url)
         if self.verbose == True:
             output_manager.line_break().info('Executing query: {0}'.format(url)).line_break()
         return url
@@ -236,7 +233,8 @@ class TheMole:
         req = self.requester.request(self.generate_url(query))
         if not '<html' in req and not '<HTML' in req:
             req = '<html><body>' + req + '</body></html>'
-        return self.html_filter.apply_filters(req)
+        return req
+        #return self.html_filter.apply_filters(req)
 
     def set_mode(self, mode):
         self.mode = mode
@@ -329,7 +327,7 @@ class TheMole:
         if not url.startswith('http://') and not url.startswith('https://'):
             url = 'http://' + url
 
-        self.requester.set_url(url)
+        self.requester.url = url
         if vulnerable_param is None and '?' in url:
             params = list(t.split('=', 1) for t in url.split('?')[1].split('&'))
             vulnerable_param = params[-1][0]

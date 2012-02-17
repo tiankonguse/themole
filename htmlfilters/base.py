@@ -25,9 +25,9 @@
 class HTMLFilter:
     def __init__(self, params, name=''):
         pass
-    
-    def filter(self, data):
-        return data
+
+    def filter_(self, response):
+        return response
 
     def __str__(self):
         return ''

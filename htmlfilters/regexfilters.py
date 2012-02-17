@@ -35,8 +35,8 @@ class BaseRegexHTMLFilter(HTMLFilter):
         except sre_constants.error as ex:
             raise FilterCreationError(str(ex))
 
-    def filter(self, data):
-        return self.regex.sub(self.replacement, data)
+    def filter_(self, response):
+        return self.regex.sub(self.replacement, response.content)
 
 class RemoverRegexHTMLFilter(BaseRegexHTMLFilter):
     def __init__(self, name, params):
@@ -60,7 +60,7 @@ class ReplacerRegexHTMLFilter(BaseRegexHTMLFilter):
 
 class HTMLPretifierFilter(BaseRegexHTMLFilter):
     def __init__(self, name, params):
-        BaseRegexHTMLFilter(self, '\(<html>|<body>|</html>|</body>\)', '')
+        BaseRegexHTMLFilter.__init__(self, '\(<html>|<body>|</html>|</body>\)', '')
 
 register_response_filter('regexrem', RemoverRegexHTMLFilter)
 register_response_filter('regexrep', ReplacerRegexHTMLFilter)

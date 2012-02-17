@@ -579,7 +579,7 @@ class BaseFilterCommand(Command):
 class HTMLFilterCommand(BaseFilterCommand):
 
     def __init__(self):
-        BaseFilterCommand.__init__(self, lambda mole: mole.response_filters)
+        BaseFilterCommand.__init__(self, lambda mole: mole.requester.response_filters)
 
     def execute(self, mole, params):
         try:
@@ -589,7 +589,7 @@ class HTMLFilterCommand(BaseFilterCommand):
 
 class QueryFilterCommand(BaseFilterCommand):
     def __init__(self):
-        BaseFilterCommand.__init__(self, lambda mole: mole.response.query_filters)
+        BaseFilterCommand.__init__(self, lambda mole: mole.requester.query_filters)
 
     def execute(self, mole, params):
         try:

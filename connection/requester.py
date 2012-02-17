@@ -24,8 +24,9 @@
 
 import urllib.parse
 import time
+import chardet
 
-from moleexceptions import InvalidMethodException, InvalidParamException
+from moleexceptions import InvalidMethodException, InvalidParamException, EncodingNotFound
 from connection.request import Request
 from filters import QueryFilterManager, RequestFilterManager, HTMLFilterManager
 
@@ -57,14 +58,41 @@ class Requester(object):
         self.__query_filters = QueryFilterManager()
         self.__request_filters = RequestFilterManager()
         self.__response_filters = HTMLFilterManager()
-        self.__sender = None
-        self.method(method)
+        self.__encoding = None
+        self.method = method
         if url is not None:
             self.url = url
         if vulnerable_param is not None:
             self.set_vulnerable_param(method, vulnerable_param)
         if cookie:
             self.cookie_parameters = cookie
+
+    def decode(self, data):
+        if self.__encoding is not None:
+            try:
+                to_ret = data.decode(self.__encoding)
+            except (UnicodeDecodeError, TypeError):
+                self.__encoding = None
+
+        if self.__encoding is None:
+            self.__encoding = chardet.detect(data)['encoding']
+            try:
+                to_ret = data.decode(self.__encoding)
+            except (UnicodeDecodeError, TypeError):
+                self.__encoding = None
+
+        if self.__encoding is None:
+            self.__encoding = self.guess_encoding(data)
+            try:
+                to_ret = data.decode(self.__encoding)
+            except (UnicodeDecodeError, TypeError):
+                self.__encoding = None
+
+        if self.__encoding is None:
+            raise EncodingNotFound('Try using the "encoding" command.')
+
+        return to_ret
+        #return DbmsMole.remove_errors(to_ret)
 
     def request(self, query):
 
@@ -91,11 +119,17 @@ class Requester(object):
         self.__request_filters.apply_filters(request)
 
         time.sleep(self.__delay)
+
         response = self.__sender.send(request)
+
+        response.content = self.decode(response.content)
 
         self.__response_filters.apply_filters(response)
 
         return response.content
+
+    def is_initialized(self):
+        return self.__url is not None and self.__vulnerable_param is not None
 
     @property
     def sender(self):

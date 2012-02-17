@@ -35,7 +35,7 @@ class Request():
         self.post_parameters = post_parameters
         self.cookie = cookie
         self.headers = headers
-        self.headers["Cookie"] = cookie
+        self.headers["Cookie"] = urlencode(cookie)
 
     def str_url(self):
         return self.proto + self.host + self.path + '?' + urlencode(self.get_parameters)

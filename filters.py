@@ -22,11 +22,9 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-from queryfilters import *
-from htmlfilters import *
 from functools import reduce
 from moleexceptions import FilterNotFoundException
-import queryfilters, htmlfilters, os
+import queryfilters, htmlfilters, requestfilters, os
 
 class BaseFilterManager:
     def __init__(self, import_dir):
@@ -80,3 +78,8 @@ class HTMLFilterManager(BaseFilterManager):
     def __init__(self):
         htmlfilters.register_response_filter = self.register_filter
         BaseFilterManager.__init__(self, 'htmlfilters')
+
+class RequestFilterManager(BaseFilterManager):
+    def __init__(self):
+        requestfilters.register_request_filter = self.register_filter
+        BaseFilterManager.__init__(self, 'requestfilters')
