@@ -66,6 +66,7 @@ class Requester(object):
             self.set_vulnerable_param(method, vulnerable_param)
         if cookie:
             self.cookie_parameters = cookie
+        self.__response_filters.add_filter('script_error_filter', [])
 
     def decode(self, data):
         if self.__encoding is not None:
@@ -96,12 +97,12 @@ class Requester(object):
 
     def request(self, query):
 
-        self.__query_filters.apply_filters(query)
+        query = self.__query_filters.apply_filters(query)
 
         get_params = self.__get_parameters.copy()
         post_params = self.__post_parameters.copy()
         cookie_params = self.__cookie_parameters.copy()
-        headers = Requester.headers.copy()
+        headers = self.__headers.copy()
         if self.__vulnerable_param_group == 'GET':
             get_params[self.__vulnerable_param] += query
         elif self.__vulnerable_param_group == 'POST':

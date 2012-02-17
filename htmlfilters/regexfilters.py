@@ -28,7 +28,7 @@ from htmlfilters.base import *
 from htmlfilters import register_response_filter
 
 class BaseRegexHTMLFilter(HTMLFilter):
-    def __init__(self, filter_str, replacement):
+    def __init__(self, name, filter_str, replacement):
         self.replacement = replacement
         try:
             self.regex = re.compile(filter_str, flags=re.DOTALL | re.MULTILINE)
@@ -38,12 +38,12 @@ class BaseRegexHTMLFilter(HTMLFilter):
     def filter_(self, response):
         response.content = self.regex.sub(self.replacement, response.content)
 
+
 class RemoverRegexHTMLFilter(BaseRegexHTMLFilter):
     def __init__(self, name, params):
         if len(params) != 1:
             raise FilterCreationError('Expected regex as argument.')
-        BaseRegexHTMLFilter.__init__(self, params[0], '')
-        self.name = name
+        BaseRegexHTMLFilter.__init__(self, name, params[0], '')
 
     def __str__(self):
         return '{name} \'{pat}\''.format(name=self.name, pat=self.regex.pattern)
@@ -52,16 +52,30 @@ class ReplacerRegexHTMLFilter(BaseRegexHTMLFilter):
     def __init__(self, name, params):
         if len(params) != 2:
             raise FilterCreationError('Expected regex and replacement string as arguments.')
-        BaseRegexHTMLFilter.__init__(self, params[0], params[1])
-        self.name = name
+        BaseRegexHTMLFilter.__init__(self, name, params[0], params[1])
 
     def __str__(self):
         return '{name} \'{pat}\' -> \'{rep}\''.format(name=self.name, pat=self.regex.pattern, rep=self.replacement)
 
 class HTMLPretifierFilter(BaseRegexHTMLFilter):
     def __init__(self, name, params):
-        BaseRegexHTMLFilter.__init__(self, '\(<html>|<body>|</html>|</body>\)', '')
+        BaseRegexHTMLFilter.__init__(self, name, '\(<html>|<body>|</html>|</body>\)', '')
 
-register_response_filter('regexrem', RemoverRegexHTMLFilter)
-register_response_filter('regexrep', ReplacerRegexHTMLFilter)
-register_response_filter('htmlpretifier', HTMLPretifierFilter)
+class ScriptErrorFilter(HTMLFilter):
+    def __init__(self, name, params):
+        HTMLFilter.__init__(self, name, params)
+        self.error_filters = [
+                    # PHP verbose errors.
+                    re.compile("<br />\n<b>Warning</b>:  [\w_\d]+\(\)(:\s|\s\[.*\]:)[\w :<>\\\\_\'\.\(\)/-]+ on line <b>(\d+)</b><br />"),
+                ]
+
+    def filter_(self, response):
+        for i in self.error_filters:
+            response.content = i.sub('', response.content)
+        return response
+    
+
+register_response_filter('regex_rem', RemoverRegexHTMLFilter)
+register_response_filter('regex_rep', ReplacerRegexHTMLFilter)
+register_response_filter('html_pretifier', HTMLPretifierFilter)
+register_response_filter('script_error_filter', ScriptErrorFilter)

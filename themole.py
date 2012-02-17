@@ -234,7 +234,6 @@ class TheMole:
         if not '<html' in req and not '<HTML' in req:
             req = '<html><body>' + req + '</body></html>'
         return req
-        #return self.html_filter.apply_filters(req)
 
     def set_mode(self, mode):
         self.mode = mode
@@ -319,6 +318,7 @@ class TheMole:
                     output_manager.advance('Table {0} exists.'.format(table)).line_break()
             except:
                 pass
+        output_manager.line_break()
 
     def brute_force_users_tables(self, db):
         return self.brute_force_tables(db, TheMole.users_tables)
@@ -339,20 +339,20 @@ class TheMole:
 
     def get_url(self):
         try:
-            return self.requester.get_url()
+            return self.requester.url
         except AttributeError:
             return ''
 
     def set_method(self, method):
-        self.requester.set_method(method)
+        self.requester.method = method
         self.initialized = False
 
     def set_post_params(self, params):
-        self.requester.set_post_params(params)
+        self.requester.post_parameters = params
         self.initialized = False
 
     def set_cookie_params(self, params):
-        self.requester.set_cookie_params(params)
+        self.requester.cookie_parameters = params
         self.initialized = False
 
     def set_vulnerable_param(self, method, param):

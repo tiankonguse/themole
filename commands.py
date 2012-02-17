@@ -111,12 +111,12 @@ class CookieCommand(Command):
         if not mole.requester:
             raise CommandException('URL must be set first.')
         if len(params) == 1:
-            mole.requester.set_cookie_params(' '.join(params))
+            mole.requester.cookie_parameters = ' '.join(params)
         elif len(params) > 1:
             raise CommandException('Too many arguments(remember to use quotes when setting the cookie).')
         else:
             try:
-                output_manager.normal(mole.requester.headers['Cookie']).line_break()
+                output_manager.normal(mole.requester.cookie_parameters).line_break()
             except KeyError:
                 output_manager.normal('No cookie set yet.').line_break()
 
@@ -177,7 +177,7 @@ class FetchDataCommand(Command):
         self.check_initialization(mole)
         if len(params) == 0:
             raise CommandException('At least one parameter is required!')
-        self.cmds[params[0]].execute(mole, params[1:], output_manager)
+        self.cmds[params[0]].execute(mole, params[1:])
 
     def usage(self, cmd_name):
         return cmd_name + ' <schemas|tables|columns> [args]'
@@ -717,11 +717,11 @@ class MethodCommand(Command):
         if len(params) == 0:
             method = mole.requester.method
             if method == 'POST':
-                params = mole.requester.get_post_params()
+                params = mole.requester.post_parameters
             elif method == 'Cookie':
-                params = mole.requester.get_cookie_params()
+                params = mole.requester.cookie_parameters
             else:
-                params = mole.requester.get_get_params()
+                params = mole.requester.get_parameters
             if len(params) == 0:
                 params = 'No parameters have been set.'
             output_manager.normal('{0}: {1}'.format(method, params)).line_break()
