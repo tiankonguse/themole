@@ -23,7 +23,7 @@
 # Gastón Traberg
 
 import re, sre_constants
-from exceptions import *
+from moleexceptions import FilterCreationError
 from htmlfilters.base import *
 from htmlfilters import register_response_filter
 
@@ -31,10 +31,10 @@ class BaseRegexHTMLFilter(HTMLFilter):
     def __init__(self, filter_str, replacement):
         self.replacement = replacement
         try:
-            self.regex = re.compile(filter_str, flags=re.DOTALL|re.MULTILINE)
+            self.regex = re.compile(filter_str, flags=re.DOTALL | re.MULTILINE)
         except sre_constants.error as ex:
             raise FilterCreationError(str(ex))
-    
+
     def filter(self, data):
         return self.regex.sub(self.replacement, data)
 

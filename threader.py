@@ -23,7 +23,7 @@
 # Gastón Traberg
 
 from threading import Thread, Event, Lock
-from exceptions import *
+from moleexceptions import ConnectionException, QueryError
 
 class Threader:
     def __init__(self, max_threads):
@@ -63,7 +63,7 @@ class Threader:
                     data.append(result)
             except (ConnectionException, QueryError):
                 pass
-            except Exception as ex:
+            except Exception:
                 import traceback, sys
                 traceback.print_exc(file=sys.stdout)
             self.results[index] = data

@@ -24,7 +24,7 @@ import http.client
 import socket
 from urllib.parse import urlencode, urlparse
 
-from exceptions import ConnectionException
+from moleexceptions import ConnectionException
 from connection.response import Response
 
 class BaseRequestSender():

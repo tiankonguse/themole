@@ -25,7 +25,7 @@
 
 import lxml.html as lxml
 from functools import reduce
-from exceptions import *
+from moleexceptions import NeedleNotFound
 
 class DomAnalyser():
     def set_good_page(self, page, search_needle):

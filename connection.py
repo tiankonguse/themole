@@ -24,7 +24,6 @@
 
 import time
 import http.client
-import re
 import socket
 import urllib.parse
 from urllib.parse import urlparse, urlunparse
@@ -32,10 +31,11 @@ import copy
 
 import chardet, encodings
 from dbmsmoles import DbmsMole
-from exceptions import *
+from moleexceptions import EncodingNotFound, ConnectionException
+from moleexceptions import InvalidMethodException, InvalidParamException
 
 class HttpRequester:
-    headers =  {
+    headers = {
         'User-Agent': 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)',
         'Accept-Language': 'en-us',
         'Accept-Encoding': 'identity',
@@ -46,7 +46,7 @@ class HttpRequester:
 
     accepted_methods = ['GET', 'POST', 'Cookie']
 
-    def __init__(self, url = None, vulnerable_param = None, delay = 0, method = 'GET', cookie = None, max_retries=3):
+    def __init__(self, url=None, vulnerable_param=None, delay=0, method='GET', cookie=None, max_retries=3):
         self.encoding = None
         self.delay = delay
         self.method = None
@@ -80,28 +80,28 @@ class HttpRequester:
 
     def decode(self, data):
         if self.encoding is not None:
-            try:            
+            try:
                 to_ret = data.decode(self.encoding)
             except (UnicodeDecodeError, TypeError):
                 self.encoding = None
-        
+
         if self.encoding is None:
             self.encoding = chardet.detect(data)['encoding']
-            try:            
+            try:
                 to_ret = data.decode(self.encoding)
             except (UnicodeDecodeError, TypeError):
                 self.encoding = None
-                
+
         if self.encoding is None:
             self.encoding = self.guess_encoding(data)
-            try:            
+            try:
                 to_ret = data.decode(self.encoding)
             except (UnicodeDecodeError, TypeError):
                 self.encoding = None
 
         if self.encoding is None:
             raise EncodingNotFound('Try using the "encoding" command.')
-        
+
         return DbmsMole.remove_errors(to_ret)
 
     # Tries to remove the query from the result html.
@@ -229,7 +229,7 @@ class HttpRequester:
         self.vulnerable_param = None
         self.vulnerable_param_group = None
 
-    def _parse_param_string(self, param_string, splitter = '&'):
+    def _parse_param_string(self, param_string, splitter='&'):
         if '=' not in param_string:
             param_string_lst = []
         else:
@@ -239,20 +239,20 @@ class HttpRequester:
 
     def set_post_params(self, param_string):
         self.post_parameters = self._parse_param_string(param_string)
-    
+
     def set_cookie_params(self, param_string):
         self.cookie_parameters = self._parse_param_string(param_string, '; ')
         self.headers['Cookie'] = param_string
 
-    def _join_params(self, parameters, joiner = '&'):
-        return joiner.join(a + '=' + b for a,b in parameters)
+    def _join_params(self, parameters, joiner='&'):
+        return joiner.join(a + '=' + b for a, b in parameters)
 
     def get_post_params(self):
         return self._join_params(self.post_parameters)
-    
+
     def get_get_params(self):
         return self._join_params(self.get_parameters)
-        
+
     def get_cookie_params(self):
         return self._join_params(self.cookie_parameters, '; ')
 

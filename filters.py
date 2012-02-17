@@ -25,7 +25,7 @@
 from queryfilters import *
 from htmlfilters import *
 from functools import reduce
-from exceptions import FilterNotFoundException
+from moleexceptions import FilterNotFoundException
 import queryfilters, htmlfilters, os
 
 class BaseFilterManager:
@@ -38,7 +38,7 @@ class BaseFilterManager:
 
     def active_filters(self):
         return [x[0] for x in self.filters]
-    
+
     def active_filters_to_string(self):
         return [str(x[1]) for x in self.filters]
 
@@ -51,11 +51,11 @@ class BaseFilterManager:
         self.filters = list(filter(lambda x: x[0] != name, self.filters))
 
     def apply_filters(self, query):
-        return reduce(lambda x,y: y[1].filter_(x), self.filters, query)
+        return reduce(lambda x, y: y[1].filter_(x), self.filters, query)
 
     def available_filters(self):
         return self.filter_map.keys()
-    
+
     def register_filter(self, name, filter_class):
         self.filter_map[name] = filter_class
 
@@ -63,7 +63,7 @@ class QueryFilterManager(BaseFilterManager):
     def __init__(self):
         queryfilters.register_query_filter = self.register_filter
         BaseFilterManager.__init__(self, 'queryfilters')
-    
+
     def parameters(self, name, args):
         if not name in self.active_filters():
             raise FilterNotFoundException()

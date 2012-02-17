@@ -30,7 +30,8 @@ from lxml import etree
 from dbmsmoles.dbmsmole import FingerBase
 from datadumper import classes_dict as datadumper_classes
 from domanalyser import DomAnalyser
-from exceptions import *
+from moleexceptions import FileOpenException, InvalidFormatException
+from moleexceptions import InvalidDataException
 
 dtd = """<!DOCTYPE themole [
 <!ELEMENT themole (config, data_schema)>
@@ -127,7 +128,7 @@ class XMLExporter:
         mole_config.analyser = DomAnalyser()
 
         try:
-            parser = etree.XMLParser(dtd_validation = True)
+            parser = etree.XMLParser(dtd_validation=True)
             root = etree.fromstring(xml_string, parser)
         except etree.XMLSyntaxError:
             raise InvalidFormatException()

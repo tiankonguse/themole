@@ -23,16 +23,14 @@
 # Gastón Traberg
 
 from sys import exit
+import getopt, sys
+import builtins
+import codecs
+import signal
+import completion
 
 import themole
-import completion
-import signal
-import builtins
 import commands
-import getopt, sys
-import traceback
-import codecs
-
 from outputmanager import OutputManager
 
 VERSION = '0.2.6'
@@ -46,11 +44,11 @@ class Manager:
         if 'threads' in opt_map:
             threads = int(opt_map['threads'])
         self.mole = themole.TheMole(threads=threads)
-        self.completer   = completion.CompletionManager(cmd_manager, self.mole)
+        self.completer = completion.CompletionManager(cmd_manager, self.mole)
         if 'url' in opt_map:
             try:
                 vuln_param = opt_map['vuln_param'] if 'vuln_param' in opt_map else None
-                cmd_manager.find('url').execute(self.mole, [opt_map['url'], vuln_param]) 
+                cmd_manager.find('url').execute(self.mole, [opt_map['url'], vuln_param])
             except commands.CommandException as ex:
                 output_manager.error('Error while setting URL: {0}'.format(ex)).line_break()
                 self.mole.abort_query()

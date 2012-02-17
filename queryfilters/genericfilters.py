@@ -21,7 +21,7 @@
 # Gastón Traberg
 
 import random, re
-from exceptions import *
+from moleexceptions import FilterConfigException, FilterCreationError
 from queryfilters.base import BaseQueryFilter
 from queryfilters import register_query_filter
 
@@ -35,10 +35,10 @@ class CaseFilter(BaseQueryFilter):
         for i in range(len(query_list)):
             if query_list[i] in self.word_delimiters:
                 if not skip_next:
-                    word = query_list[i-len(so_far):i]
+                    word = query_list[i - len(so_far):i]
                     if ''.join(word).isupper() or ''.join(word).islower():
                         word = [word[i].swapcase() if i % 2 == 1 and not word[i] == 'x' else word[i] for i in range(len(word))]
-                        query_list[i-len(so_far):i] = word
+                        query_list[i - len(so_far):i] = word
                 skip_next = (so_far == 'from')
                 so_far = ''
             else:
@@ -147,7 +147,7 @@ class ParenthesisFilter(BaseQueryFilter):
     def filter(self, query):
         match = self.regex.search(query)
         while match:
-            keyword,op1,oper,op2 = match.groups()
+            keyword, op1, oper, op2 = match.groups()
             if len(list(filter(lambda x: x == '"' or x == "'", op2))) & 1 == 0:
                 op2 = '(' + op2 + ')'
             query = query.replace(match.string[match.start():match.end()], keyword + '(' + op1 + ')' + oper + op2)

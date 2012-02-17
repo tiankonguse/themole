@@ -23,12 +23,23 @@
 # Gastón Traberg
 
 from sys import exit
-
-import connection, os
-import themole
-import traceback, codecs
+import os
 from base64 import b64encode
-from exceptions import *
+import codecs
+
+import themole
+from moleexceptions import MoleAttributeRequired, CommandException
+from moleexceptions import PageNotFound, NeedleNotFound, SeparatorNotFound
+from moleexceptions import CommentNotFound, ColumnNumberNotFound
+from moleexceptions import InjectableFieldNotFound, DbmsDetectionFailed
+from moleexceptions import EncodingNotFound, StoppedQueryException
+from moleexceptions import QuietCommandException, QueryError
+from moleexceptions import FilterNotFoundException, FilterCreationError
+from moleexceptions import FilterConfigException, FileOpenException
+from moleexceptions import NotInitializedException, InvalidFormatException
+from moleexceptions import InvalidDataException, InvalidMethodException
+from moleexceptions import InvalidParamException, CmdNotFoundException
+
 
 class Command:
     def check_initialization(self, mole):

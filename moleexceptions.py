@@ -27,18 +27,6 @@
 class StoppedQueryException(Exception):
     pass
 
-
-#Commands exceptions
-
-class CmdNotFoundException(Exception):
-    pass
-
-class CommandException(Exception):
-    pass
-
-class QuietCommandException(Exception):
-    pass
-
 #The Mole Exceptions
 
 class PageNotFound(Exception):

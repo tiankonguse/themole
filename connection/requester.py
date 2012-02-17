@@ -25,7 +25,7 @@
 import urllib.parse
 import time
 
-from exceptions import InvalidMethodException, InvalidParamException
+from moleexceptions import InvalidMethodException, InvalidParamException
 from connection.request import Request
 from filters import QueryFilterManager, RequestFilterManager, HTMLFilterManager
 
