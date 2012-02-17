@@ -22,17 +22,17 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-from moleexceptions import MoleAttributeRequired, ConnectionException, PageNotFound
+from moleexceptions import MoleAttributeRequired, PageNotFound, ConnectionException
 from moleexceptions import DbmsDetectionFailed, CommentNotFound, ColumnNumberNotFound
-from moleexceptions import InjectableFieldNotFound, QueryError, InvalidParamException
-from moleexceptions import NotInitializedException
+from moleexceptions import InjectableFieldNotFound, InvalidParamException
+from moleexceptions import NotInitializedException, QueryError
 from domanalyser import DomAnalyser
 from dbmsmoles import MysqlMole, PostgresMole, SQLServerMole, OracleMole
 from dbdump import DatabaseDump
 from threader import Threader
 from xmlexporter import XMLExporter
 from injectioninspector import InjectionInspector
-from datadumper import *
+from datadumper import BlindDataDumper, StringUnionDataDumper, IntegerUnionDataDumper
 from connection.requester import Requester
 from connection.requestsender import HttpRequestSender
 

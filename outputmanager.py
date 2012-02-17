@@ -109,7 +109,7 @@ class OutputManager:
 class BlindSQLIOutput:
     def __init__(self, output_manager, length):
         self.om = output_manager
-        self.word = [' ' for i in range(length)]
+        self.word = [' ' for _ in range(length)]
         self.om.normal(''.join(self.word))
 
     def set(self, char, index):
@@ -161,8 +161,6 @@ class PlainResultsOutput(ResultsOutput):
         self.om.normal('=' * len(','.join(self.headers))).line_break()
         for result in self.results:
             self.om.normal(','.join(result)).line_break()
-
-import time
 
 class RowDoneCounter:
 

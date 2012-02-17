@@ -101,16 +101,16 @@ class Manager:
 
 def parse_options():
     if '-h' in sys.argv:
-        help()
+        help_()
     options = 'u:n:p:e:t:'
     try:
-        args, extra = getopt.getopt(sys.argv[1:], options)
+        args, _ = getopt.getopt(sys.argv[1:], options)
     except getopt.GetoptError as ex:
         print('Invalid parameter({err}).'.format(err=str(ex)))
         exit(1)
     return args
 
-def help():
+def help_():
     print(' Usage ' + sys.argv[0] + ' [PARAMS]\n')
     print(' The mole v{0} - Automatic SQL Injection exploiter.'.format(VERSION))
     print(' Run The mole to begin an interactive session\n')
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     try:
         manager.start()
     except Exception as ex:
-        import traceback, sys
+        import traceback
         traceback.print_exc(file=sys.stdout)
         output_manager.error('Unexpected error encountered. Please report this bug :D').line_break()
         manager.mole.threader.stop()
