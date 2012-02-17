@@ -21,9 +21,11 @@
 # Gastón Traberg
 
 import http.client
-from urllib.parse import urlencode
+import socket
+from urllib.parse import urlencode, urlparse
 
 from exceptions import ConnectionException
+from connection.response import Response
 
 class BaseRequestSender():
 
@@ -31,6 +33,10 @@ class BaseRequestSender():
         pass
 
 class HttpRequestSender(BaseRequestSender):
+
+    def __init__(self):
+        self.follow_redirects = True
+        self.max_retries = 3
 
     def send(self, request):
         try:
@@ -44,19 +50,22 @@ class HttpRequestSender(BaseRequestSender):
                 http.client.BadStatusLine) as e:
             raise ConnectionException(str(e))
 
-        for i in range(3):
+        for i in range(self.max_retries):
             try:
-                connection.request(request.method, request.str_uri(), urlencode(request.post_parameters), request.headers)
+                connection.request(request.method,
+                                   request.str_uri(),
+                                   urlencode(request.post_parameters),
+                                   request.headers)
                 resp = connection.getresponse()
                 resp_headers = dict(resp.getheaders())
                 while self.follow_redirects and resp.getcode() == 302 and 'Location' in resp_headers:
                     resp.read() # Need to read whole request before sending a new one
                     parsed = urlparse(resp_headers["Location"])
-                    headers["Host"] = parsed.netloc
-                    connection.request('GET', parsed.path, None, headers)
+                    request.headers["Host"] = parsed.netloc
+                    connection.request('GET', parsed.path, None, request.headers)
                     resp = connection.getresponse()
                     resp_headers = dict(resp.getheaders())
-                data = self.decode(resp.read())
+                data = resp.read()
                 break
             except (socket.error,
                     socket.timeout,
@@ -70,3 +79,5 @@ class HttpRequestSender(BaseRequestSender):
 
         if data is None:
             raise ConnectionException(str(exception))
+
+        return Response(data)

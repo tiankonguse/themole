@@ -31,7 +31,8 @@ from xmlexporter import XMLExporter
 from injectioninspector import InjectionInspector
 from datadumper import *
 from filters import QueryFilterManager, HTMLFilterManager
-from connection.Requester import Requester
+from connection.requester import Requester
+from connection.requestsender import HttpRequestSender
 
 class TheMole:
 
@@ -86,9 +87,7 @@ class TheMole:
         self.query_columns = 0
         self.injectable_field = 0
         self.database_dump = DatabaseDump()
-        self.requester = Requester()
-        self.query_filter = QueryFilterManager()
-        self.html_filter = HTMLFilterManager()
+        self.requester = Requester(HttpRequestSender())
 
     def restart(self):
         self.initialized = False

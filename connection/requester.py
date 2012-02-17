@@ -26,8 +26,9 @@ import urllib.parse
 import time
 
 from exceptions import InvalidMethodException, InvalidParamException
+from connection.request import Request
+from filters import QueryFilterManager, RequestFilterManager, HTMLFilterManager
 
-from request import Request
 
 class Requester(object):
 
@@ -53,9 +54,9 @@ class Requester(object):
         self.__cookie_parameters = {}
         self.__vulnerable_param = None
         self.__vulnerable_param_group = None
-        self.__query_filters = []
-        self.__request_filters = []
-        self.__response_filters = []
+        self.__query_filters = QueryFilterManager()
+        self.__request_filters = RequestFilterManager()
+        self.__response_filters = HTMLFilterManager()
         self.__sender = None
         self.method(method)
         if url is not None:
@@ -67,8 +68,7 @@ class Requester(object):
 
     def request(self, query):
 
-        for plugin in self.__query_filters:
-            query = plugin.filter_(query)
+        self.__query_filters.apply_filters(query)
 
         get_params = self.__get_parameters.copy()
         post_params = self.__post_parameters.copy()
@@ -88,14 +88,12 @@ class Requester(object):
                           cookie_params,
                           headers)
 
-        for plugin in self.__request_filters:
-            plugin.filter_(request)
+        self.__request_filters.apply_filters(request)
 
         time.sleep(self.__delay)
         response = self.__sender.send(request)
 
-        for plugin in self.__response_filters:
-            plugin.filter_(response)
+        self.__response_filters.apply_filters(response)
 
         return response.content
 

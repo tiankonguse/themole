@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
@@ -22,9 +20,5 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-class RequestFilter:
-    def __init__(self, params):
-        pass
-
-    def filter_(self, request):
-        pass
+def register_request_filter(name, class_):
+    pass
