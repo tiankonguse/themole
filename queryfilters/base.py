@@ -30,11 +30,8 @@ class BaseQueryFilter:
     def filter_(self, query):
         pass
     
-    def config(self, params):
-        pass
-    
-    def parameters(self, current_params):
-        return []
+    def configuration_parameters(self):
+        return {}
 
     def __str__(self):
         return self.name

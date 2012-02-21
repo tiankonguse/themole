@@ -68,6 +68,12 @@ class QueryFilterManager(BaseFilterManager):
         else:
             return self.filters[self.active_filters().index(name)][1].parameters(args)
 
+    def config_parameters(self, name):
+        if not name in self.active_filters():
+            raise FilterNotFoundException()
+        else:
+            return self.filters[self.active_filters().index(name)][1].configuration_parameters()
+
     def config(self, name, params):
         if not name in self.active_filters():
             raise FilterNotFoundException()

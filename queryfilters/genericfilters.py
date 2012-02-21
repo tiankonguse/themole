@@ -24,6 +24,7 @@ import random, re
 from moleexceptions import FilterConfigException, FilterCreationError
 from queryfilters.base import BaseQueryFilter
 from queryfilters import register_query_filter
+from parameters import Parameter
 
 class CaseFilter(BaseQueryFilter):
     word_delimiters = {' ', '/', '(', ')'}
@@ -71,6 +72,43 @@ class SQLServerCollationFilter(BaseQueryFilter):
         self.field_match = re.compile('cast\(([\w\d_\-@]+) as varchar\([\d]+\)\)')
         self.blacklist = []
         self.collation = params[0] if len(params) == 1 else 'DATABASE_DEFAULT'
+        self.blist_param = Parameter(lambda _,__: self.print_blacklist())
+        add_blist = Parameter(lambda _,params: self.blacklist_add(params))
+        del_blist = Parameter(no_args_str='Expected argument after "del"')
+        self.blist_param.add_parameter('add', add_blist)
+        del_blist.set_param_generator(lambda _,__: self.del_generator())
+        self.blist_param.add_parameter('del', del_blist)
+        self.collation_param = Parameter(lambda _,params: self.exec_collation(params))
+        self.params = { 'blacklist' : self.blist_param, 'collation' : self.collation_param }
+
+    def configuration_parameters(self):
+        return self.params
+
+    def exec_collation(self, params):
+        if len(params) < 1:
+            output_manager.normal(self.collation).line_break()
+        else:
+            self.collation = params[0]
+
+    def blacklist_add(self, params):
+        if len(params) == 0:
+            output_manager.error('Expected argument after "add"').line_break()
+        else:
+            for i in params:
+                self.blacklist.append(i)
+    
+    def del_generator(self):
+        ret = {}
+        for i in self.blacklist:
+            ret[i] = Parameter(lambda _,__,i=i: self.blacklist.remove(i))
+        return ret
+
+    def print_blacklist(self):
+        if len(self.blacklist) == 0:
+            output_manager.info('No fields in blacklist.').line_break()
+        else:
+            for i in self.blacklist:
+                output_manager.normal(i).line_break()
 
     def filter_(self, query):
         try:
@@ -83,44 +121,6 @@ class SQLServerCollationFilter(BaseQueryFilter):
         except Exception as ex:
             output_manager.error('{0}'.format(ex)).line_break()
         return query
-
-    def config(self, params):
-        if len(params) == 0:
-            raise FilterConfigException('At least one argument required')
-        if params[0] == 'blacklist':
-            if len(params) > 1:
-                if params[1] == 'add':
-                    if len(params) != 3:
-                        raise FilterConfigException('Expected argument after "add"')
-                    self.blacklist.append(params[2])
-                elif params[1] == 'del':
-                    if len(params) != 3:
-                        raise FilterConfigException('Expected argument after "del"')
-                    self.blacklist.remove(params[2])
-            else:
-                if len(self.blacklist) == 0:
-                    output_manager.info('No fields in blacklist.').line_break()
-                else:
-                    for i in self.blacklist:
-                        output_manager.normal(i).line_break()
-        elif params[0] == 'collation':
-            if len(params) != 2:
-                output_manager.normal(self.collation).line_break
-            else:
-                self.collation = params[1]
-        else:
-            raise FilterConfigException('Argument ' + params[0] + ' is invalid.')
-
-    def parameters(self, current_params):
-        if len(current_params) == 0:
-            return ['blacklist', 'collation']
-        elif current_params[0] == 'blacklist':
-            if len(current_params) == 2:
-                return self.blacklist if current_params[1] == 'del' else []
-            else:
-                return ['add', 'del'] if len(current_params) == 1 else []
-        else:
-            return []
 
     def __str__(self):
         return self.name + ' ' + self.collation

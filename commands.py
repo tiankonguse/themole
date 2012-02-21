@@ -26,8 +26,10 @@ from sys import exit
 import os
 from base64 import b64encode
 import codecs
+from functools import partial
 
 import themole
+from parameters import Parameter
 from moleexceptions import MoleAttributeRequired, CommandException
 from moleexceptions import PageNotFound, NeedleNotFound, SeparatorNotFound
 from moleexceptions import CommentNotFound, ColumnNumberNotFound
@@ -124,31 +126,27 @@ class CookieCommand(Command):
         return cmd_name + ' [COOKIE]'
 
 class RedirectCommand(Command):
+    def __init__(self):
+        self.params = Parameter(lambda mole,_: output_manager.normal('on' if mole.requester.sender.follow_redirects else 'off').line_break())
+        self.params.add_parameter('on', Parameter(lambda mole,_: self.set_follow_redirects(mole, True)))
+        self.params.add_parameter('off', Parameter(lambda mole,_: self.set_follow_redirects(mole, False)))
+    
+    def set_follow_redirects(self, mole, value):
+        mole.requester.sender.follow_redirects = value
+    
     def execute(self, mole, params):
-        if len(params) == 0:
-            output_manager.normal('on' if mole.requester.follow_redirects else 'off').line_break()
-        else:
-            if params[0] == 'on':
-                value = True
-            elif params[0] == 'off':
-                value = False
-            else:
-                raise CommandException('Expected "on" or "off" as argument')
-            mole.requester.follow_redirects = value
+        self.params.execute(mole, params)
 
     def usage(self, cmd_name):
         return cmd_name + ' [on|off]'
 
     def parameters(self, mole, current_params):
-        return ['on', 'off'] if len(current_params) == 0 else []
+        return self.params.parameter_list(mole, current_params)
 
 class NeedleCommand(Command):
     def execute(self, mole, params):
         if len(params) == 0:
-            if not mole.needle:
-                output_manager.normal('No needle defined').line_break()
-            else:
-                output_manager.normal(mole.needle).line_break()
+            output_manager.normal('No needle defined' if not mole.needle else mole.needle).line_break()
         else:
             mole.needle = ' '.join(params)
 
@@ -184,7 +182,7 @@ class FetchDataCommand(Command):
 
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
-            return ['schemas', 'tables', 'columns']
+            return self.cmds.keys()
         else:
             try:
                 return self.cmds[current_params[0]].parameters(mole, current_params[1:])
@@ -443,16 +441,16 @@ class ExitCommand(Command):
         exit(0)
 
 class QueryModeCommand(Command):
+    def __init__(self):
+        self.params = Parameter(lambda mole,_: output_manager.normal(mole.mode).line_break())
+        self.params.add_parameter('union', Parameter(lambda mole,_: mole.set_mode('union')))
+        self.params.add_parameter('blind', Parameter(lambda mole,_: mole.set_mode('blind')))
+    
     def execute(self, mole, params):
-        if len(params) == 0:
-            output_manager.normal(mole.mode).line_break()
-        else:
-            if not params[0] in ['union', 'blind']:
-                raise CommandException('Invalid query mode.')
-            mole.set_mode(params[0])
+        self.params.execute(mole, params)
 
     def parameters(self, mole, current_params):
-        return ['union', 'blind'] if len(current_params) == 0 else []
+        return self.params.parameter_list(mole, current_params)
 
     def usage(self, cmd_name):
         return cmd_name + ' <union|blind>'
@@ -488,7 +486,10 @@ class DelayCommand(Command):
         if len(params) == 0:
             output_manager.normal(mole.delay).line_break()
         else:
-            mole.delay = float(params[0])
+            try:
+                mole.delay = float(params[0])
+            except ValueError:
+                raise CommandException("Expected float number as argument")
             if mole.requester:
                 mole.requester.delay = mole.delay
 
@@ -496,45 +497,63 @@ class DelayCommand(Command):
         return cmd_name + ' [DELAY]'
 
 class VerboseCommand(Command):
+    def __init__(self):
+        self.params = Parameter(lambda mole,_: output_manager.normal('on' if mole.verbose else 'off').line_break())
+        self.params.add_parameter('on', Parameter(lambda mole,_: self.set_verbose(mole, True)))
+        self.params.add_parameter('off', Parameter(lambda mole,_: self.set_verbose(mole, False)))
+    
+    def set_verbose(self, mole, value):
+        mole.verbose = value
+    
     def execute(self, mole, params):
-        if len(params) == 0:
-            output_manager.normal('on' if mole.verbose else 'off').line_break()
-        else:
-            if not params[0] in ['on', 'off']:
-                raise CommandException('Invalid parameter.')
-            mole.verbose = True if params[0] == 'on' else False
+        self.params.execute(mole, params)
 
     def parameters(self, mole, current_params):
-        return ['on', 'off'] if len(current_params) == 0 else []
+        return self.params.parameter_list(mole, current_params)
 
     def usage(self, cmd_name):
         return cmd_name + ' <on|off>'
 
 class OutputCommand(Command):
+    def __init__(self):
+        self.params = Parameter(lambda mole,_: output_manager.normal(output_manager.result_output).line_break())
+        self.params.add_parameter('pretty', Parameter(lambda mole,_: self.set_output('pretty')))
+        self.params.add_parameter('plain', Parameter(lambda mole,_: self.set_output('plain')))
+    
+    def set_output(self, value):
+        output_manager.result_output = value
+    
     def execute(self, mole, params):
-        if len(params) == 0:
-            output_manager.normal(output_manager.result_output).line_break()
-        else:
-            if not params[0] in ['pretty', 'plain']:
-                raise CommandException('Invalid parameter.')
-            output_manager.result_output = params[0]
+        self.params.execute(mole, params)
 
     def parameters(self, mole, current_params):
-        return ['pretty', 'plain'] if len(current_params) == 0 else []
+        return self.params.parameter_list(mole, current_params)
 
     def usage(self, cmd_name):
         return cmd_name + ' <pretty|plain>'
 
 class UsageCommand(Command):
+    def __init__(self):
+        self.params = None
+    
+    def initialize(self):
+        if self.params is None:
+            '[-] Error: chori is not a valid command'
+            self.params = Parameter()
+            for cmd in cmd_manager.cmds:
+                self.params.add_parameter(cmd, Parameter(lambda __,_,cmd=cmd: 
+                    output_manager.normal(' {0}'.format(cmd_manager.cmds[cmd].usage(cmd))).line_break()))
+    
+    def blah(self, data):
+        output_manager.normal(' {0}'.format(data)).line_break()
+    
     def execute(self, mole, params):
-        if len(params) == 0:
-            raise CommandException('Command required as argument')
-        else:
-            cmd = cmd_manager.find(params[0])
-            output_manager.normal(' {0}'.format(cmd.usage(params[0]))).line_break()
+        self.initialize()
+        self.params.execute(mole, params)
 
     def parameters(self, mole, current_params):
-        return cmd_manager.cmds.keys() if len(current_params) == 0 else []
+        self.initialize()
+        return self.params.parameter_list(mole, current_params)
 
     def usage(self, cmd_name):
         return cmd_name + ' <CMD_NAME>'
@@ -542,42 +561,48 @@ class UsageCommand(Command):
 class BaseFilterCommand(Command):
     def __init__(self, functor):
         self.functor = functor
+        self.params = Parameter(lambda mole,_: self.print_filters(mole))
+        add_param = Parameter()
+        add_param.set_param_generator(lambda mole,_: self.generate_add_filters(mole))
+        del_param = Parameter()
+        del_param.set_param_generator(lambda mole,_: self.generate_del_filters(mole))
+        self.params.add_parameter('add', add_param)
+        self.params.add_parameter('del', del_param)
+
+    def generate_add_filters(self, mole):
+        ret = {}
+        for i in self.functor(mole).available_filters():
+            ret[i] = Parameter(lambda mole,params,i=i: self.add_filter(mole, i, params))
+        return ret
+    
+    def generate_del_filters(self, mole):
+        ret = {}
+        for i in self.functor(mole).active_filters():
+            ret[i] = Parameter(lambda mole,params,i=i: self.functor(mole).remove_filter(i))
+        return ret
+
+    def add_filter(self, mole, name, params):
+        try:
+            self.functor(mole).add_filter(name, params)
+        except FilterCreationError as ex:
+            raise CommandException('Filter {0} failed to initialize({1})'.format(name, str(ex)))
+        
+    def print_filters(self, mole):
+        filters = self.functor(mole).active_filters_to_string()
+        if len(filters) == 0:
+            output_manager.normal('No filters added yet.').line_break()
+        else:
+            for i in filters:
+                output_manager.normal(i).line_break()
 
     def execute(self, mole, params):
-        if len(params) == 0:
-            filters = self.functor(mole).active_filters_to_string()
-            if len(filters) == 0:
-                output_manager.normal('No filters added yet.').line_break()
-            else:
-                for i in filters:
-                    output_manager.normal(i).line_break()
-        elif len(params) == 1:
-            raise CommandException(params[0] + ' requires at least one parameter.')
-        else:
-            if params[0] == 'add':
-                try:
-                    self.functor(mole).add_filter(params[1], params[2:])
-                except FilterNotFoundException:
-                    raise CommandException('Filter ' + params[1] + ' not found.')
-                except FilterCreationError as ex:
-                    raise CommandException('Filter {0} failed to initialize({1})'.format(params[1], str(ex)))
-            elif params[0] == 'del':
-                self.functor(mole).remove_filter(params[1])
-            else:
-                raise CommandException('Parameter ' + params[1] + ' is not valid.')
+        self.params.execute(mole, params)
 
     def parameters(self, mole, current_params):
-        if len(current_params) == 0:
-            return ['add', 'del']
-        elif len(current_params) == 1:
-            if current_params[0] == 'add':
-                return self.functor(mole).available_filters()
-            elif current_params[0] == 'del':
-                return self.functor(mole).active_filters()
+        return self.params.parameter_list(mole, current_params)
 
 
 class HTMLFilterCommand(BaseFilterCommand):
-
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda mole: mole.requester.response_filters)
 
@@ -586,46 +611,38 @@ class HTMLFilterCommand(BaseFilterCommand):
             BaseFilterCommand.execute(self, mole, params)
         except FilterCreationError as ex:
             raise CommandException('Filter creation error({msg})'.format(msg=str(ex)), False)
+    
+    def usage(self, cmd_name):
+        return cmd_name + ' [add|del] [FILTER_NAME [ARGS]]'
 
 class QueryFilterCommand(BaseFilterCommand):
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda mole: mole.requester.query_filters)
-
-    def execute(self, mole, params):
-        try:
-            BaseFilterCommand.execute(self, mole, params)
-        except CommandException as ex:
-            if len(params) > 1 and params[0] == 'config':
-                if len(params) < 3:
-                    raise CommandException('Expected more arguments.')
-                try:
-                    mole.requester.query_filters.config(params[1], params[2:])
-                except FilterConfigException as ex:
-                    output_manager.error('Filter config error({msg})'.format(msg=str(ex))).line_break()
-                except FilterNotFoundException as ex:
-                    output_manager.error('Filter {0} not found.'.format(params[1])).line_break()
-            else:
-                raise ex
-
-    def parameters(self, mole, current_params):
-        params = BaseFilterCommand.parameters(self, mole, current_params)
-
-        if len(current_params) == 0:
-            return params + ['config']
-        if params is not None and len(params) > 0:
-            return params
-        if len(current_params) == 1:
-            if current_params[0] == 'config':
-                return mole.requester.query_filters.active_filters()
-        elif current_params[0] == 'config':
+        config = Parameter()
+        config.set_param_generator(lambda mole,_: self.generate_config_parameters(mole))
+        self.params.add_parameter('config', config)
+        
+    def generate_config_parameters(self, mole):
+        ret = {}
+        for i in mole.requester.query_filters.active_filters():
             try:
-                return mole.requester.query_filters.parameters(current_params[1], current_params[2:])
-            except FilterNotFoundException:
-                pass
-        return []
+                param = Parameter()
+                subparams = mole.requester.query_filters.config_parameters(i)
+                for subparam in subparams:
+                    param.add_parameter(subparam, subparams[subparam])
+                ret[i] = param
+            except Exception as ex:
+                print(ex)
+        return ret
+        
+    def generate_config_subparameters(self, mole, name, params):
+        ret = {}
+        for i in mole.requester.query_filters.parameters(name, params):
+            ret[i] = Parameter(lambda mole,params,i=i: mole.requester.query_filters.config(i, params))
+        return ret
 
     def usage(self, cmd_name):
-        return cmd_name + ' (add|del|config) [FILTER_NAME [ARGS]]'
+        return cmd_name + ' [add|del|config] [FILTER_NAME [ARGS]]'
 
 class ExportCommand(Command):
     def execute(self, mole, params):
