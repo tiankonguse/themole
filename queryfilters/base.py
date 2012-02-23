@@ -28,8 +28,14 @@ class BaseQueryFilter:
         pass
 
     def filter_(self, query):
+        """Apply the filter to the query.
+        
+        @param query: String containing the query to filter.
+        @return: String with the filtered query.
+        
+        """
         pass
-    
+
     def configuration_parameters(self):
         return {}
 

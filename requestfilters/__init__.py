@@ -21,4 +21,10 @@
 # Gastón Traberg
 
 def register_request_filter(name, class_):
+    """Register a request filter.
+    
+    @param name: String to identify the request filter.
+    @param class_: Class that implements the filter.
+    
+    """
     pass

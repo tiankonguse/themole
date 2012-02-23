@@ -27,7 +27,12 @@ class ResponseFilter:
         self.name = name
 
     def filter_(self, response):
-        return response
+        """Apply the filter to the response.
+        
+        @param query: Response object to filter.
+        
+        """
+        pass
 
     def __str__(self):
         return self.name

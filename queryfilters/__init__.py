@@ -22,5 +22,11 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-def register_query_filter():
+def register_query_filter(name, class_):
+    """Register a query filter.
+    
+    @param name: String to identify the query filter.
+    @param class_: Class that implements the filter.
+    
+    """
     pass

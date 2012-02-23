@@ -27,4 +27,9 @@ class RequestFilter:
         pass
 
     def filter_(self, request):
+        """Apply the filter to the request.
+        
+        @param query: Request object to filter.
+        
+        """
         pass

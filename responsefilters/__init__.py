@@ -22,5 +22,11 @@
 # Santiago Alessandri
 # Gastón Traberg
 
-def register_response_filter():
+def register_response_filter(name, class_):
+    """Register a response filter.
+    
+    @param name: String to identify the response filter.
+    @param class_: Class that implements the filter.
+    
+    """
     pass

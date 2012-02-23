@@ -96,6 +96,13 @@ class Requester(object):
         #return DbmsMole.remove_errors(to_ret)
 
     def request(self, query):
+        """Make the request applying the filters and return the response.
+        
+        @param query: String containing the query to inject in the
+        vulnerable param.
+        @return: String containing the response in html format.
+        
+        """
 
         query = self.__query_filters.apply_filters(query)
 
