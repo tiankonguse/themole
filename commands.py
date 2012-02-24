@@ -127,13 +127,13 @@ class CookieCommand(Command):
 
 class RedirectCommand(Command):
     def __init__(self):
-        self.params = Parameter(lambda mole,_: output_manager.normal('on' if mole.requester.sender.follow_redirects else 'off').line_break())
-        self.params.add_parameter('on', Parameter(lambda mole,_: self.set_follow_redirects(mole, True)))
-        self.params.add_parameter('off', Parameter(lambda mole,_: self.set_follow_redirects(mole, False)))
-    
+        self.params = Parameter(lambda mole, _: output_manager.normal('on' if mole.requester.sender.follow_redirects else 'off').line_break())
+        self.params.add_parameter('on', Parameter(lambda mole, _: self.set_follow_redirects(mole, True)))
+        self.params.add_parameter('off', Parameter(lambda mole, _: self.set_follow_redirects(mole, False)))
+
     def set_follow_redirects(self, mole, value):
         mole.requester.sender.follow_redirects = value
-    
+
     def execute(self, mole, params):
         self.params.execute(mole, params)
 
@@ -442,10 +442,10 @@ class ExitCommand(Command):
 
 class QueryModeCommand(Command):
     def __init__(self):
-        self.params = Parameter(lambda mole,_: output_manager.normal(mole.mode).line_break())
-        self.params.add_parameter('union', Parameter(lambda mole,_: mole.set_mode('union')))
-        self.params.add_parameter('blind', Parameter(lambda mole,_: mole.set_mode('blind')))
-    
+        self.params = Parameter(lambda mole, _: output_manager.normal(mole.mode).line_break())
+        self.params.add_parameter('union', Parameter(lambda mole, _: mole.set_mode('union')))
+        self.params.add_parameter('blind', Parameter(lambda mole, _: mole.set_mode('blind')))
+
     def execute(self, mole, params):
         self.params.execute(mole, params)
 
@@ -498,13 +498,13 @@ class DelayCommand(Command):
 
 class VerboseCommand(Command):
     def __init__(self):
-        self.params = Parameter(lambda mole,_: output_manager.normal('on' if mole.verbose else 'off').line_break())
-        self.params.add_parameter('on', Parameter(lambda mole,_: self.set_verbose(mole, True)))
-        self.params.add_parameter('off', Parameter(lambda mole,_: self.set_verbose(mole, False)))
-    
+        self.params = Parameter(lambda mole, _: output_manager.normal('on' if mole.verbose else 'off').line_break())
+        self.params.add_parameter('on', Parameter(lambda mole, _: self.set_verbose(mole, True)))
+        self.params.add_parameter('off', Parameter(lambda mole, _: self.set_verbose(mole, False)))
+
     def set_verbose(self, mole, value):
         mole.verbose = value
-    
+
     def execute(self, mole, params):
         self.params.execute(mole, params)
 
@@ -516,13 +516,13 @@ class VerboseCommand(Command):
 
 class OutputCommand(Command):
     def __init__(self):
-        self.params = Parameter(lambda mole,_: output_manager.normal(output_manager.result_output).line_break())
-        self.params.add_parameter('pretty', Parameter(lambda mole,_: self.set_output('pretty')))
-        self.params.add_parameter('plain', Parameter(lambda mole,_: self.set_output('plain')))
-    
+        self.params = Parameter(lambda mole, _: output_manager.normal(output_manager.result_output).line_break())
+        self.params.add_parameter('pretty', Parameter(lambda mole, _: self.set_output('pretty')))
+        self.params.add_parameter('plain', Parameter(lambda mole, _: self.set_output('plain')))
+
     def set_output(self, value):
         output_manager.result_output = value
-    
+
     def execute(self, mole, params):
         self.params.execute(mole, params)
 
@@ -535,18 +535,18 @@ class OutputCommand(Command):
 class UsageCommand(Command):
     def __init__(self):
         self.params = None
-    
+
     def initialize(self):
         if self.params is None:
             '[-] Error: chori is not a valid command'
             self.params = Parameter()
             for cmd in cmd_manager.cmds:
-                self.params.add_parameter(cmd, Parameter(lambda __,_,cmd=cmd: 
+                self.params.add_parameter(cmd, Parameter(lambda __, _, cmd=cmd:
                     output_manager.normal(' {0}'.format(cmd_manager.cmds[cmd].usage(cmd))).line_break()))
-    
+
     def blah(self, data):
         output_manager.normal(' {0}'.format(data)).line_break()
-    
+
     def execute(self, mole, params):
         self.initialize()
         self.params.execute(mole, params)
@@ -561,24 +561,24 @@ class UsageCommand(Command):
 class BaseFilterCommand(Command):
     def __init__(self, functor):
         self.functor = functor
-        self.params = Parameter(lambda mole,_: self.print_filters(mole))
+        self.params = Parameter(lambda mole, _: self.print_filters(mole))
         add_param = Parameter()
-        add_param.set_param_generator(lambda mole,_: self.generate_add_filters(mole))
+        add_param.set_param_generator(lambda mole, _: self.generate_add_filters(mole))
         del_param = Parameter()
-        del_param.set_param_generator(lambda mole,_: self.generate_del_filters(mole))
+        del_param.set_param_generator(lambda mole, _: self.generate_del_filters(mole))
         self.params.add_parameter('add', add_param)
         self.params.add_parameter('del', del_param)
 
     def generate_add_filters(self, mole):
         ret = {}
         for i in self.functor(mole).available_filters():
-            ret[i] = Parameter(lambda mole,params,i=i: self.add_filter(mole, i, params))
+            ret[i] = Parameter(lambda mole, params, i=i: self.add_filter(mole, i, params))
         return ret
-    
+
     def generate_del_filters(self, mole):
         ret = {}
         for i in self.functor(mole).active_filters():
-            ret[i] = Parameter(lambda mole,params,i=i: self.functor(mole).remove_filter(i))
+            ret[i] = Parameter(lambda mole, params, i=i: self.functor(mole).remove_filter(i))
         return ret
 
     def add_filter(self, mole, name, params):
@@ -586,7 +586,7 @@ class BaseFilterCommand(Command):
             self.functor(mole).add_filter(name, params)
         except FilterCreationError as ex:
             raise CommandException('Filter {0} failed to initialize({1})'.format(name, str(ex)))
-        
+
     def print_filters(self, mole):
         filters = self.functor(mole).active_filters_to_string()
         if len(filters) == 0:
@@ -601,6 +601,18 @@ class BaseFilterCommand(Command):
     def parameters(self, mole, current_params):
         return self.params.parameter_list(mole, current_params)
 
+class RequestFilterCommand(BaseFilterCommand):
+    def __init__(self):
+        BaseFilterCommand.__init__(self, lambda mole: mole.requester.request_filters)
+
+    def execute(self, mole, params):
+        try:
+            BaseFilterCommand.execute(self, mole, params)
+        except FilterCreationError as ex:
+            raise CommandException('Filter creation error({msg})'.format(msg=str(ex)), False)
+
+    def usage(self, cmd_name):
+        return cmd_name + ' [add|del] [FILTER_NAME [ARGS]]'
 
 class HTMLFilterCommand(BaseFilterCommand):
     def __init__(self):
@@ -611,7 +623,7 @@ class HTMLFilterCommand(BaseFilterCommand):
             BaseFilterCommand.execute(self, mole, params)
         except FilterCreationError as ex:
             raise CommandException('Filter creation error({msg})'.format(msg=str(ex)), False)
-    
+
     def usage(self, cmd_name):
         return cmd_name + ' [add|del] [FILTER_NAME [ARGS]]'
 
@@ -619,9 +631,9 @@ class QueryFilterCommand(BaseFilterCommand):
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda mole: mole.requester.query_filters)
         config = Parameter()
-        config.set_param_generator(lambda mole,_: self.generate_config_parameters(mole))
+        config.set_param_generator(lambda mole, _: self.generate_config_parameters(mole))
         self.params.add_parameter('config', config)
-        
+
     def generate_config_parameters(self, mole):
         ret = {}
         for i in mole.requester.query_filters.active_filters():
@@ -634,11 +646,11 @@ class QueryFilterCommand(BaseFilterCommand):
             except Exception as ex:
                 print(ex)
         return ret
-        
+
     def generate_config_subparameters(self, mole, name, params):
         ret = {}
         for i in mole.requester.query_filters.parameters(name, params):
-            ret[i] = Parameter(lambda mole,params,i=i: mole.requester.query_filters.config(i, params))
+            ret[i] = Parameter(lambda mole, params, i=i: mole.requester.query_filters.config(i, params))
         return ret
 
     def usage(self, cmd_name):
@@ -954,6 +966,7 @@ class CommandManager:
                       'qfilter'  : QueryFilterCommand(),
                       'readfile' : ReadFileCommand(),
                       'recursive': RecursiveCommand(),
+                      'requestfilter': RequestFilterCommand(),
                       'schemas'  : SchemasCommand(),
                       'suffix'   : SuffixCommand(),
                       'tables'   : TablesCommand(),

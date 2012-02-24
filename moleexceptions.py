@@ -89,6 +89,11 @@ class InvalidParamException(Exception):
 class InvalidMethodException(Exception):
     pass
 
+#Filter exceptions
+
+class FilterRuntimeException(Exception):
+    pass
+
 class FilterNotFoundException(Exception):
     pass
 

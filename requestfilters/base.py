@@ -23,8 +23,13 @@
 # Gastón Traberg
 
 class RequestFilter:
-    def __init__(self, params):
-        pass
+    def __init__(self, name, params):
+        """Initialize a Request filter identified by the name. 
+        
+        @param name: String used to identify the plugin.
+        
+        """
+        self.name = name
 
     def filter_(self, request):
         """Apply the filter to the request.
