@@ -22,6 +22,8 @@
 # Santiago Alessandri
 # Gastón Traberg
 
+import copy
+
 class RequestFilter:
     def __init__(self, name, params):
         """Initialize a Request filter identified by the name. 
@@ -29,6 +31,7 @@ class RequestFilter:
         @param name: String used to identify the plugin.
         
         """
+        self.init_params = copy.copy(params)
         self.name = name
 
     def filter_(self, request):
@@ -38,3 +41,12 @@ class RequestFilter:
         
         """
         pass
+
+    def configuration_parameters(self):
+        return {}
+
+    def export_config(self):
+        return []
+
+    def __str__(self):
+        return self.name

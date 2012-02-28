@@ -43,7 +43,9 @@ class BaseFilterManager:
     def add_filter(self, name, params):
         if not name in self.filter_map:
             raise FilterNotFoundException()
-        self.filters.append((name, self.filter_map[name](name, params)))
+        filter_object = self.filter_map[name](name, params)
+        self.filters.append((name, filter_object))
+        return filter_object
 
     def remove_filter(self, name):
         self.filters = list(filter(lambda x: x[0] != name, self.filters))

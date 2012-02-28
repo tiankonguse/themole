@@ -618,6 +618,8 @@ class HTMLFilterCommand(BaseFilterCommand):
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda mole: mole.requester.response_filters)
 
+    #TODO: PORT CHANGES IN PARAMETERS FROM QUERY FILTER COMMAND
+
     def execute(self, mole, params):
         try:
             BaseFilterCommand.execute(self, mole, params)

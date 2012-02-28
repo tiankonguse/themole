@@ -33,7 +33,7 @@ import themole
 import commands
 from outputmanager import OutputManager
 
-VERSION = '0.2.6'
+__version__ = '0.2.6'
 
 def sigint_handler(x, y):
     manager.mole.abort_query()
@@ -112,7 +112,7 @@ def parse_options():
 
 def help_():
     print(' Usage ' + sys.argv[0] + ' [PARAMS]\n')
-    print(' The mole v{0} - Automatic SQL Injection exploiter.'.format(VERSION))
+    print(' The mole v{0} - Automatic SQL Injection exploiter.'.format(__version__))
     print(' Run The mole to begin an interactive session\n')
     print(' Params can be:')
     print('   -u URL: The url which contains a sqli vulnerability.')

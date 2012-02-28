@@ -22,8 +22,16 @@
 # Santiago Alessandri
 # Gastón Traberg
 
+import copy
+
 class BaseQueryFilter:
     def __init__(self, name, params):
+        """Initialize a Query filter identified by the name. 
+        
+        @param name: String used to identify the plugin.
+        
+        """
+        self.init_params = copy.copy(params)
         self.name = name
         pass
 
@@ -38,6 +46,9 @@ class BaseQueryFilter:
 
     def configuration_parameters(self):
         return {}
+
+    def export_config(self):
+        return []
 
     def __str__(self):
         return self.name
