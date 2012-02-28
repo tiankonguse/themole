@@ -30,6 +30,7 @@ from functools import partial
 
 import themole
 from parameters import Parameter
+from connection.requestsender import HttpHeadRequestSender, HttpRequestSender
 from moleexceptions import MoleAttributeRequired, CommandException
 from moleexceptions import PageNotFound, NeedleNotFound, SeparatorNotFound
 from moleexceptions import CommentNotFound, ColumnNumberNotFound
@@ -514,6 +515,23 @@ class VerboseCommand(Command):
     def usage(self, cmd_name):
         return cmd_name + ' <on|off>'
 
+class RequestSenderCommand(Command):
+    def __init__(self):
+        self.params = Parameter(lambda mole, _: output_manager.normal(str(mole.requester.sender)).line_break())
+        self.params.add_parameter('headsender', Parameter(lambda mole, _: self.set_sender(mole, HttpHeadRequestSender)))
+        self.params.add_parameter('httpsender', Parameter(lambda mole, _: self.set_sender(mole, HttpRequestSender)))
+    
+    def execute(self, mole, params):
+        self.params.execute(mole, params)
+    
+    def parameters(self, mole, current_params):
+        return self.params.parameter_list(mole, current_params)
+    
+    def set_sender(self, mole, sender):
+        mole.requester.sender = sender()
+        mole.initialized = False
+        mole.requester.encoding = None
+
 class OutputCommand(Command):
     def __init__(self):
         self.params = Parameter(lambda mole, _: output_manager.normal(output_manager.result_output).line_break())
@@ -969,6 +987,7 @@ class CommandManager:
                       'readfile' : ReadFileCommand(),
                       'recursive': RecursiveCommand(),
                       'requestfilter': RequestFilterCommand(),
+                      'requestsender': RequestSenderCommand(),
                       'schemas'  : SchemasCommand(),
                       'suffix'   : SuffixCommand(),
                       'tables'   : TablesCommand(),

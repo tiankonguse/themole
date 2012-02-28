@@ -25,6 +25,7 @@
 import urllib.parse
 import time
 import chardet
+import encodings
 
 from moleexceptions import InvalidMethodException, InvalidParamException, EncodingNotFound
 from connection.request import Request
@@ -84,6 +85,8 @@ class Requester(object):
 
         if self.__encoding is None:
             self.__encoding = self.guess_encoding(data)
+            if self.__encoding:
+                raise EncodingNotFound('Try using the "encoding" command.')
             try:
                 to_ret = data.decode(self.__encoding)
             except (UnicodeDecodeError, TypeError):
@@ -190,6 +193,14 @@ class Requester(object):
     @property
     def get_parameters(self):
         return urllib.parse.urlencode(self.__get_parameters, True)
+        
+    @property
+    def encoding(self):
+        return self.__encoding
+    
+    @encoding.setter
+    def encoding(self, new_encoding):
+        self.__encoding = new_encoding
 
     @get_parameters.setter
     def get_parameters(self, get_params):
@@ -231,6 +242,14 @@ class Requester(object):
             self.__vulnerable_param = vulnerable_param
         self.__vulnerable_param_group = method
 
+    def guess_encoding(self, data):
+        for enc in set(encodings.aliases.aliases.values()):
+            try:
+                data.decode(enc)
+                return enc
+            except UnicodeDecodeError:
+                pass
+        return None
 
     @property
     def query_filters(self):
