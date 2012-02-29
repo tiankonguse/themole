@@ -72,13 +72,13 @@ class SQLServerCollationFilter(BaseQueryFilter):
         self.field_match = re.compile('cast\(([\w\d_\-@]+) as varchar\([\d]+\)\)')
         self.blacklist = []
         self.collation = params[0] if len(params) == 1 else 'DATABASE_DEFAULT'
-        self.blist_param = Parameter(lambda _,__: self.print_blacklist())
-        add_blist = Parameter(lambda _,params: self.blacklist_add(params))
+        self.blist_param = Parameter(lambda _, __: self.print_blacklist())
+        add_blist = Parameter(lambda _, params: self.blacklist_add(params))
         del_blist = Parameter(no_args_str='Expected argument after "del"')
         self.blist_param.add_parameter('add', add_blist)
-        del_blist.set_param_generator(lambda _,__: self.del_generator())
+        del_blist.set_param_generator(lambda _, __: self.del_generator())
         self.blist_param.add_parameter('del', del_blist)
-        self.collation_param = Parameter(lambda _,params: self.exec_collation(params))
+        self.collation_param = Parameter(lambda _, params: self.exec_collation(params))
         self.params = { 'blacklist' : self.blist_param, 'collation' : self.collation_param }
 
     def configuration_parameters(self):
@@ -96,11 +96,11 @@ class SQLServerCollationFilter(BaseQueryFilter):
         else:
             for i in params:
                 self.blacklist.append(i)
-    
+
     def del_generator(self):
         ret = {}
         for i in self.blacklist:
-            ret[i] = Parameter(lambda _,__,i=i: self.blacklist.remove(i))
+            ret[i] = Parameter(lambda _, __, i=i: self.blacklist.remove(i))
         return ret
 
     def print_blacklist(self):
@@ -121,6 +121,12 @@ class SQLServerCollationFilter(BaseQueryFilter):
         except Exception as ex:
             output_manager.error('{0}'.format(ex)).line_break()
         return query
+
+    def export_config(self):
+        import copy
+        blacklist_config = ['blacklist', 'add'] + copy.copy(self.blacklist)
+        collation_config = ['collation', self.collation]
+        return [blacklist_config, collation_config]
 
     def __str__(self):
         return self.name + ' ' + self.collation
