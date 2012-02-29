@@ -684,7 +684,7 @@ class ExportCommand(Command):
             raise CommandException('Unknown export format.')
         try:
             mole.export_xml(params[1])
-            output_manager.advance('[+] Exportation successful')
+            output_manager.advance('Exportation successful').line_break()
         except FileOpenException:
             raise CommandException('The file given could not be opened', False)
         except NotInitializedException:

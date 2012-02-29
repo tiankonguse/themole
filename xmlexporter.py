@@ -58,6 +58,7 @@ dtd = """<!DOCTYPE themole [
 <!ELEMENT data_dumper EMPTY>
 <!ATTLIST data_dumper type CDATA #REQUIRED>
 <!ELEMENT requester (query_filters, request_filters, response_filters)>
+<!ATTLIST requester sender CDATA #REQUIRED>
 <!ATTLIST requester delay CDATA #REQUIRED>
 <!ATTLIST requester method CDATA #REQUIRED>
 <!ATTLIST requester headers CDATA #REQUIRED>
@@ -336,6 +337,10 @@ class XMLExporter:
         conn_obj = mole_config.requester
         connection = etree.Element('requester')
 
+        sender = b64encode(str(conn_obj.sender).encode()).decode()
+        connection.set('sender', sender)
+        del sender
+
         delay = b64encode(str(conn_obj.delay).encode()).decode()
         connection.set('delay', delay)
         del delay
@@ -390,6 +395,15 @@ class XMLExporter:
     def __import_requester(self, node, mole_config):
 
         conn_obj = mole_config.requester
+
+        field = node.get('sender')
+        value = b64decode(field.encode()).decode()
+        sender_class = [c for c in mole_config.sender_list if str(c) == value]
+        if len(sender_class) == 0:
+            raise InvalidDataException('Could not find the sender indicated in the XML file.')
+        if len(sender_class) > 1:
+            raise InvalidDataException('Too many senders match the type string. This should never happen')
+        conn_obj.sender = sender_class[0]()
 
         field = node.get('delay')
         value = int(b64decode(field.encode()).decode())

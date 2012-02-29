@@ -34,7 +34,7 @@ from xmlexporter import XMLExporter
 from injectioninspector import InjectionInspector
 from datadumper import BlindDataDumper, StringUnionDataDumper, IntegerUnionDataDumper
 from connection.requester import Requester
-from connection.requestsender import HttpRequestSender
+from connection.requestsender import HttpRequestSender, HttpHeadRequestSender
 
 class TheMole:
 
@@ -68,6 +68,7 @@ class TheMole:
     ]
 
     dbms_mole_list = [MysqlMole, SQLServerMole, PostgresMole, OracleMole]
+    sender_list = [HttpRequestSender, HttpHeadRequestSender]
 
     def __init__(self, threads=4):
         self.initialized = False

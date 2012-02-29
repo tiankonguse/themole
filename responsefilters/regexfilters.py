@@ -29,7 +29,7 @@ from responsefilters import register_response_filter
 
 class BaseRegexHTMLFilter(ResponseFilter):
     def __init__(self, name, filter_str, replacement):
-        ResponseFilter.__init__(self, name, [])
+        ResponseFilter.__init__(self, name, [filter_str, replacement])
         self.replacement = replacement
         try:
             self.regex = re.compile(filter_str, flags=re.DOTALL | re.MULTILINE)
