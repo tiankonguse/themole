@@ -632,7 +632,7 @@ class RequestFilterCommand(BaseFilterCommand):
     def usage(self, cmd_name):
         return cmd_name + ' [add|del] [FILTER_NAME [ARGS]]'
 
-class HTMLFilterCommand(BaseFilterCommand):
+class ResponseFilterCommand(BaseFilterCommand):
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda mole: mole.requester.response_filters)
 
@@ -974,7 +974,6 @@ class CommandManager:
                       'find_users_table'  : BruteforceUserTableCommand(),
                       'follow_redirects' : RedirectCommand(),
                       'headers'  : HTTPHeadersCommand(),
-                      'htmlfilter'  : HTMLFilterCommand(),
                       'import'   : ImportCommand(),
                       'injectable_field' : InjectableFieldCommand(),
                       'method'   : MethodCommand(),
@@ -988,6 +987,7 @@ class CommandManager:
                       'recursive': RecursiveCommand(),
                       'requestfilter': RequestFilterCommand(),
                       'requestsender': RequestSenderCommand(),
+                      'responsefilter'  : ResponseFilterCommand(),
                       'schemas'  : SchemasCommand(),
                       'suffix'   : SuffixCommand(),
                       'tables'   : TablesCommand(),
