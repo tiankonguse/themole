@@ -694,7 +694,7 @@ class ExportCommand(Command):
         return ['xml'] if len(current_params) == 0 else []
 
     def usage(self, cmd_name):
-        return cmd_name + ' <format> <output_filename>'
+        return cmd_name + ' <FORMAT> <OUTPUT_FILENAME>'
 
 class ImportCommand(Command):
     def execute(self, mole, params):
@@ -716,7 +716,7 @@ class ImportCommand(Command):
         return ['xml'] if len(current_params) == 0 else []
 
     def usage(self, cmd_name):
-        return cmd_name + ' <format> <input_filename>'
+        return cmd_name + ' <FORMAT> <INPUT_FILENAME>'
 
 class InjectableFieldCommand(Command):
     def execute(self, mole, params):
@@ -757,7 +757,7 @@ class ReadFileCommand(Command):
         return []
 
     def usage(self, cmd_name):
-        return cmd_name + ' <filename>'
+        return cmd_name + ' <FILENAME>'
 
 class MethodCommand(Command):
     accepted_methods = ['GET', 'POST', 'Cookie']
@@ -801,7 +801,7 @@ class MethodCommand(Command):
 
 
     def usage(self, cmd_name):
-        return cmd_name + ' (GET | POST | Cookie) [PARAMS] [VULNERABLE_PARAM]'
+        return cmd_name + ' [GET|POST|Cookie] [PARAMS] [VULNERABLE_PARAM]'
 
 class VulnerableParamCommand(Command):
     accepted_methods = ['GET', 'POST', 'Cookie']
@@ -833,7 +833,7 @@ class VulnerableParamCommand(Command):
         return []
 
     def usage(self, cmd_name):
-        return cmd_name + ' (GET | POST | Cookie) <VULNERABLE_PARAM>'
+        return cmd_name + ' [GET|POST|Cookie] <VULNERABLE_PARAM>'
 
 class HTTPHeadersCommand(Command):
     def execute(self, mole, params):
@@ -884,7 +884,7 @@ class AuthCommand(Command):
         return ['basic'] if len(current_params) == 0 else []
 
     def usage(self, cmd_name):
-        return cmd_name + ' <BASIC|DIGEST> USERNAME:PASSWORD'
+        return cmd_name + ' [basic] [USERNAME:PASSWORD]'
 
 class EncodingCommand(Command):
     def execute(self, mole, params):
