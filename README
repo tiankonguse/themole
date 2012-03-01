@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------
-       The Mole v0.2.5
+       The Mole v0.3
 ------------------------------------------------------------------------
 
 
@@ -41,23 +41,39 @@ as an argument to the application, using the "-u" parameter.
 - needle [NEEDLE]: Gets/sets the NEEDLE. This can also be provided as an
 argument to the application, using the "-n" parameter.
 
-- method (GET|POST <param_post> ) [injectable_field]: Sets the method of
+- method (GET|POST <param_post> ) [vulnerable_param]: Sets the method of
 the request to GET or POST. In case POST is given the param_post string
-will be used as the POST parameters. If injectable_field is given then
+will be used as the POST parameters. If vulnerable_param is given then
 the mole will use this parameter to inject.
+
+- vulnerable_param [<GET|POST|Cookie> VULNERABLE_PARAM]: Sets/gets the
+type and name of the vulnerable parameter to be exploited by The Mole.
+
+- injectable_field [<FIELD_NUM>]: Sets/gets the field of the query
+which will be used to print the information retrieved when using a
+union technique.
+
+- auth [<basic> <USERNAME:PASSWORD>]: Sets/gets the authentication
+information used by The Mole in each request.
+
+- follow_redirects [<on|off>]: Sets/gets the follow redirect flag. If
+enabled, The Mole will follow http redirects received from the server.    
 
 - dbinfo: Fetch current user name, database name and DBMS version.
 
-- schemas: Fetchs the schemas(databases) from the server. The results
+- usercreds: Fetches the credentials for the dbms. Usually requires
+administrator privileges on the database.
+
+- schemas: Fetches the schemas(databases) from the server. The results
 obtained will be cached, so further calls to this command will return
 the cached entries. See "fetch" command.
 
-- tables <SCHEMA>: Fetchs the tables for the schema SCHEMA. The results
+- tables <SCHEMA>: Fetches the tables for the schema SCHEMA. The results
 obtained will be cached, so further calls to this command will return
 the cached entries. See "fetch" command.
 e.g: "tables mysql"
 
-- columns <SCHEMA> <TABLE>: Fetchs the columns for the table TABLE, in
+- columns <SCHEMA> <TABLE>: Fetches the columns for the table TABLE, in
 the schema SCHEMA. The results obtained will be cached, so further calls
 to this command will return the cached entries. See "fetch" command.
 e.g: "columns mysql user"
@@ -147,16 +163,29 @@ delay.
 header. Use this to set the User-Agent, cookie, or whatever additional
 header you want to send.
 
-- qfilter <add|config|del> <FILTER> [ARGS]: Add/configure/remove query 
+- encoding [ENCODING]: Gets/sets the encoding use to decode the response
+received.
+
+- requestsender [<httpsender|headsender>]: Gets/sets the request sending
+mechanism. httpsender is the default mechanism, it makes the request and
+returns the full body of the response. headsender makes a HEAD request
+and retrieves the headers of the response as the HTML of the response. 
+
+- qfilter <add|del|config> <FILTER> [ARGS]: Add/configure/remove query 
 filters. Query filters are applied to each query before appending it to 
 the vulnerable parameter. So far, these can be used to either bypass an 
 IPS/IDS or to apply a filter when SQL Server requires you to change the
 collation of the retrieved fields.
 
-- htmlfilter <add|del> <FILTER> [ARGS]: Adds/removes an html filter. 
-Html filters are applied to the data retrieved from the server. In some
-cases, invalid HTML can make The Mole miss the injection, so you might
-want to use a regular expression in order to fix it.
+- responsefilter <add|del|config> <FILTER> [ARGS]: Adds/removes/configs 
+a response filter. Response filters are applied to the response retrieved 
+from the server. In some cases, invalid HTML can make The Mole miss the 
+injection, so you might want to use a regular expression in order to fix 
+it.
+
+- requestfilter <add|del|config> <FILTER> [ARGS]: Add/configure/remove
+a request filter. Request filters are applied once the request is generated
+but before it is sent to the server.
 
 - export <TYPE> [<ARG1>, ...]: Exports the current mole configuration
 and the dumped schema's structures for later usage.
@@ -181,5 +210,8 @@ Matías Fontanini
 Santiago Alessandri
 Gastón Traberg
 
-Please visit http://sourceforge.net/projects/themole/ to download the
-latest release.
+Please visit the official site http://themole.nasel.com.ar/ to download the
+latest release or the project's sourceforge page: 
+https://sourceforge.net/projects/themole/
+
+

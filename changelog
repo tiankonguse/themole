@@ -1,3 +1,20 @@
+Version 0.3
+===========
+
+	+ Added support for cookie injections.
+	+ Added support for injections that return binary data. 
+	+ Changed the output mechanism.
+	+ Enhanced exception handling mechanism.
+	+ Changed filtering mechanism.
+	+ Added several query filters.
+	+ Added uri_changer request filter.
+	+ Added some response filters.
+	+ Improved encoding detection algorithm.
+	+ Added DBMS user credentials listing.
+	+ Enhanced CLI parser.
+	+ Done major refactoring to the code.
+	
+
 Version 0.2.6
 =============
 

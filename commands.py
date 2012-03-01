@@ -520,13 +520,13 @@ class RequestSenderCommand(Command):
         self.params = Parameter(lambda mole, _: output_manager.normal(str(mole.requester.sender)).line_break())
         self.params.add_parameter('headsender', Parameter(lambda mole, _: self.set_sender(mole, HttpHeadRequestSender)))
         self.params.add_parameter('httpsender', Parameter(lambda mole, _: self.set_sender(mole, HttpRequestSender)))
-    
+
     def execute(self, mole, params):
         self.params.execute(mole, params)
-    
+
     def parameters(self, mole, current_params):
         return self.params.parameter_list(mole, current_params)
-    
+
     def set_sender(self, mole, sender):
         mole.requester.sender = sender()
         mole.initialized = False
@@ -619,33 +619,62 @@ class BaseFilterCommand(Command):
     def parameters(self, mole, current_params):
         return self.params.parameter_list(mole, current_params)
 
+    def usage(self, cmd_name):
+        return cmd_name + ' [add|del|config] [FILTER_NAME [ARGS]]'
+
 class RequestFilterCommand(BaseFilterCommand):
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda mole: mole.requester.request_filters)
+        config = Parameter()
+        config.set_param_generator(lambda mole, _: self.generate_config_parameters(mole))
+        self.params.add_parameter('config', config)
 
-    def execute(self, mole, params):
-        try:
-            BaseFilterCommand.execute(self, mole, params)
-        except FilterCreationError as ex:
-            raise CommandException('Filter creation error({msg})'.format(msg=str(ex)), False)
+    def generate_config_parameters(self, mole):
+        ret = {}
+        for i in mole.requester.request_filters.active_filters():
+            try:
+                param = Parameter()
+                subparams = mole.requester.request_filters.config_parameters(i)
+                for subparam in subparams:
+                    param.add_parameter(subparam, subparams[subparam])
+                ret[i] = param
+            except Exception as ex:
+                print(ex)
+        return ret
 
-    def usage(self, cmd_name):
-        return cmd_name + ' [add|del] [FILTER_NAME [ARGS]]'
+    def generate_config_subparameters(self, mole, name, params):
+        ret = {}
+        for i in mole.requester.request_filters.parameters(name, params):
+            ret[i] = Parameter(lambda mole, params, i=i: mole.requester.request_filters.config(i, params))
+        return ret
+
 
 class ResponseFilterCommand(BaseFilterCommand):
     def __init__(self):
         BaseFilterCommand.__init__(self, lambda mole: mole.requester.response_filters)
+        config = Parameter()
+        config.set_param_generator(lambda mole, _: self.generate_config_parameters(mole))
+        self.params.add_parameter('config', config)
 
-    #TODO: PORT CHANGES IN PARAMETERS FROM QUERY FILTER COMMAND
+    def generate_config_parameters(self, mole):
+        ret = {}
+        for i in mole.requester.response_filters.active_filters():
+            try:
+                param = Parameter()
+                subparams = mole.requester.response_filters.config_parameters(i)
+                for subparam in subparams:
+                    param.add_parameter(subparam, subparams[subparam])
+                ret[i] = param
+            except Exception as ex:
+                print(ex)
+        return ret
 
-    def execute(self, mole, params):
-        try:
-            BaseFilterCommand.execute(self, mole, params)
-        except FilterCreationError as ex:
-            raise CommandException('Filter creation error({msg})'.format(msg=str(ex)), False)
+    def generate_config_subparameters(self, mole, name, params):
+        ret = {}
+        for i in mole.requester.response_filters.parameters(name, params):
+            ret[i] = Parameter(lambda mole, params, i=i: mole.requester.response_filters.config(i, params))
+        return ret
 
-    def usage(self, cmd_name):
-        return cmd_name + ' [add|del] [FILTER_NAME [ARGS]]'
 
 class QueryFilterCommand(BaseFilterCommand):
     def __init__(self):
@@ -673,8 +702,6 @@ class QueryFilterCommand(BaseFilterCommand):
             ret[i] = Parameter(lambda mole, params, i=i: mole.requester.query_filters.config(i, params))
         return ret
 
-    def usage(self, cmd_name):
-        return cmd_name + ' [add|del|config] [FILTER_NAME [ARGS]]'
 
 class ExportCommand(Command):
     def execute(self, mole, params):
