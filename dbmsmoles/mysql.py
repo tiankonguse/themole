@@ -31,7 +31,6 @@ class MysqlMole(DbmsMole):
     integer_field_finger = 'ascii(0x3a) + (length(0x49494949494949) * 190) + (ascii(0x49) * 31337)'
     integer_field_finger_result = '2288989'
     integer_out_delimiter = '3133707'
-    integer_inner_delimiter = '0x3e3c'
     comment_list = ['#', '--', '/*', ' ']
 
     def __init__(self):
@@ -91,7 +90,7 @@ class MysqlMole(DbmsMole):
         if not self.finger or self.finger.is_string_query:
             return 'CONCAT_WS(' + MysqlMole.inner_delimiter + ',' + ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)) + ')'
         else:
-            return 'CONCAT_WS(' + MysqlMole.integer_inner_delimiter + ',' + ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)) + ')'
+            return 'CONCAT_WS(' + MysqlMole.inner_delimiter + ',' + ','.join(map(lambda x: 'IFNULL(' + x + ', 0x20)', fields)) + ')'
 
     @classmethod
     def injectable_field_fingers(cls, query_columns, base):
