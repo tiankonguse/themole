@@ -70,7 +70,7 @@ class OracleMole(DbmsMole):
         return {
             'field'  : ['name', 'password'],
             'table'  : 'sys.user$',
-            'filter' : '1=1'
+            'filter' : 'type# = 1'
         }
     @classmethod
     def dbms_name(cls):

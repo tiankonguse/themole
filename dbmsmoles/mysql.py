@@ -130,7 +130,7 @@ class MysqlMole(DbmsMole):
 
     @classmethod
     def dbms_check_blind_query(cls):
-        return ' and 0 < (select length(version())) '
+        return ' and 0 < (select length(concat(user(),version()))) '
 
     def forge_count_query(self, fields, table_name, injectable_field, where = "1=1"):
         query_list = list(self.finger._query)

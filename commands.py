@@ -393,10 +393,10 @@ class UserCredentialsCommand(Command):
         except QueryError:
             print('[-] There was an error with the query.')
             return
-        output_manager.begin_sequence(['User', 'Password'])
+        res_out = output_manager.results_output(['User', 'Password'])
         for i in result:
-            output_manager.put(i)
-        output_manager.end_sequence()
+            res_out.put(i)
+        res_out.end_sequence()
 
     def parameters(self, mole, current_params):
         return []
