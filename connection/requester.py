@@ -193,7 +193,7 @@ class Requester(object):
 
     @property
     def get_parameters(self):
-        return urllib.parse.urlencode(self.__get_parameters, True)
+        return self.__get_parameters
         
     @property
     def encoding(self):
@@ -211,7 +211,7 @@ class Requester(object):
 
     @property
     def post_parameters(self):
-        return urllib.parse.urlencode(self.__post_parameters, True)
+        return self.__post_parameters
 
     @post_parameters.setter
     def post_parameters(self, post_params):
@@ -221,7 +221,7 @@ class Requester(object):
 
     @property
     def cookie_parameters(self):
-        return urllib.parse.urlencode(self.__cookie_parameters, True)
+        return self.__cookie_parameters
 
     @cookie_parameters.setter
     def cookie_parameters(self, cookie_params):

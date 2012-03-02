@@ -97,7 +97,7 @@ class TheMole:
     def initialize(self):
         self.analyser = DomAnalyser()
         if not self.requester.is_initialized():
-            raise MoleAttributeRequired('Attribute url and injectable field are required')
+            raise MoleAttributeRequired('Attribute url and vulnerable param are required')
         if not self.needle:
             raise MoleAttributeRequired('Attribute needle is required')
 
@@ -114,8 +114,6 @@ class TheMole:
 
         try:
             original_request = self.requester.request(self.prefix + self.suffix)
-            #if not '<html' in original_request and not '<HTML' in original_request:
-            #    original_request = '<html><body>' + original_request + '</body></html>'
         except ConnectionException as ex:
             raise PageNotFound(str(ex))
         self.analyser.set_good_page(original_request, self.needle)

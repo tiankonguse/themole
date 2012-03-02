@@ -23,6 +23,7 @@
 # Gastón Traberg
 
 from sys import exit
+from urllib.parse import urlencode, parse_qs
 import os
 from base64 import b64encode
 import codecs
@@ -119,7 +120,7 @@ class CookieCommand(Command):
             raise CommandException('Too many arguments(remember to use quotes when setting the cookie).')
         else:
             try:
-                output_manager.normal(mole.requester.cookie_parameters).line_break()
+                output_manager.normal(urlencode(mole.requester.cookie_parameters)).line_break()
             except KeyError:
                 output_manager.normal('No cookie set yet.').line_break()
 
@@ -787,17 +788,16 @@ class ReadFileCommand(Command):
         return cmd_name + ' <FILENAME>'
 
 class MethodCommand(Command):
-    accepted_methods = ['GET', 'POST', 'Cookie']
+    accepted_methods = ['GET', 'POST']
 
     def execute(self, mole, params):
         if len(params) == 0:
             method = mole.requester.method
             if method == 'POST':
                 params = mole.requester.post_parameters
-            elif method == 'Cookie':
-                params = mole.requester.cookie_parameters
             else:
                 params = mole.requester.get_parameters
+            params = urlencode(params, True)
             if len(params) == 0:
                 params = 'No parameters have been set.'
             output_manager.normal('{0}: {1}'.format(method, params)).line_break()
@@ -810,8 +810,6 @@ class MethodCommand(Command):
             if len(params) >= 2:
                 if params[0] == 'POST':
                     mole.set_post_params(params[1])
-                elif params[0] == 'Cookie':
-                    mole.set_cookie_params(params[1])
                 elif params[0] == 'GET':
                     mole.set_get_params(params[1])
 
@@ -822,13 +820,13 @@ class MethodCommand(Command):
         if len(current_params) == 0:
             return self.accepted_methods
         elif len(current_params) == 2:
-            return list(t.split('=', 1)[0] for t in current_params[1].split('&'))
+            return parse_qs(current_params[1]).keys()
         else:
             return []
 
 
     def usage(self, cmd_name):
-        return cmd_name + ' [GET|POST|Cookie] [PARAMS] [VULNERABLE_PARAM]'
+        return cmd_name + ' [GET|POST] [PARAMS] [VULNERABLE_PARAM]'
 
 class VulnerableParamCommand(Command):
     accepted_methods = ['GET', 'POST', 'Cookie']
@@ -836,7 +834,10 @@ class VulnerableParamCommand(Command):
     def execute(self, mole, params):
         if len(params) == 0:
             method, param = mole.requester.get_vulnerable_param()
-            output_manager.normal('{0} {1}'.format(method, param)).line_break()
+            if method is not None and param is not None:
+                output_manager.normal('{0} {1}'.format(method, param)).line_break()
+            else:
+                output_manager.normal('Vulnerable parameter not set yet.').line_break()
         elif len(params) == 2:
             if params[0] not in self.accepted_methods:
                 raise CommandException('The method ' + params[0] + ' is not supported!')
@@ -852,11 +853,11 @@ class VulnerableParamCommand(Command):
             return self.accepted_methods
         if len(current_params) == 1:
             if current_params[0] == 'GET':
-                return [x[0] for x in mole.requester.get_parameters]
+                return mole.requester.get_parameters.keys()
             elif current_params[0] == 'POST':
-                return [x[0] for x in mole.requester.post_parameters]
+                return mole.requester.post_parameters.keys()
             elif current_params[0] == 'Cookie':
-                return [x[0] for x in mole.requester.cookie_parameters]
+                return mole.requester.cookie_parameters.keys()
         return []
 
     def usage(self, cmd_name):
@@ -872,7 +873,7 @@ class HTTPHeadersCommand(Command):
             if len(params) < 3:
                 raise CommandException('"set" expects header key and value as arguments.')
             if params[1] == 'Cookie':
-                CookieCommand().execute(mole, params[2:], output_manager)
+                CookieCommand().execute(mole, params[2:])
             else:
                 mole.requester.headers[params[1]] = ' '.join(params[2:])
         elif params[0] == 'del':
