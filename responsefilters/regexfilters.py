@@ -66,17 +66,27 @@ class ScriptErrorFilter(ResponseFilter):
     def __init__(self, name, params):
         ResponseFilter.__init__(self, name, params)
         self.error_filters = [
-                    # PHP verbose errors.
-                    re.compile("<br />\n<b>Warning</b>:  [\w_\d]+\(\)(:\s|\s\[.*\]:)[\w :<>\\\\_\'\.\(\)/-]+ on line <b>(\d+)</b><br />"),
-                ]
+            # PHP verbose errors.
+            re.compile("<br />\n<b>Warning</b>:  [\w_\d]+\(\)(:\s|\s\[.*\]:)[\w :<>\\\\_\'\.\(\)/-]+ on line <b>(\d+)</b><br />"),
+        ]
 
     def filter_(self, response):
         for i in self.error_filters:
             response.content = i.sub('', response.content)
         return response
 
+class HTMLValidationFilter(ResponseFilter):
+    def __init__(self, name, params):
+        ResponseFilter.__init__(self, name, params)
+        self.regex = re.compile('<html', flags=re.DOTALL | re.MULTILINE)
+    
+    def filter_(self, response):
+        if not self.regex.match(response.content):
+            response.content = '<html><body>{0}</body></html>'.format(response.content)
+        return response
 
 register_response_filter('regex_rem', RemoverRegexHTMLFilter)
 register_response_filter('regex_rep', ReplacerRegexHTMLFilter)
 register_response_filter('html_pretifier', HTMLPretifierFilter)
 register_response_filter('script_error_filter', ScriptErrorFilter)
+register_response_filter('html_validator', HTMLValidationFilter)

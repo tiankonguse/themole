@@ -68,6 +68,7 @@ class Requester(object):
         if cookie:
             self.cookie_parameters = cookie
         self.__response_filters.add_filter('script_error_filter', [])
+        self.__response_filters.add_filter('html_validator', [])
 
     def decode(self, data):
         if self.__encoding is not None:
