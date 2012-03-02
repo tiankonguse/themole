@@ -33,7 +33,7 @@ import themole
 import commands
 from outputmanager import OutputManager
 
-__version__ = '0.2.6'
+__version__ = '0.3'
 
 def sigint_handler(x, y):
     manager.mole.abort_query()
