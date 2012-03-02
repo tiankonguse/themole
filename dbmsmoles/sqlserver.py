@@ -71,7 +71,7 @@ class SQLServerMole(DbmsMole):
 
     def _user_creds_query_info(self):
         return {
-            'field'  : ['name', 'password'],
+            'field'  : ['name', 'master.dbo.fn_varbintohexstr(password)'],
             'table'  : 'master..sysxlogins',
             'filter' : '1=1'
         }
