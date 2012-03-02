@@ -22,15 +22,19 @@
 # Santiago Alessandri
 # Gastón Traberg
 
+import os
+import sys
+
 from functools import reduce
 from moleexceptions import FilterNotFoundException
-import queryfilters, responsefilters, requestfilters, os
+import queryfilters, responsefilters, requestfilters
 
 class BaseFilterManager:
     def __init__(self, import_dir):
+        full_import_dir = os.path.join(os.path.dirname(sys.argv[0]), import_dir)
         self.filters = []
         self.filter_map = {}
-        classes = [x[:-3] for x in os.listdir(import_dir) if not x.startswith('__') and x.endswith('.py')]
+        classes = [x[:-3] for x in os.listdir(full_import_dir) if not x.startswith('__') and x.endswith('.py')]
         for c in classes:
             __import__(import_dir + '.' + c, globals(), locals())
 
