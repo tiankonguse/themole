@@ -105,7 +105,7 @@ class PostgresMole(DbmsMole):
 
     @classmethod
     def dbms_check_blind_query(cls):
-        return ' and {op_par}0 < (select length(getpgusername()))'
+        return ' and 0 < (select length(getpgusername()))'
 
     @classmethod
     def field_finger(cls, finger):
@@ -180,7 +180,7 @@ class PostgresMole(DbmsMole):
         if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             query += " distinct on(schemaname) "
             fields = ['schemaname']
-        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + 
+        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter +
                                         " as varchar(10))||length(" + self._concat_fields(fields) +
                                             ")||cast(" + PostgresMole.integer_out_delimiter + " as varchar(10)) as bigint)"
                                         )
@@ -201,9 +201,9 @@ class PostgresMole(DbmsMole):
         if len(fields) == 1 and fields[0] == 'distinct(schemaname)':
             query += " distinct on(schemaname) "
             fields = ['schemaname']
-        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter + 
+        query_list[injectable_field] = ("cast(cast(" + PostgresMole.integer_out_delimiter +
                                         " as varchar(10))||ascii(substring(" + self._concat_fields(fields) +
-                                        ", " + str(index)+",1))||cast(" + PostgresMole.integer_out_delimiter + 
+                                        ", " + str(index)+",1))||cast(" + PostgresMole.integer_out_delimiter +
                                         " as varchar(10)) as bigint)"
                                         )
         query += ','.join(query_list)
