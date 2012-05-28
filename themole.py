@@ -207,6 +207,7 @@ class TheMole:
         output_manager.echo_output = False
         try:
             if len(self.dumper.get_databases(self, field, 1)) > 0:
+                self.injectable_field = field
                 return True
         except QueryError:
             return False
