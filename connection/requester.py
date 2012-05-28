@@ -101,11 +101,11 @@ class Requester(object):
 
     def request(self, query):
         """Make the request applying the filters and return the response.
-        
+
         @param query: String containing the query to inject in the
         vulnerable param.
         @return: String containing the response in html format.
-        
+
         """
 
         query = self.__query_filters.apply_filters(query)
@@ -135,6 +135,15 @@ class Requester(object):
         response = self.__sender.send(request)
 
         response.content = self.decode(response.content)
+
+        if len(query) > 0:
+            new_response = ''
+            while query.lower() in response.content.lower():
+                index = response.content.lower().find(query.lower())
+                new_response += response.content[:index]
+                response.content = response.content[index+len(query):]
+            new_response += response.content
+            response.content = new_response
 
         self.__response_filters.apply_filters(response)
 
@@ -194,11 +203,11 @@ class Requester(object):
     @property
     def get_parameters(self):
         return self.__get_parameters
-        
+
     @property
     def encoding(self):
         return self.__encoding
-    
+
     @encoding.setter
     def encoding(self, new_encoding):
         self.__encoding = new_encoding
