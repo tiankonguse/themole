@@ -313,11 +313,14 @@ class QueryCommand(Command):
             index_limit = params.index('limit') if 'limit' in params else -1
             index_where = params.index('where') if 'where' in params else -1
             index_offset = params.index('offset') if 'offset' in params else -1
-            min_end = min(index_limit if index_limit != -1 else 0x7fffff, index_offset if index_offset != -1 else 0x7fffff)
+            index_outfile = params.index('outfile') if 'outfile' in params else -1
+            min_end = min(index_limit if index_limit != -1 else 0x7fffff, index_outfile if index_outfile != -1 else 0x7fffff. index_offset if index_offset != -1 else 0x7fffff)
             if min_end == 0x7fffff:
                 min_end = -1
             where_end = min_end if min_end != -1 and min_end > index_where else len(params) + 1
+            outfile_end = min_end if min_end != -1 and min_end > index_outfile else len(params) + 1
             condition = ' '.join(params[index_where + 1:where_end]) if index_where != -1 else '1=1'
+            outfile = ''.join(params[index_outfile+1:outfile_end]) if index_outfile != -1 else ''
             if index_limit == len(params) - 1:
                 raise CommandException('Limit argument requires row numbers.')
             if index_offset == len(params) - 1:
@@ -340,13 +343,24 @@ class QueryCommand(Command):
         except themole.QueryError as ex:
             output_manager.error('Query error: {0}'.format(ex)).line_break()
             return
-        res_out = output_manager.results_output(columns)
-        for i in result:
-            res_out.put(i)
-        res_out.end_sequence()
+        if len(outfile) == 0:
+            res_out = output_manager.results_output(columns)
+            for i in result:
+                res_out.put(i)
+            res_out.end_sequence()
+        else:
+            output_manager.line_break()
+            try:
+                fd = open(outfile, 'a+')
+                for i in result:
+                    fd.write(', '.join(i) + '\n')
+                fd.close()
+                output_manager.info('Saved results to ' + outfile).line_break()
+            except IOError as ex:
+                output_manager.error(str(ex))
 
     def usage(self, cmd_name):
-        return cmd_name + ' <SCHEMA> <TABLE> <COLUMNS> [where <CONDITION>] [limit <NUM_ROWS>] [offset <OFFSET>]'
+        return cmd_name + ' <SCHEMA> <TABLE> <COLUMNS> [where <CONDITION>] [limit <NUM_ROWS>] [outfile <PATH>][offset <OFFSET>]'
 
     def parameters(self, mole, current_params):
         if len(current_params) == 0:
@@ -360,7 +374,7 @@ class QueryCommand(Command):
                 return []
             return tables
         elif len(current_params) == 3 :
-            return ['where', 'limit', 'offset']
+            return ['where', 'limit', 'offset', 'outfile']
         else:
             columns = mole.poll_columns(current_params[0], current_params[1])
             return columns if columns else []

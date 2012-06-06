@@ -100,7 +100,7 @@ class CompletionManager:
         while match:
             output += self.nice_split(line[start_index:match.start()])
             start_index += match.end()
-            output.append(match.groups()[0][1:-1].strip())
+            output.append(match.groups()[0][1:-1])
             match = self.parse_regex.search(line[start_index:])
         if start_index < len(line):
             output += self.nice_split(line[start_index:])
