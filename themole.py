@@ -175,8 +175,8 @@ class TheMole:
                     return
                 raise
 
-            if self._dbms_mole is None:
-                raise DbmsDetectionFailed()
+#            if self._dbms_mole is None:
+#                raise DbmsDetectionFailed()
 
             if self._dbms_mole.is_string_query():
                 output_manager.advance('Using string union technique.').line_break()

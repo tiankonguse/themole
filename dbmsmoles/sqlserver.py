@@ -110,7 +110,7 @@ class SQLServerMole(DbmsMole):
 
     @classmethod
     def dbms_check_blind_query(cls):
-        return ' and {op_par}0 < (select len(user_name()))'
+        return ' and 0 < (select len(user_name()))'
 
     @classmethod
     def dbms_name(cls):
