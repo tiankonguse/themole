@@ -103,7 +103,7 @@ class InjectionInspector:
             last *= 2
             output_manager.info('Trying {0} columns'.format(last))
             try:
-                new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (last,)))
+                new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (last,))) or ''
             except ConnectionException as ex:
                 raise ColumnNumberNotFound(str(ex))
         pri = last // 2
@@ -113,7 +113,8 @@ class InjectionInspector:
             medio = ((pri + last) // 2) + ((pri + last) & 1)
             output_manager.info('Trying {0} columns'.format(medio))
             try:
-                new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (medio,)))
+                new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (medio,))) or ''
+                
             except ConnectionException as ex:
                 raise ColumnNumberNotFound(str(ex))
             if new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
