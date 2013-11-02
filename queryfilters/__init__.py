@@ -18,9 +18,9 @@
 # Developed by: Nasel(http://www.nasel.com.ar)
 #
 # Authors:
-# Matías Fontanini
+# Matias Fontanini
 # Santiago Alessandri
-# Gastón Traberg
+# Gaston Traberg
 
 def register_query_filter(name, class_):
     """Register a query filter.

@@ -18,9 +18,9 @@
 # Developed by: Nasel(http://www.nasel.com.ar)
 #
 # Authors:
-# Matías Fontanini
+# Matias Fontanini
 # Santiago Alessandri
-# Gastón Traberg
+# Gaston Traberg
 
 class Parameter:
     def __init__(self, exec_function=None, no_args_str='Expected arguments', invalid_args_function=None):

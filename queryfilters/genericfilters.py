@@ -16,9 +16,9 @@
 # Developed by: Nasel(http://www.nasel.com.ar)
 #
 # Authors:
-# Matías Fontanini
+# Matias Fontanini
 # Santiago Alessandri
-# Gastón Traberg
+# Gaston Traberg
 
 import random, re
 from moleexceptions import FilterConfigException, FilterCreationError

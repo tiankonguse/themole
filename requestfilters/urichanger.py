@@ -16,9 +16,9 @@
 # Developed by: Nasel(http://www.nasel.com.ar)
 #
 # Authors:
-# Matías Fontanini
+# Matias Fontanini
 # Santiago Alessandri
-# Gastón Traberg
+# Gaston Traberg
 
 from urllib.parse import parse_qs, quote
 

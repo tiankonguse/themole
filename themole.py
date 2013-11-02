@@ -18,9 +18,9 @@
 # Developed by: Nasel(http://www.nasel.com.ar)
 #
 # Authors:
-# Matías Fontanini
+# Matias Fontanini
 # Santiago Alessandri
-# Gastón Traberg
+# Gaston Traberg
 
 from moleexceptions import MoleAttributeRequired, PageNotFound, ConnectionException
 from moleexceptions import DbmsDetectionFailed, CommentNotFound, ColumnNumberNotFound
