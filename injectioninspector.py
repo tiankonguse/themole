@@ -90,11 +90,11 @@ class InjectionInspector:
             req = mole.make_request(' order by 15000')
         except ConnectionException as ex:
             raise ColumnNumberNotFound(str(ex))
-        content_of_needle = mole.analyser.node_content(req)
+        content_of_needle = mole.analyser.node_content(req) or ''
         mole.stop_query = False
         last = 2
         try:
-            new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (last,)))
+            new_needle_content = mole.analyser.node_content(mole.make_request(' order by %d ' % (last,))) or ''
         except ConnectionException as ex:
             raise ColumnNumberNotFound(str(ex))
         while new_needle_content != content_of_needle and not DbmsMole.is_error(new_needle_content):
