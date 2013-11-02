@@ -130,7 +130,6 @@ r"""                     _____ _           ___  ___      _
                       | | | | | |  __/ | |  | | (_) | |  __/
                       \_/ |_| |_|\___| \_|  |_/\___/|_|\___|
 
- Developed by Nasel(http://www.nasel.com.ar).
  Published under GPLv3.
  Be efficient and have fun!
 """

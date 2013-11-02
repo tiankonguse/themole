@@ -22,6 +22,7 @@
 
 import http.client
 import socket
+import zlib
 from urllib.parse import urlencode, urlparse
 
 from moleexceptions import ConnectionException
@@ -53,7 +54,7 @@ class BaseRequestSender():
 
         for _ in range(self.max_retries):
             try:
-                data = self.fetch_data(request, connection)
+                (data, headers) = self.fetch_data(request, connection)
                 break
             except (socket.error,
                     socket.timeout,
@@ -68,6 +69,8 @@ class BaseRequestSender():
         if data is None:
             raise ConnectionException(str(exception))
 
+        if 'Content-Encoding' in headers and headers['Content-Encoding'] == 'gzip':
+            data = decompressed_data=zlib.decompress(data, 16+zlib.MAX_WBITS)
         return Response(data)
 
 class HttpRequestSender(BaseRequestSender):
@@ -86,7 +89,7 @@ class HttpRequestSender(BaseRequestSender):
             connection.request('GET', parsed.path, None, request.headers)
             resp = connection.getresponse()
             resp_headers = dict(resp.getheaders())
-        return resp.read()
+        return (resp.read(), resp_headers)
 
     def __str__(self):
         return 'httpsender'
@@ -102,7 +105,7 @@ class HttpHeadRequestSender(BaseRequestSender):
         output = ''
         for header in headers:
             output += '<div>{0} {1}</div>\n'.format(header, headers[header])
-        return '<html><body>{0}</body></html>'.format(output).encode()
+        return ('<html><body>{0}</body></html>'.format(output).encode(), headers)
 
     def __str__(self):
         return 'headsender'
